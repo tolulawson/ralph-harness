@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ralph Execute"
+  short_description: "Resume an installed Ralph harness here"
+  default_prompt: "Use $ralph-execute to resume the installed Ralph harness in this repository and advance the next step."
+
+policy:
+  allow_implicit_invocation: false

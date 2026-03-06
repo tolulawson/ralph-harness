@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ralph Install"
+  short_description: "Install the Ralph harness into the current repo"
+  default_prompt: "Use $ralph-install to install the Ralph harness into this repository from the canonical scaffold under src/."
+
+policy:
+  allow_implicit_invocation: false

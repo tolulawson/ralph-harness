@@ -1,0 +1,18 @@
+# Workflow State
+
+- Project: `{{project_name}}`
+- Active epoch: `{{active_epoch_id}}`
+- Active spec: `{{active_spec_key}}`
+- Active task: `{{active_task_id}}`
+- Phase: `{{current_phase}}`
+- Task status: `{{task_status}}`
+- Assigned role: `{{assigned_role}}`
+- Branch: `{{current_branch}}`
+- Run id: `{{current_run_id}}`
+- Active PR number: `{{active_pr_number}}`
+- Active PR URL: `{{active_pr_url}}`
+- Queue head spec: `{{queue_head_spec_id}}`
+- Resume spec id: `{{resume_spec_id}}`
+- Last event id: `{{last_event_id}}`
+- Last report: `{{last_report_path}}`
+- Next action: {{next_action}}

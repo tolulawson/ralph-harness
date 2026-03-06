@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "queue_policy": {
+    "selection": "fifo",
+    "preemption": "emergency_only"
+  },
+  "active_spec_id": "001",
+  "resume_spec_id": null,
+  "specs": [
+    {
+      "spec_id": "001",
+      "spec_slug": "self-bootstrap-harness",
+      "spec_key": "001-self-bootstrap-harness",
+      "title": "Self-Bootstrap Harness",
+      "epoch_id": "E001",
+      "created_at": "2026-03-05T11:20:00-08:00",
+      "last_worked_at": "2026-03-05T12:08:00-08:00",
+      "status": "done",
+      "kind": "normal",
+      "priority_override": null,
+      "blocked_reason": null,
+      "prd_path": "tasks/prd-ralph-harness.md",
+      "spec_path": "specs/001-self-bootstrap-harness/spec.md",
+      "plan_path": "specs/001-self-bootstrap-harness/plan.md",
+      "tasks_path": "specs/001-self-bootstrap-harness/tasks.md",
+      "latest_report_path": ".ralph/reports/bootstrap-20260305/release.md",
+      "branch_name": "codex/001-self-bootstrap-harness",
+      "base_branch": "main",
+      "pr_number": null,
+      "pr_url": null,
+      "pr_state": null,
+      "merge_commit": null,
+      "task_summary": {
+        "total": 9,
+        "done": 9,
+        "in_progress": 0,
+        "blocked": 0
+      },
+      "next_task_id": null
+    }
+  ]
+}

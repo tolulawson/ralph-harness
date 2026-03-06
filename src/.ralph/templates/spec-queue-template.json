@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "queue_policy": {
+    "selection": "fifo",
+    "preemption": "emergency_only"
+  },
+  "active_spec_id": "{{active_spec_id}}",
+  "resume_spec_id": "{{resume_spec_id}}",
+  "specs": [
+    {
+      "spec_id": "{{spec_id}}",
+      "spec_slug": "{{spec_slug}}",
+      "spec_key": "{{spec_key}}",
+      "title": "{{title}}",
+      "epoch_id": "{{epoch_id}}",
+      "created_at": "{{created_at}}",
+      "last_worked_at": "{{last_worked_at}}",
+      "status": "{{status}}",
+      "kind": "{{kind}}",
+      "priority_override": null,
+      "blocked_reason": null,
+      "prd_path": "tasks/prd-{{project_slug}}.md",
+      "spec_path": "specs/{{spec_key}}/spec.md",
+      "plan_path": "specs/{{spec_key}}/plan.md",
+      "tasks_path": "specs/{{spec_key}}/tasks.md",
+      "latest_report_path": ".ralph/reports/{{run_id}}/release.md",
+      "branch_name": "codex/{{spec_key}}",
+      "base_branch": "{{base_branch}}",
+      "pr_number": null,
+      "pr_url": null,
+      "pr_state": null,
+      "merge_commit": null,
+      "task_summary": {
+        "total": 0,
+        "done": 0,
+        "in_progress": 0,
+        "blocked": 0
+      },
+      "next_task_id": null
+    }
+  ]
+}

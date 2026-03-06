@@ -1,0 +1,34 @@
+{
+  "schema_version": "2.0.0",
+  "project_name": "ralph-harness",
+  "active_epoch_id": "E001",
+  "active_spec_id": "001",
+  "active_spec_key": "001-self-bootstrap-harness",
+  "active_task_id": "001-T009",
+  "current_phase": "complete",
+  "task_status": "done",
+  "assigned_role": "orchestrator",
+  "current_branch": "codex/001-self-bootstrap-harness",
+  "current_run_id": "bootstrap-20260305",
+  "active_pr_number": null,
+  "active_pr_url": null,
+  "queue_head_spec_id": null,
+  "resume_spec_id": null,
+  "interruption_state": null,
+  "last_event_id": "evt-0008",
+  "last_report_path": ".ralph/reports/bootstrap-20260305/release.md",
+  "last_verified_at": "2026-03-05T12:08:00-08:00",
+  "blocked_reason": null,
+  "failure_count": 0,
+  "next_action": "Seed the next numbered spec in a target project, or install this harness into another repository and start its FIFO queue.",
+  "queue_snapshot": [
+    {
+      "spec_id": "001",
+      "spec_key": "001-self-bootstrap-harness",
+      "epoch_id": "E001",
+      "status": "done",
+      "branch_name": "codex/001-self-bootstrap-harness",
+      "pr_number": null
+    }
+  ]
+}

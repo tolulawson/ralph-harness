@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ralph Plan"
+  short_description: "Create spec, plan, and tasks for this repo"
+  default_prompt: "Use $ralph-plan to turn the current PRD or feature brief into Ralph planning artifacts for this repository."
+
+policy:
+  allow_implicit_invocation: false

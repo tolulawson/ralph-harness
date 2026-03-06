@@ -1,0 +1,34 @@
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+
+[agents]
+max_threads = 4
+max_depth = 8
+
+[agents.orchestrator]
+config_file = "agents/orchestrator.toml"
+
+[agents.prd]
+config_file = "agents/prd.toml"
+
+[agents.specify]
+config_file = "agents/specify.toml"
+
+[agents.plan]
+config_file = "agents/plan.toml"
+
+[agents.task_gen]
+config_file = "agents/task-gen.toml"
+
+[agents.implement]
+config_file = "agents/implement.toml"
+
+[agents.review]
+config_file = "agents/review.toml"
+
+[agents.verify]
+config_file = "agents/verify.toml"
+
+[agents.release]
+config_file = "agents/release.toml"
