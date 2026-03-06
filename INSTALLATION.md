@@ -22,9 +22,9 @@ After installation, the target repository should contain:
 - the harness constitution
 - the Codex control plane
 - repo-local role skills
-- seed runtime state, queue, logs, reports, and templates
+- neutral seed runtime state and templates
+- generated runtime tracking files, logs, and report directories
 - project-specific policy
-- starter task tracking files
 - a starter spec register
 
 ## Installable Skills
@@ -57,7 +57,8 @@ From inside the target repository, ask Codex to use `src/` as the source templat
 Use /Users/tolu/Desktop/dev/ralph-harness/src as the scaffold source.
 Install the Codex-native harness into this repository using src/install-manifest.txt as the copy contract.
 Preserve the existing AGENTS.md if one already exists and append a Ralph harness section that tells Codex to read .ralph/constitution.md, .ralph/policy/project-policy.md, .ralph/state/workflow-state.json, .ralph/state/spec-queue.json, and the latest report.
-Copy only the manifest-listed control-plane files, runtime skills, seed state files, and templates.
+Copy only the manifest-listed control-plane files, runtime skills, neutral seed state files, and templates.
+Then create the generated runtime files listed in src/generated-runtime-manifest.txt.
 Do not copy the source repo's dogfood runtime logs, reports, PRD, or numbered spec history.
 Adapt the constitution and project policy for this repo, preserve existing code, create the project PRD, decompose it into epochs and numbered specs, and seed the initial FIFO spec queue.
 ```
@@ -67,13 +68,17 @@ Adapt the constitution and project policy for this repo, preserve existing code,
 From the parent directory of the target repository:
 
 ```bash
-rsync -av \
-  --exclude '.git' \
-  /Users/tolu/Desktop/dev/ralph-harness/src/ \
-  /path/to/target-repo/
+SOURCE_REPO=/Users/tolu/Desktop/dev/ralph-harness
+TARGET_REPO=/path/to/target-repo
+
+while IFS= read -r path; do
+  [[ -z "$path" || "$path" == \#* ]] && continue
+  mkdir -p "$TARGET_REPO/$(dirname "$path")"
+  rsync -a "$SOURCE_REPO/src/$path" "$TARGET_REPO/$path"
+done < "$SOURCE_REPO/src/install-manifest.txt"
 ```
 
-Then review [src/install-manifest.txt](/Users/tolu/Desktop/dev/ralph-harness/src/install-manifest.txt) and adapt the target repository before first use.
+Then create the runtime files listed in [src/generated-runtime-manifest.txt](/Users/tolu/Desktop/dev/ralph-harness/src/generated-runtime-manifest.txt) and adapt the target repository before first use.
 
 ## What Gets Copied
 
@@ -87,12 +92,17 @@ Copy only the manifest-listed scaffold paths from `src/`:
 - `.ralph/policy/`
 - `.ralph/state/`
 - `.ralph/templates/`
-- `.ralph/logs/`
-- `.ralph/reports/`
-- `.ralph/summaries/`
+- `specs/INDEX.md`
+
+## What Gets Generated After Copy
+
+After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](/Users/tolu/Desktop/dev/ralph-harness/src/generated-runtime-manifest.txt):
+
 - `tasks/todo.md`
 - `tasks/lessons.md`
-- `specs/INDEX.md`
+- `.ralph/logs/events.jsonl`
+- `.ralph/reports/`
+- `.ralph/summaries/`
 
 ## What Must Not Be Copied
 
@@ -131,7 +141,8 @@ After copying from `src/`, rewrite:
 - `.ralph/state/spec-queue.json`
 - `.ralph/state/workflow-state.md`
 - `specs/INDEX.md`
-- `tasks/todo.md`
+- generated `tasks/todo.md`
+- generated `tasks/lessons.md`
 
 Set at minimum:
 
@@ -149,14 +160,15 @@ Set at minimum:
 When an LLM installs this harness into a new or existing project, it should:
 
 1. copy the manifest-listed scaffold from `src/`
-2. merge or append the AGENTS loader instructions if the project already has an `AGENTS.md`
-3. preserve the target repo’s existing product code
-4. adapt `.ralph/constitution.md` and `.ralph/policy/project-policy.md`
-5. rewrite the workflow state and spec queue files for the target project
-6. create the project PRD
-7. create the epoch map and numbered spec queue
-8. create the first numbered spec, plan, and task list
-9. append the initial events and reports
+2. create the generated runtime files from `src/generated-runtime-manifest.txt`
+3. merge or append the AGENTS loader instructions if the project already has an `AGENTS.md`
+4. preserve the target repo’s existing product code
+5. adapt `.ralph/constitution.md` and `.ralph/policy/project-policy.md`
+6. rewrite the workflow state and spec queue files for the target project
+7. create the project PRD
+8. create the epoch map and numbered spec queue
+9. create the first numbered spec, plan, and task list
+10. append the initial events and reports
 
 ## Verification After Installation
 
@@ -168,8 +180,8 @@ At the end of setup, verify:
 - `.ralph/constitution.md` exists and matches the intended harness doctrine for the target project
 - `.ralph/state/workflow-state.json` exists and matches the target project
 - `.ralph/state/spec-queue.json` exists and matches the target project
-- `.ralph/state/workflow-state.md` mirrors the JSON state
-- `specs/INDEX.md` mirrors the queue semantically
+- `.ralph/state/workflow-state.md` matches the JSON state
+- `specs/INDEX.md` matches the queue semantically
 - the target repo did not receive this source repo’s dogfood PRD, numbered spec history, reports, or event log
 
 ## Final Result

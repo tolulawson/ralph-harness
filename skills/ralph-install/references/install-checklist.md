@@ -15,11 +15,11 @@ During installation, make sure Codex:
    - `.ralph/policy/*`
    - `.ralph/state/*`
    - `.ralph/templates/*`
-   - `.ralph/logs/*`
-   - `.ralph/summaries/*`
-6. preserves and appends to an existing `AGENTS.md`
-7. does not copy the source repo's root dogfood logs, reports, PRD, or numbered spec history
-8. rewrites workflow state, spec queue, and policy for the target project
-9. creates the first project PRD with epoch framing
-10. seeds the numbered spec queue and `specs/INDEX.md`
-11. appends initial reports and events
+   - `specs/INDEX.md`
+6. generates the runtime files listed in `src/generated-runtime-manifest.txt`
+7. preserves and appends to an existing `AGENTS.md`
+8. does not copy the source repo's root dogfood logs, reports, TODOs, lessons, PRD, or numbered spec history
+9. rewrites workflow state, spec queue, and policy for the target project
+10. creates the first project PRD with epoch framing
+11. seeds the numbered spec queue and `specs/INDEX.md`
+12. appends initial reports and events

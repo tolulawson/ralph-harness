@@ -2,7 +2,9 @@
 
 ## Mission
 
-This repository is a reference template and installation guide for a Codex-native Ralph harness that runs a durable queue-driven workflow:
+This document is part of the generic Ralph harness scaffold installed into a target repository.
+
+The harness runs a durable queue-driven workflow:
 
 - the parent agent owns orchestration
 - PRD work defines epochs and feature themes
@@ -23,16 +25,15 @@ Interpret the harness in this order:
 
 `AGENTS.md` is only the Codex entrypoint that tells Codex where to read the real operating doctrine.
 
-This repository itself is primarily a source template for other projects. Its local artifacts are examples of the expected harness shape rather than the main long-running workload.
+After installation, the target repository root is the live harness runtime.
 
-External named entry points may also exist via distributable source skills:
+The public source skills used to install or bootstrap the harness live in the source repository, not inside the installed runtime. The installed runtime uses the role skills under `.agents/skills/`.
 
-- `ralph-install`
-- `ralph-prd`
-- `ralph-plan`
-- `ralph-execute`
+## Source Scaffold Contract
 
-Those source skills are distinct from the runtime role skills under `.agents/skills/`.
+- This scaffold is generic and should be adapted to the target project during installation.
+- Runtime records such as `tasks/todo.md`, `tasks/lessons.md`, `.ralph/logs/events.jsonl`, and `.ralph/reports/` are generated during installation or first run.
+- Project-specific PRDs, specs, tasks, reports, and event history belong to the target repository runtime, not to the scaffold source.
 
 ## Core Workflow
 
@@ -76,10 +77,12 @@ Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 
 - `.ralph/state/workflow-state.json` is the canonical machine-readable runtime state.
 - `.ralph/state/spec-queue.json` is the canonical machine-readable spec queue and spec-state registry.
-- `.ralph/state/workflow-state.md` is a human mirror and must agree with the JSON state.
+- `.ralph/state/workflow-state.md` is a human-readable companion file and must agree with the JSON state.
 - `specs/INDEX.md` is a human-readable projection of the spec queue.
 - `tasks/`, `specs/`, `.ralph/reports/`, and `.ralph/logs/events.jsonl` are part of the durable memory of the harness.
 - do not rely on conversational memory when a file can carry the state.
+
+Only neutral seed state and installable contracts belong in the scaffold state and spec files. Project-specific runtime records are created after installation.
 
 ## Resume Order
 

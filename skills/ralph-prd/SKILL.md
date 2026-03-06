@@ -9,7 +9,7 @@ Generate or update a Ralph-style project PRD for the current repository without 
 
 Use this as the direct public entry point for shaping work before planning or execution.
 
-In this source repository, the root `tasks/` and `specs/` files are dogfood runtime artifacts. The installable scaffold lives under `src/`.
+In this source repository, the root `tasks/` and `specs/` files are dogfood runtime artifacts. The installable scaffold lives under `src/`, and target runtime records are created after installation rather than copied from the scaffold history.
 
 ## Use When
 

@@ -1,0 +1,6 @@
+# Runtime files and directories created in the target repository after the scaffold is copied
+tasks/todo.md
+tasks/lessons.md
+.ralph/logs/events.jsonl
+.ralph/reports/
+.ralph/summaries/

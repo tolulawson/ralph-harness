@@ -13,3 +13,6 @@
 - Model the durable execution queue at the numbered spec level, not the feature-slug level. PRDs define epochs, epochs group specs, and the orchestrator advances one numbered spec at a time through branch, review, verification, and PR completion.
 - When the user corrects wording in a documentation request, preserve the intended concept in the artifact and avoid echoing the typo back into repo-facing language.
 - Keep `src/` as the only installable scaffold source and keep the repo root as the live dogfood runtime. Installation flows should follow `src/install-manifest.txt` and must never copy the root runtime history into target projects.
+- Treat `src/` as shipped output, not as the workshop. Do not store this repository's own TODOs, lessons, event logs, or bootstrap work records inside `src/`; those belong at the root dogfood layer and target runtime records should be generated during install or first run.
+- Root `AGENTS.md` and root `.ralph/constitution.md` must describe the fixed ground truth of this source repository. Do not blur source-repo truth with generic installed-scaffold language; let the `src/` copies stay generic and adapt them during installation.
+- Do not maintain an automatic source-to-root update model. `src/` stays pure, and root changes happen only when explicitly requested for the dogfood runtime or source-repo documents.

@@ -9,7 +9,7 @@ Generate queue-ready planning artifacts for a Ralph-managed project without star
 
 Use this as the public planning entry point after requirements are understood.
 
-In this source repository, the root runtime artifacts are dogfood examples. Installed target repos should use their own copied scaffold from `src/`.
+In this source repository, the root runtime artifacts are dogfood examples. Installed target repos should use their own copied scaffold from `src/` and generate their own runtime records after installation.
 
 ## Use When
 

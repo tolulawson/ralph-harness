@@ -23,11 +23,11 @@ This is the main external entry point for adopting the harness in a target repos
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
 - `.ralph/templates/*`
-- `.ralph/logs/*`
 - `.codex/config.toml`
 - `agents/*.toml`
 - `.agents/skills/*`
-- starter `tasks/` and `specs/` artifacts for the target project
+- neutral seed `specs/INDEX.md`
+- generated runtime files listed in `src/generated-runtime-manifest.txt`
 
 ## Workflow
 
@@ -36,24 +36,26 @@ This is the main external entry point for adopting the harness in a target repos
 3. Treat `src/` as the only installable scaffold root.
 4. Read `src/install-manifest.txt`.
 5. Copy only the manifest-listed scaffold paths into the current repository.
-6. If the target repo already has `AGENTS.md`, preserve it and append a short Ralph harness loader section that tells Codex to read:
+6. Read `src/generated-runtime-manifest.txt`.
+7. Generate the runtime files and directories listed there for the target repository.
+8. If the target repo already has `AGENTS.md`, preserve it and append a short Ralph harness loader section that tells Codex to read:
    - `.ralph/constitution.md`
    - `.ralph/policy/project-policy.md`
    - `.ralph/state/workflow-state.json`
    - `.ralph/state/spec-queue.json`
    - the latest report referenced by `last_report_path`
-7. Install the control-plane files, runtime contracts, and runtime role skills from `src/`.
-8. Do not copy the source repo's root dogfood logs, reports, PRD, or numbered spec history.
-9. Rewrite the installed state files so they reflect the target project rather than the scaffold seed.
-10. Adapt `.ralph/constitution.md` and `.ralph/policy/project-policy.md` to the target repo's workflow.
-11. Create the first real project PRD, epoch framing, numbered spec register, and initial tasks.
-12. Append the initial event and report trail for the target project.
+9. Install the control-plane files, runtime contracts, and runtime role skills from `src/`.
+10. Do not copy the source repo's root dogfood logs, reports, TODOs, lessons, PRD, or numbered spec history.
+11. Rewrite the installed state files so they reflect the target project rather than the scaffold seed.
+12. Adapt `.ralph/constitution.md` and `.ralph/policy/project-policy.md` to the target repo's workflow.
+13. Create the first real project PRD, epoch framing, numbered spec register, and initial tasks.
+14. Append the initial event and report trail for the target project.
 
 ## Outputs
 
 - installed harness scaffold from `src/` in the current repository
 - merged or updated `AGENTS.md`
-- initialized `.ralph/` runtime structure
+- initialized `.ralph/` runtime structure and generated runtime records
 - initialized target-project PRD, spec queue, and numbered spec artifacts
 
 ## References
@@ -67,6 +69,7 @@ This is the main external entry point for adopting the harness in a target repos
 At the end of installation:
 
 - verify the harness files exist in the target repo
+- verify the generated runtime files from `src/generated-runtime-manifest.txt` exist in the target repo
 - verify the loader points to the constitution, policy, workflow state, spec queue, and latest report
 - verify the target project has its first real PRD, spec queue, and numbered spec set
 - remind the user: `Restart Codex to pick up new skills.` if this skill was newly installed globally

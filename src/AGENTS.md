@@ -1,6 +1,8 @@
 # Codex Loader For Ralph Harness
 
-This repository is the reference source for a Codex-native Ralph harness and contains example artifacts that demonstrate the intended queue-driven workflow.
+This file is part of the generic Ralph harness scaffold that gets installed into a target repository.
+
+All paths below are relative to the target repository root, which becomes the live harness runtime after installation.
 
 ## Read Order
 
@@ -28,5 +30,7 @@ Before doing substantial work, read these files in order:
 ## Operating Rule
 
 Do not treat conversational memory as the source of truth when the harness files already contain the needed state or policy.
+
+The repository root is the harness work area after installation.
 
 If this repository is installed into a project that already has its own `AGENTS.md`, keep that file and append a short Ralph harness section that points Codex to the files listed above.

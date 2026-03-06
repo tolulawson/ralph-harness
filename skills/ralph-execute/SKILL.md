@@ -9,7 +9,7 @@ Resume and advance an already-installed Ralph harness in the current repository.
 
 This skill does not install the harness. It assumes the current repository already contains the Ralph harness scaffold.
 
-In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are dogfood runtime artifacts. Target repos should reach the same shape after installing from `src/`.
+In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are dogfood runtime artifacts. The shipped scaffold under `src/` stays cleaner than the root runtime, and target runtime records are generated after installation or first run.
 
 ## Use When
 

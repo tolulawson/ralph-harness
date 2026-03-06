@@ -9,7 +9,7 @@ This repository has three jobs at once:
 The important separation is:
 
 - `src/` is the canonical scaffold that gets installed into other projects
-- repo root is the live Ralph-managed project for this repository
+- repo root is the workshop and live Ralph-managed dogfood project for this repository
 - `skills/` stays at repo root as the public entry surface for installing or invoking the harness
 
 ## Objective
@@ -27,7 +27,7 @@ Use this repository when you want Codex to install an orchestrated coding system
 - standardized handoff reports in `.ralph/reports/<run-id>/`
 - repeatable planning and execution artifacts in `tasks/` and `specs/<spec-id>-<slug>/`
 
-Target repositories should install the scaffold from `src/`, then maintain their own live runtime data locally.
+Target repositories should install the scaffold from `src/`, then generate and maintain their own live runtime data locally.
 
 ## How The Harness Works
 
@@ -68,13 +68,13 @@ Each spec is the execution unit. The orchestrator:
 skills/                           Public source skills
 src/                              Canonical installable scaffold
 src/install-manifest.txt          Install contract for target repos
+src/generated-runtime-manifest.txt Runtime files created after install
 src/AGENTS.md                     Scaffold loader copied into target repos
 src/.codex/                       Scaffold role declarations
 src/agents/                       Scaffold role configs
 src/.agents/skills/               Scaffold runtime role skills
-src/.ralph/                       Scaffold doctrine, policy, templates, seed state
-src/tasks/                        Scaffold starter task files
-src/specs/INDEX.md                Scaffold starter spec register
+src/.ralph/                       Scaffold doctrine, policy, templates, neutral seed state
+src/specs/INDEX.md                Neutral seed spec register
 
 AGENTS.md                         Root dogfood loader
 .codex/                           Root dogfood role declarations
@@ -97,9 +97,17 @@ The repository intentionally keeps these layers separate:
 
 That means:
 
-- `src/` contains seed state and starter runtime files
+- `src/` contains installable scaffold files, templates, and neutral seed state
+- `src/` does not carry this repository's TODOs, lessons, event history, or bootstrap work records
 - repo root contains this repository’s real event log, real reports, real numbered spec history, and real queue state
 - target repos should never receive the root dogfood history
+- target runtime records such as `tasks/todo.md`, `tasks/lessons.md`, and `.ralph/logs/events.jsonl` are generated after the scaffold is copied
+
+When improving the harness itself in this repository:
+
+- edit scaffold behavior in `src/` first
+- keep root runtime records separate from shipped scaffold output
+- apply root updates only when the task explicitly requests changes to the dogfood runtime or source-repo documents
 
 ## External Entry Points
 
@@ -136,6 +144,7 @@ In short:
 - install the public `ralph-*` skills via a third-party skill installer when you want explicit named entry points
 - treat `src/` as the only installable scaffold source
 - copy only the manifest-listed scaffold paths from `src/install-manifest.txt`
+- generate the runtime files listed in `src/generated-runtime-manifest.txt`
 - keep the repo root runtime history out of target projects
 - reset the workflow state and spec queue for the target project
 - create the initial project PRD, epoch map, numbered specs, and tasks

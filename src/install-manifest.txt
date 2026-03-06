@@ -7,18 +7,7 @@ agents/
 .ralph/policy/
 .ralph/state/
 .ralph/templates/
-.ralph/logs/
-.ralph/reports/
-.ralph/summaries/
-tasks/todo.md
-tasks/lessons.md
 specs/INDEX.md
 
-# Root dogfood runtime paths in this repository (never copied from repo root)
-# .ralph/logs/events.jsonl
-# .ralph/reports/bootstrap-20260305/
-# .ralph/state/workflow-state.json
-# .ralph/state/spec-queue.json
-# .ralph/state/workflow-state.md
-# tasks/prd-ralph-harness.md
-# specs/001-self-bootstrap-harness/
+# Runtime records created after scaffold copy are listed in `src/generated-runtime-manifest.txt`.
+# Root dogfood runtime paths in this repository are never copied into target repos.

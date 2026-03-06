@@ -1,4 +1,4 @@
-# Ralph Harness TODO
+# Harness TODO
 
 ## Plan
 
@@ -10,5 +10,4 @@
 
 ## Review
 
-- Installation scaffold seeded from `src/`.
-- Replace this starter list with the target project's real work plan as soon as installation finishes.
+- Replace this template with the target project's actual work log after installation.

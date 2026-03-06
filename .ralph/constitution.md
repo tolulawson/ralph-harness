@@ -2,7 +2,7 @@
 
 ## Mission
 
-This repository is a reference template and installation guide for a Codex-native Ralph harness that runs a durable queue-driven workflow:
+This repository is the source repository and reference implementation for a Codex-native Ralph harness that runs a durable queue-driven workflow:
 
 - the parent agent owns orchestration
 - PRD work defines epochs and feature themes
@@ -10,6 +10,12 @@ This repository is a reference template and installation guide for a Codex-nativ
 - tasks live inside a spec-owned lifecycle
 - each spec moves through branch and GitHub PR execution before the queue advances
 - repo files are the source of truth
+
+This repository's structure is fixed:
+
+- `src/` is the generic scaffold shipped to other projects
+- repo root `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `tasks/`, and `specs/` are this repository's dogfood runtime and development records
+- root `skills/` is the public source-skill entry surface
 
 ## Constitutional Priority
 
@@ -23,9 +29,9 @@ Interpret the harness in this order:
 
 `AGENTS.md` is only the Codex entrypoint that tells Codex where to read the real operating doctrine.
 
-This repository itself is primarily a source template for other projects. Its local artifacts are examples of the expected harness shape rather than the main long-running workload.
+In this source repository, scaffold behavior is edited in `src/` first. The repository root is the workshop and dogfood runtime for building and validating that scaffold.
 
-External named entry points may also exist via distributable source skills:
+External named entry points exist via distributable source skills at repository root:
 
 - `ralph-install`
 - `ralph-prd`
@@ -33,6 +39,14 @@ External named entry points may also exist via distributable source skills:
 - `ralph-execute`
 
 Those source skills are distinct from the runtime role skills under `.agents/skills/`.
+
+## Source Scaffold Contract
+
+- `src/` is the clean installable scaffold output
+- procedural source-repo work tracking does not belong in `src/`
+- target runtime records such as `tasks/todo.md`, `tasks/lessons.md`, `.ralph/logs/events.jsonl`, and `.ralph/reports/` are generated during installation or first run
+- changes to `src/` do not imply root dogfood-runtime changes; apply root updates only when they are explicitly requested
+- root `AGENTS.md` and root `.ralph/constitution.md` remain source-repo truth documents and are maintained directly for this repository
 
 ## Core Workflow
 
@@ -76,10 +90,12 @@ Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 
 - `.ralph/state/workflow-state.json` is the canonical machine-readable runtime state.
 - `.ralph/state/spec-queue.json` is the canonical machine-readable spec queue and spec-state registry.
-- `.ralph/state/workflow-state.md` is a human mirror and must agree with the JSON state.
+- `.ralph/state/workflow-state.md` is a human-readable companion file and must agree with the JSON state.
 - `specs/INDEX.md` is a human-readable projection of the spec queue.
 - `tasks/`, `specs/`, `.ralph/reports/`, and `.ralph/logs/events.jsonl` are part of the durable memory of the harness.
 - do not rely on conversational memory when a file can carry the state.
+
+Only neutral seed state and installable contracts belong in `src/.ralph/state/` and `src/specs/`. Development records for this source repository stay at root.
 
 ## Resume Order
 

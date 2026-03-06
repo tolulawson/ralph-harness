@@ -1,6 +1,14 @@
-# Codex Loader For Ralph Harness
+# Codex Loader For Ralph Harness Source Repo
 
-This repository is the reference source for a Codex-native Ralph harness and contains example artifacts that demonstrate the intended queue-driven workflow.
+This repository is the source repository for the Codex-native Ralph harness.
+
+Its ground truth is fixed:
+
+- `src/` contains the generic scaffold that gets installed into other projects
+- repo root contains this repository's own dogfood runtime and development records
+- `skills/` at repo root is the public entry surface for installing or invoking the harness
+
+All paths below are relative to this repository root, which is the live dogfood runtime for this source repository.
 
 ## Read Order
 
@@ -16,6 +24,11 @@ Before doing substantial work, read these files in order:
 8. `tasks/todo.md`
 9. a recent tail of `.ralph/logs/events.jsonl`
 
+When the task is about improving the shipped harness scaffold, also read:
+
+10. `src/install-manifest.txt`
+11. `src/generated-runtime-manifest.txt`
+
 ## Purpose Of This File
 
 `AGENTS.md` is the Codex-facing loader. It is intentionally thin.
@@ -28,5 +41,11 @@ Before doing substantial work, read these files in order:
 ## Operating Rule
 
 Do not treat conversational memory as the source of truth when the harness files already contain the needed state or policy.
+
+- make harness and scaffold changes in `src/` first
+- treat root `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `tasks/`, and `specs/` as this repository's dogfood runtime records unless the task explicitly targets them
+- do not change the root dogfood runtime just because `src/` changed; apply root changes only when explicitly requested
+
+The root `AGENTS.md` and root `.ralph/constitution.md` describe this source repository itself. The copies shipped from `src/` are generic installed-harness documents and may differ from the root source-repo documents.
 
 If this repository is installed into a project that already has its own `AGENTS.md`, keep that file and append a short Ralph harness section that points Codex to the files listed above.

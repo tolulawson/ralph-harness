@@ -24,13 +24,16 @@
 - [x] Add `src/install-manifest.txt`, seed scaffold state, and starter runtime files that can be copied into target projects without copying this repo's dogfood history.
 - [x] Retarget the installer skill and installation guide to install from `src/` only, and document the separation between root dogfood runtime and `src/` scaffold.
 - [x] Run source-vs-dogfood verification to prove the install manifest copies scaffold files but excludes root runtime history.
+- [x] Refactor `src/` into a clean shipped scaffold that excludes authored TODOs, lessons, event logs, and other procedural development records.
+- [x] Update install contracts so `ralph-install` copies only scaffold files from `src/` and generates runtime tracking files in the target repo after install.
+- [x] Add a generated-runtime manifest so install-time file creation is an explicit contract instead of an implicit behavior.
 
 ## Review
 
 - `python3` on this machine is `3.9.6`, so TOML verification used `pip._vendor.tomli` instead of `tomllib`.
 - Verified `.codex/config.toml` and all `agents/*.toml` parse successfully.
 - Verified `.ralph/state/workflow-state.json` and all 8 entries in `.ralph/logs/events.jsonl` parse successfully.
-- Verified `.ralph/state/workflow-state.md` mirrors the key JSON fields for active spec, task, phase, event id, and last report path.
+- Verified `.ralph/state/workflow-state.md` matches the key JSON fields for active spec, task, phase, event id, and last report path.
 - Verified the scaffolded skill and report directories exist with 12 repo-local skills and 8 bootstrap reports.
 - Added `README.md` with setup instructions, usage scenarios, and role/skill invocation guidance for Codex-driven adoption in downstream repos.
 - Verified `README.md` includes the requested setup section plus all four scenarios: bootstrapping a new project, installing the harness into an existing project, developing a new feature, and performing bug fixes.
@@ -49,12 +52,19 @@
 - Migrated the example artifacts to `tasks/prd-ralph-harness.md` plus `specs/001-self-bootstrap-harness/` and refreshed the sample event log and bootstrap reports to match the numbered spec model.
 - Updated the runtime and public skill surfaces so `orchestrator`, `plan`, `release`, `ralph-prd`, `ralph-plan`, and `ralph-execute` all understand epochs, numbered specs, FIFO queue selection, and PR context.
 - Verified `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and all 8 entries in `.ralph/logs/events.jsonl` parse successfully.
-- Verified `.ralph/state/workflow-state.md` mirrors the active spec and last report, and `specs/INDEX.md` mirrors the queue head spec and status semantically.
+- Verified `.ralph/state/workflow-state.md` matches the active spec and last report, and `specs/INDEX.md` matches the queue head spec and status semantically.
 - Verified the scaffold now contains 12 repo-local skills and 8 bootstrap reports.
 - Added a Mermaid flow diagram to `README.md` that shows how the harness loop moves from project PRD through epochs, numbered specs, task execution, review, verification, release, and queue advancement.
 - Split the repository into a canonical scaffold under `src/` and a live dogfood runtime at the repo root.
 - Added `src/install-manifest.txt`, seed state files, starter task files, an empty spec register, and empty runtime directories so installed target repos receive clean scaffold state instead of dogfood history.
-- Verified the mirrored scaffold-control files match between root and `src/` for `AGENTS.md`, `.codex/`, `agents/`, `.agents/skills/`, `.ralph/constitution.md`, `.ralph/policy/`, and `.ralph/templates/`.
 - Verified all 14 manifest-listed `src/` paths exist.
 - Verified a temp install copied clean scaffold files from `src/` and did not leak `tasks/prd-ralph-harness.md`, `specs/001-self-bootstrap-harness/`, or `.ralph/reports/bootstrap-20260305/`.
+- Refined the repository contract so root is the workshop and dogfood runtime, while `src/` is the clean shipped scaffold output for downstream repos.
+- Removed authored procedural files from `src/`, including scaffold TODOs, lessons, and seed event history, while keeping neutral state and template artifacts.
+- Added `src/generated-runtime-manifest.txt` so install-time file creation is an explicit contract instead of an implicit behavior.
+- Updated `README.md`, `INSTALLATION.md`, `AGENTS.md`, both constitutions, and the public `ralph-install` and `ralph-execute` skills to explain that target runtime records are generated after scaffold copy instead of being copied from `src/`.
+- Verified `src/` no longer contains `tasks/todo.md`, `tasks/lessons.md`, or `.ralph/logs/events.jsonl`.
+- Verified the new install manifest omits procedural runtime records and the generated-runtime manifest names the files and directories that `ralph-install` must create after copying the scaffold.
+- Refined the doctrine split after review: root `AGENTS.md` and root `.ralph/constitution.md` now describe this repository's fixed source-repo ground truth, while the `src/` copies are generic installed-harness documents.
+- Removed the old automatic source-to-root update concept so `src/` remains pure and root changes happen only when explicitly requested.
 - Remaining runtime caveat: the declared multi-agent config still needs to be exercised in a live Codex session to prove exact runtime acceptance.
