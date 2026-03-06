@@ -89,4 +89,5 @@
 - Added `scripts/verify-installation-contract.sh` and verified that the install guide, manifests, shipped loader, and `ralph-install` skill are aligned.
 - Refined `INSTALLATION.md` so the guide stands alone: `ralph-install` is now documented only as an optional helper, not as a prerequisite for installation.
 - Removed local filesystem references from `INSTALLATION.md` and replaced them with repo-relative references or the public GitHub repository URL so the guide is portable and does not leak local path details.
+- Replaced the remaining committed local-path links in `README.md` and `INSTALLATION.md` with GitHub repository URLs so repository docs no longer depend on this workspace path layout.
 - Remaining runtime caveat: the declared multi-agent config still needs to be exercised in a live Codex session to prove exact runtime acceptance.

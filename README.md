@@ -137,7 +137,7 @@ These are distinct from the runtime role skills under `.agents/skills/`.
 
 ## Installation
 
-Read [INSTALLATION.md](/Users/tolu/Desktop/dev/ralph-harness/INSTALLATION.md) for the full setup procedure.
+Read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md) for the full setup procedure.
 
 In short:
 
@@ -153,10 +153,10 @@ In short:
 
 The repo root remains a live Ralph-managed project. Its current runtime artifacts are examples of the harness working on itself:
 
-- [tasks/prd-ralph-harness.md](/Users/tolu/Desktop/dev/ralph-harness/tasks/prd-ralph-harness.md)
-- [specs/INDEX.md](/Users/tolu/Desktop/dev/ralph-harness/specs/INDEX.md)
-- [specs/001-self-bootstrap-harness/spec.md](/Users/tolu/Desktop/dev/ralph-harness/specs/001-self-bootstrap-harness/spec.md)
-- [`.ralph/state/workflow-state.json`](/Users/tolu/Desktop/dev/ralph-harness/.ralph/state/workflow-state.json)
-- [`.ralph/state/spec-queue.json`](/Users/tolu/Desktop/dev/ralph-harness/.ralph/state/spec-queue.json)
+- [tasks/prd-ralph-harness.md](https://github.com/tolulawson/ralph-harness/blob/main/tasks/prd-ralph-harness.md)
+- [specs/INDEX.md](https://github.com/tolulawson/ralph-harness/blob/main/specs/INDEX.md)
+- [specs/001-self-bootstrap-harness/spec.md](https://github.com/tolulawson/ralph-harness/blob/main/specs/001-self-bootstrap-harness/spec.md)
+- [`.ralph/state/workflow-state.json`](https://github.com/tolulawson/ralph-harness/blob/main/.ralph/state/workflow-state.json)
+- [`.ralph/state/spec-queue.json`](https://github.com/tolulawson/ralph-harness/blob/main/.ralph/state/spec-queue.json)
 
 Those files are reference dogfood records, not the installable template content.

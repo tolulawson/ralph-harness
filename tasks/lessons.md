@@ -21,3 +21,4 @@
 - Keep exactly one install authority. `INSTALLATION.md` owns the install workflow; manifests are subordinate contracts, and `ralph-install` must stay a thin execution adapter rather than a second install spec.
 - Do not frame `ralph-install` as a prerequisite in `INSTALLATION.md`. The guide itself must be sufficient for installation, and the skill should be documented only as an optional helper.
 - Do not commit local filesystem paths like `/Users/...` into installation docs or prompts. Shipped install instructions must use repo-relative references or the public repository URL so they are portable and do not leak local environment details.
+- In committed docs, prefer GitHub repository URLs for file links over local absolute paths. The docs should work for anyone reading the repo remotely, not just from this workspace.

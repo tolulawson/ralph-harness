@@ -12,17 +12,17 @@ The installable scaffold source is:
 
 The canonical copy contract is:
 
-- [src/install-manifest.txt](src/install-manifest.txt)
+- [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/main/src/install-manifest.txt)
 
 The canonical generated-runtime contract is:
 
-- [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt)
+- [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/main/src/generated-runtime-manifest.txt)
 
 The install authority order is:
 
-1. [INSTALLATION.md](INSTALLATION.md)
-2. [src/install-manifest.txt](src/install-manifest.txt)
-3. [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt)
+1. [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md)
+2. [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/main/src/install-manifest.txt)
+3. [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/main/src/generated-runtime-manifest.txt)
 
 Do not install from the repository root. The root contains this repository’s live dogfood runtime history.
 
@@ -87,7 +87,7 @@ done < "$SOURCE_REPO/src/install-manifest.txt"
 rm -rf "$WORK_DIR"
 ```
 
-Then create the runtime files listed in [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt) and adapt the target repository before first use.
+Then create the runtime files listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/main/src/generated-runtime-manifest.txt) and adapt the target repository before first use.
 
 ## Optional Skill-Driven Entry
 
@@ -112,7 +112,7 @@ Copy only the manifest-listed scaffold paths from `src/`:
 
 ## What Gets Generated After Copy
 
-After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt):
+After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/main/src/generated-runtime-manifest.txt):
 
 - `tasks/todo.md`
 - `tasks/lessons.md`
