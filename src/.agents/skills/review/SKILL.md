@@ -14,6 +14,8 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 - in-scope diff, branch, or PR
 - active task
 - active spec queue entry
+- `.ralph/context/project-truths.md`
+- `.ralph/context/learning-summary.md`
 - related spec and plan
 
 ## Workflow
@@ -23,8 +25,9 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 3. If the target is spec, plan, or tasks quality, use the `analyze` helper skill to perform a read-only consistency pass across the artifacts before writing findings.
 4. If there are no findings, say so explicitly.
 5. Call out residual risks or verification gaps.
-6. Treat the active PR branch as the review unit when PR metadata exists.
-7. Write a review report.
+6. Record any durable anti-patterns, review rules, or repeat failure signatures in `Candidate Learnings`.
+7. Treat the active PR branch as the review unit when PR metadata exists.
+8. Write a review report.
 
 ## Outputs
 

@@ -43,8 +43,12 @@ Those source skills are distinct from the runtime role skills under `.agents/ski
 ## Source Scaffold Contract
 
 - `src/` is the clean installable scaffold output
+- `INSTALLATION.md` is the canonical install source of truth for this source repository
+- `src/install-manifest.txt` and `src/generated-runtime-manifest.txt` are subordinate install subcontracts referenced by `INSTALLATION.md`
+- `skills/ralph-install/SKILL.md` is an execution adapter and must not define install behavior beyond what `INSTALLATION.md` already specifies
 - procedural source-repo work tracking does not belong in `src/`
 - target runtime records such as `tasks/todo.md`, `tasks/lessons.md`, `.ralph/logs/events.jsonl`, and `.ralph/reports/` are generated during installation or first run
+- any change to `src/` that affects installation behavior, copied paths, generated runtime files, loader read order, or required setup steps must update `INSTALLATION.md` in the same change
 - changes to `src/` do not imply root dogfood-runtime changes; apply root updates only when they are explicitly requested
 - root `AGENTS.md` and root `.ralph/constitution.md` remain source-repo truth documents and are maintained directly for this repository
 

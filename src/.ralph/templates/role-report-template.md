@@ -16,6 +16,10 @@
 
 - {{verification_1}}
 
+## Candidate Learnings
+
+- {{learning_1}}
+
 ## Open Issues
 
 - {{open_issue_1}}

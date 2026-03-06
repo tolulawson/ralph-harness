@@ -2,15 +2,27 @@
 
 This guide explains how an LLM or human operator should install the Codex-native Ralph harness into a target repository.
 
+`INSTALLATION.md` is the canonical install source of truth for this repository.
+
 ## Source Of Truth
 
 The installable scaffold source is:
 
-- [src/](/Users/tolu/Desktop/dev/ralph-harness/src)
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness)
 
 The canonical copy contract is:
 
-- [src/install-manifest.txt](/Users/tolu/Desktop/dev/ralph-harness/src/install-manifest.txt)
+- [src/install-manifest.txt](src/install-manifest.txt)
+
+The canonical generated-runtime contract is:
+
+- [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt)
+
+The install authority order is:
+
+1. [INSTALLATION.md](INSTALLATION.md)
+2. [src/install-manifest.txt](src/install-manifest.txt)
+3. [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt)
 
 Do not install from the repository root. The root contains this repository’s live dogfood runtime history.
 
@@ -27,21 +39,13 @@ After installation, the target repository should contain:
 - project-specific policy
 - a starter spec register
 
-## Installable Skills
+## Optional Helper Skill
 
-This repository exposes four distributable source skills under `skills/`:
+No skill is required to install the harness. This document is sufficient on its own.
 
-- `ralph-install`
-- `ralph-prd`
-- `ralph-plan`
-- `ralph-execute`
+If a user prefers a named helper entrypoint, this repository also exposes `ralph-install` under `skills/`. That skill is optional and must follow this guide.
 
-Use:
-
-- `ralph-install` to install the scaffold from `src/`
-- `ralph-prd` to generate or update the project PRD directly
-- `ralph-plan` to create the epoch map, numbered spec queue, and planning artifacts directly
-- `ralph-execute` to resume an already-installed harness in a target repository
+Other public `ralph-*` skills are outside the install contract and are not needed to install the harness.
 
 ## Installation Modes
 
@@ -49,18 +53,17 @@ Use:
 
 This is the intended workflow.
 
-If a third-party skill installer is available, install `ralph-install` first and then invoke it explicitly in the target repo.
-
 From inside the target repository, ask Codex to use `src/` as the source template:
 
 ```text
-Use /Users/tolu/Desktop/dev/ralph-harness/src as the scaffold source.
+Use https://github.com/tolulawson/ralph-harness as the scaffold source repository.
+Use the scaffold under src/ in that repository.
 Install the Codex-native harness into this repository using src/install-manifest.txt as the copy contract.
-Preserve the existing AGENTS.md if one already exists and append a Ralph harness section that tells Codex to read .ralph/constitution.md, .ralph/policy/project-policy.md, .ralph/state/workflow-state.json, .ralph/state/spec-queue.json, and the latest report.
+Preserve the existing AGENTS.md if one already exists and append a Ralph harness section that tells Codex to read .ralph/constitution.md, .ralph/policy/project-policy.md, .ralph/context/project-truths.md, .ralph/context/project-facts.json, .ralph/context/learning-summary.md, .ralph/state/workflow-state.json, .ralph/state/spec-queue.json, the latest report, and only a recent tail of .ralph/context/learning-log.jsonl when diagnosing or promoting learnings.
 Copy only the manifest-listed control-plane files, runtime skills, neutral seed state files, and templates.
 Then create the generated runtime files listed in src/generated-runtime-manifest.txt.
 Do not copy the source repo's dogfood runtime logs, reports, PRD, or numbered spec history.
-Adapt the constitution and project policy for this repo, preserve existing code, create the project PRD, decompose it into epochs and numbered specs, and seed the initial FIFO spec queue.
+Adapt the constitution, project policy, and copied knowledge files for this repo, preserve existing code, create the project PRD, decompose it into epochs and numbered specs, and seed the initial FIFO spec queue.
 ```
 
 ### Option 2: Copy the scaffold manually
@@ -68,17 +71,29 @@ Adapt the constitution and project policy for this repo, preserve existing code,
 From the parent directory of the target repository:
 
 ```bash
-SOURCE_REPO=/Users/tolu/Desktop/dev/ralph-harness
+SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
 TARGET_REPO=/path/to/target-repo
+WORK_DIR="$(mktemp -d)"
+
+git clone --depth=1 "$SOURCE_REPO_URL" "$WORK_DIR/ralph-harness"
+SOURCE_REPO="$WORK_DIR/ralph-harness"
 
 while IFS= read -r path; do
   [[ -z "$path" || "$path" == \#* ]] && continue
   mkdir -p "$TARGET_REPO/$(dirname "$path")"
   rsync -a "$SOURCE_REPO/src/$path" "$TARGET_REPO/$path"
 done < "$SOURCE_REPO/src/install-manifest.txt"
+
+rm -rf "$WORK_DIR"
 ```
 
-Then create the runtime files listed in [src/generated-runtime-manifest.txt](/Users/tolu/Desktop/dev/ralph-harness/src/generated-runtime-manifest.txt) and adapt the target repository before first use.
+Then create the runtime files listed in [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt) and adapt the target repository before first use.
+
+## Optional Skill-Driven Entry
+
+If `ralph-install` is available, you may invoke it as a convenience entrypoint.
+
+That skill is not required for installation and does not replace this guide. It must execute the workflow defined here.
 
 ## What Gets Copied
 
@@ -89,6 +104,7 @@ Copy only the manifest-listed scaffold paths from `src/`:
 - `agents/`
 - `.agents/skills/`
 - `.ralph/constitution.md`
+- `.ralph/context/`
 - `.ralph/policy/`
 - `.ralph/state/`
 - `.ralph/templates/`
@@ -96,7 +112,7 @@ Copy only the manifest-listed scaffold paths from `src/`:
 
 ## What Gets Generated After Copy
 
-After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](/Users/tolu/Desktop/dev/ralph-harness/src/generated-runtime-manifest.txt):
+After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](src/generated-runtime-manifest.txt):
 
 - `tasks/todo.md`
 - `tasks/lessons.md`
@@ -122,14 +138,20 @@ Those belong only to this repository’s own live runtime.
 
 If the target repository already has an `AGENTS.md`, do not replace it wholesale.
 
+## Canonical AGENTS Loader Snippet
+
 Append a short Ralph harness section that says, in substance:
 
 - this repo uses the Ralph harness
 - Codex should read `.ralph/constitution.md`
 - then read `.ralph/policy/project-policy.md`
+- then read `.ralph/context/project-truths.md`
+- then read `.ralph/context/project-facts.json`
+- then read `.ralph/context/learning-summary.md`
 - then read `.ralph/state/workflow-state.json`
 - then read `.ralph/state/spec-queue.json`
 - then read the latest report referenced by `last_report_path`
+- then read only a recent tail of `.ralph/context/learning-log.jsonl` when diagnosing or promoting learnings
 
 The root `AGENTS.md` in the target repo should remain a loader, not the full harness doctrine.
 
@@ -137,6 +159,10 @@ The root `AGENTS.md` in the target repo should remain a loader, not the full har
 
 After copying from `src/`, rewrite:
 
+- `.ralph/context/project-truths.md`
+- `.ralph/context/project-facts.json`
+- `.ralph/context/learning-summary.md`
+- `.ralph/context/learning-log.jsonl`
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
 - `.ralph/state/workflow-state.md`
@@ -147,6 +173,9 @@ After copying from `src/`, rewrite:
 Set at minimum:
 
 - target project name
+- explicit project truths that are already known
+- any applicable structured project facts that can be verified at install time
+- an empty or target-initialized learning summary and learning log
 - active epoch
 - active spec
 - current phase
@@ -163,12 +192,27 @@ When an LLM installs this harness into a new or existing project, it should:
 2. create the generated runtime files from `src/generated-runtime-manifest.txt`
 3. merge or append the AGENTS loader instructions if the project already has an `AGENTS.md`
 4. preserve the target repo’s existing product code
-5. adapt `.ralph/constitution.md` and `.ralph/policy/project-policy.md`
+5. adapt `.ralph/constitution.md`, `.ralph/policy/project-policy.md`, and the copied `.ralph/context/` files for the target project
 6. rewrite the workflow state and spec queue files for the target project
-7. create the project PRD
-8. create the epoch map and numbered spec queue
-9. create the first numbered spec, plan, and task list
-10. append the initial events and reports
+7. seed explicit truths in `.ralph/context/project-truths.md`
+8. seed any known structured facts in `.ralph/context/project-facts.json` and leave unknown or irrelevant facts absent or null
+9. initialize `.ralph/context/learning-summary.md` and `.ralph/context/learning-log.jsonl` for the target project
+10. create the project PRD
+11. create the epoch map and numbered spec queue
+12. create the first numbered spec, plan, and task list
+13. append the initial events and reports
+
+## Canonical Install Checklist
+
+An install is correct only if it does all of the following:
+
+1. copies only the scaffold paths listed in `src/install-manifest.txt`
+2. creates the generated runtime records listed in `src/generated-runtime-manifest.txt`
+3. preserves an existing `AGENTS.md` and appends the Ralph loader snippet from this guide instead of replacing the whole file
+4. adapts `.ralph/constitution.md`, `.ralph/policy/project-policy.md`, and copied `.ralph/context/` files for the target project
+5. rewrites scaffold seed state into target-project state
+6. creates the first real project PRD, epoch map, spec queue, and first numbered spec artifacts
+7. avoids copying this repository's root dogfood runtime files into the target repo
 
 ## Verification After Installation
 
@@ -178,6 +222,10 @@ At the end of setup, verify:
 - `.codex/config.toml` exists and parses
 - `agents/*.toml` exist and parse
 - `.ralph/constitution.md` exists and matches the intended harness doctrine for the target project
+- `.ralph/context/project-truths.md` exists and contains the target project's initial explicit truths or placeholders adapted for that repo
+- `.ralph/context/project-facts.json` exists, parses, and contains only relevant structured facts for the target repo
+- `.ralph/context/learning-summary.md` exists and is initialized for the target repo
+- `.ralph/context/learning-log.jsonl` exists and is valid JSONL
 - `.ralph/state/workflow-state.json` exists and matches the target project
 - `.ralph/state/spec-queue.json` exists and matches the target project
 - `.ralph/state/workflow-state.md` matches the JSON state

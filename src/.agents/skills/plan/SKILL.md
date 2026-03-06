@@ -14,6 +14,9 @@ description: Convert a project PRD or numbered feature specification into an epo
 
 - `tasks/prd-<project>.md`
 - optional active `specs/<spec-key>/spec.md`
+- `.ralph/context/project-truths.md`
+- `.ralph/context/project-facts.json`
+- `.ralph/context/learning-summary.md`
 - `.ralph/state/spec-queue.json`
 - `.ralph/policy/project-policy.md`
 - current harness state
@@ -35,8 +38,9 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - `data-model.md`
    - `contracts/`
    - `quickstart.md`
-7. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
-8. Write the role report and recommend the next role.
+7. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established.
+8. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
+9. Write the role report and recommend the next role.
 
 ## Outputs
 
@@ -47,6 +51,8 @@ If the project PRD is missing, stop and report that the PRD step must complete f
 - `specs/<spec-key>/data-model.md` when needed
 - `specs/<spec-key>/contracts/` when needed
 - `specs/<spec-key>/quickstart.md` when needed
+- optional updates to `.ralph/context/project-truths.md`
+- optional updates to `.ralph/context/project-facts.json`
 - `.ralph/reports/<run-id>/plan.md`
 
 ## Stop Condition

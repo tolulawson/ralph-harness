@@ -19,9 +19,12 @@ Interpret the harness in this order:
 
 1. this constitution
 2. `.ralph/policy/project-policy.md`
-3. `.ralph/state/workflow-state.json`
-4. `.ralph/state/spec-queue.json`
-5. active spec artifacts and latest role reports
+3. `.ralph/context/project-truths.md`
+4. `.ralph/context/project-facts.json`
+5. `.ralph/context/learning-summary.md`
+6. `.ralph/state/workflow-state.json`
+7. `.ralph/state/spec-queue.json`
+8. active spec artifacts and latest role reports
 
 `AGENTS.md` is only the Codex entrypoint that tells Codex where to read the real operating doctrine.
 
@@ -35,31 +38,47 @@ The public source skills used to install or bootstrap the harness live in the so
 - Runtime records such as `tasks/todo.md`, `tasks/lessons.md`, `.ralph/logs/events.jsonl`, and `.ralph/reports/` are generated during installation or first run.
 - Project-specific PRDs, specs, tasks, reports, and event history belong to the target repository runtime, not to the scaffold source.
 
+## Knowledge Layer
+
+- `.ralph/context/project-truths.md` stores explicit human-provided project truths and rules.
+- `.ralph/context/project-facts.json` stores optional structured facts that actually apply to the target project.
+- `.ralph/context/learning-summary.md` stores promoted stable learnings that should become normal harness context.
+- `.ralph/context/learning-log.jsonl` is an append-only ledger for candidate implicit learnings and promotion history.
+- Explicit truths become canonical immediately.
+- Implicit learnings append to the log first and are promoted only after validation or explicit approval.
+
 ## Core Workflow
 
 Follow this loop unless the active role instructions say otherwise:
 
 1. read `.ralph/state/workflow-state.json`
-2. read `.ralph/state/spec-queue.json`
-3. determine the active spec, or activate the oldest ready spec in FIFO order
-4. read the most recent role report referenced by `last_report_path`
-5. read the active spec artifacts under `specs/<spec-id>-<slug>/`
-6. read only a recent tail from `.ralph/logs/events.jsonl` unless diagnosing a blocker
-7. choose the next task inside the active spec in this order:
+2. read `.ralph/policy/project-policy.md`
+3. read `.ralph/context/project-truths.md`
+4. read `.ralph/context/project-facts.json`
+5. read `.ralph/context/learning-summary.md`
+6. read `.ralph/state/spec-queue.json`
+7. determine the active spec, or activate the oldest ready spec in FIFO order
+8. read the most recent role report referenced by `last_report_path`
+9. read the active spec artifacts under `specs/<spec-id>-<slug>/`
+10. read only a recent tail from `.ralph/logs/events.jsonl` unless diagnosing a blocker
+11. read only a recent tail from `.ralph/context/learning-log.jsonl` when diagnosing or promoting learnings
+12. choose the next task inside the active spec in this order:
    - first `in_progress`
    - else first `ready`
    - else first `review_failed`
    - else first `verification_failed`
    - else advance the spec toward PR, merge, or completion
-8. decide the next role from spec status, task status, and next action
-9. run one role-specific unit of work
-10. write or update only the artifacts in scope for that role
-11. write a role report to `.ralph/reports/<run-id>/<role>.md`
-12. append one event to `.ralph/logs/events.jsonl`
-13. update `.ralph/state/workflow-state.json`
-14. update `.ralph/state/spec-queue.json`
-15. regenerate `.ralph/state/workflow-state.md`
-16. regenerate `specs/INDEX.md` when queue-visible metadata changes
+13. decide the next role from spec status, task status, and next action
+14. run one role-specific unit of work
+15. write or update only the artifacts in scope for that role
+16. write a role report to `.ralph/reports/<run-id>/<role>.md`
+17. append one event to `.ralph/logs/events.jsonl`
+18. append candidate learnings to `.ralph/context/learning-log.jsonl`
+19. promote validated learnings into `.ralph/context/learning-summary.md`, `.ralph/context/project-truths.md`, or `.ralph/context/project-facts.json` when justified
+20. update `.ralph/state/workflow-state.json`
+21. update `.ralph/state/spec-queue.json`
+22. regenerate `.ralph/state/workflow-state.md`
+23. regenerate `specs/INDEX.md` when queue-visible metadata changes
 
 ## Planning Hierarchy
 
@@ -78,6 +97,8 @@ Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 - `.ralph/state/workflow-state.json` is the canonical machine-readable runtime state.
 - `.ralph/state/spec-queue.json` is the canonical machine-readable spec queue and spec-state registry.
 - `.ralph/state/workflow-state.md` is a human-readable companion file and must agree with the JSON state.
+- `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, and `.ralph/context/learning-summary.md` are part of the default harness context.
+- `.ralph/context/learning-log.jsonl` is the append-only learning ledger and should be tailed selectively rather than loaded in full.
 - `specs/INDEX.md` is a human-readable projection of the spec queue.
 - `tasks/`, `specs/`, `.ralph/reports/`, and `.ralph/logs/events.jsonl` are part of the durable memory of the harness.
 - do not rely on conversational memory when a file can carry the state.
@@ -88,15 +109,21 @@ Only neutral seed state and installable contracts belong in the scaffold state a
 
 Use this order whenever a fresh Codex run resumes work:
 
-1. `.ralph/state/workflow-state.json`
-2. `.ralph/state/spec-queue.json`
-3. `.ralph/reports/<current-run-id>/` or `last_report_path`
-4. active spec files in `specs/<spec-id>-<slug>/`
-5. `specs/INDEX.md`
-6. active PRD files in `tasks/`
-7. `tasks/todo.md`
-8. recent events from `.ralph/logs/events.jsonl`
-9. older logs only if the recent context is insufficient
+1. `.ralph/constitution.md`
+2. `.ralph/policy/project-policy.md`
+3. `.ralph/context/project-truths.md`
+4. `.ralph/context/project-facts.json`
+5. `.ralph/context/learning-summary.md`
+6. `.ralph/state/workflow-state.json`
+7. `.ralph/state/spec-queue.json`
+8. `.ralph/reports/<current-run-id>/` or `last_report_path`
+9. active spec files in `specs/<spec-id>-<slug>/`
+10. `specs/INDEX.md`
+11. active PRD files in `tasks/`
+12. `tasks/todo.md`
+13. recent events from `.ralph/logs/events.jsonl`
+14. recent learning entries from `.ralph/context/learning-log.jsonl` only when needed
+15. older logs only if the recent context is insufficient
 
 ## Canonical Phases
 
@@ -183,14 +210,14 @@ Repo-local skills live under `.agents/skills/`. Use exactly one primary role ski
 
 Default helper policy:
 
-- `prd`: `reporting`
-- `specify`: `reporting`, `state-sync`
-- `plan`: `reporting`, `state-sync`
+- `prd`: `reporting`, `learning`
+- `specify`: `reporting`, `state-sync`, optional `learning`
+- `plan`: `reporting`, `state-sync`, `learning`
 - `task-gen`: `reporting`
-- `implement`: `reporting` plus optional domain skills
-- `review`: `reporting`, `analyze`
-- `verify`: `reporting` plus optional browser or mobile test skills
-- `release`: `reporting`, `state-sync`
+- `implement`: `reporting`, `learning` plus optional domain skills
+- `review`: `reporting`, `analyze`, `learning`
+- `verify`: `reporting`, `learning` plus optional browser or mobile test skills
+- `release`: `reporting`, `state-sync`, optional `learning`
 
 ## Report Contract
 
@@ -200,10 +227,11 @@ Every role report must include these sections:
 - `Inputs Read`
 - `Artifacts Written`
 - `Verification`
+- `Candidate Learnings`
 - `Open Issues`
 - `Recommended Next Role`
 
-Role reports are the handoff contract for the next fresh run and should name the active spec and active PR context whenever applicable.
+Role reports are the handoff contract for the next fresh run and should name the active spec and active PR context whenever applicable. Candidate learnings must either list concrete observations with evidence or explicitly say `None`.
 
 ## Git And PR Policy
 
@@ -234,6 +262,8 @@ When full runtime verification is unavailable, record the exact limitation rathe
 
 ## Self-Improvement
 
-- record durable corrections in `tasks/lessons.md`
-- update `tasks/todo.md` as work progresses
+- write explicit project rules to `.ralph/context/project-truths.md`
+- append candidate implicit learnings to `.ralph/context/learning-log.jsonl`
+- promote stable learnings into `.ralph/context/learning-summary.md`
+- update `.ralph/context/project-facts.json` only with facts that actually apply to the target project
 - add or refine repo-local skills when repeated work patterns emerge

@@ -4,6 +4,7 @@ AGENTS.md
 agents/
 .agents/skills/
 .ralph/constitution.md
+.ralph/context/
 .ralph/policy/
 .ralph/state/
 .ralph/templates/

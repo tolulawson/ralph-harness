@@ -27,6 +27,15 @@
 - [x] Refactor `src/` into a clean shipped scaffold that excludes authored TODOs, lessons, event logs, and other procedural development records.
 - [x] Update install contracts so `ralph-install` copies only scaffold files from `src/` and generates runtime tracking files in the target repo after install.
 - [x] Add a generated-runtime manifest so install-time file creation is an explicit contract instead of an implicit behavior.
+- [x] Add a knowledge layer to the shipped harness under `src/.ralph/context/` for explicit truths, structured facts, promoted learnings, and append-only learning capture.
+- [x] Update the shipped `src` loader, constitution, policy, install manifest, templates, and runtime skills so the knowledge layer is part of default harness context and role reporting.
+- [x] Verify the new `src`-only learning subsystem with manifest checks, read-order checks, and a temp scaffold inspection without changing root doctrine files.
+- [x] Patch `INSTALLATION.md` so its AGENTS merge guidance, copied-path list, setup/reset steps, and verification checklist match the current `src/` scaffold, including the knowledge layer.
+- [x] Update the root constitution with a source-repo rule that any install-surface change in `src/` must be reflected in `INSTALLATION.md` in the same change.
+- [x] Verify the updated installation guide against `src/install-manifest.txt`, `src/generated-runtime-manifest.txt`, and the shipped loader read order.
+- [x] Make `INSTALLATION.md` the explicit canonical install authority and document the install authority order.
+- [x] Refactor `skills/ralph-install/SKILL.md` into a thin adapter that defers to `INSTALLATION.md` instead of restating install behavior.
+- [x] Remove secondary install-truth references from `skills/ralph-install/` and add a verification script that checks guide, manifests, shipped loader, and install skill stay aligned.
 
 ## Review
 
@@ -67,4 +76,17 @@
 - Verified the new install manifest omits procedural runtime records and the generated-runtime manifest names the files and directories that `ralph-install` must create after copying the scaffold.
 - Refined the doctrine split after review: root `AGENTS.md` and root `.ralph/constitution.md` now describe this repository's fixed source-repo ground truth, while the `src/` copies are generic installed-harness documents.
 - Removed the old automatic source-to-root update concept so `src/` remains pure and root changes happen only when explicitly requested.
+- Added a shipped learning and truth layer under `src/.ralph/context/` with `project-truths.md`, `project-facts.json`, `learning-summary.md`, and `learning-log.jsonl`.
+- Updated the shipped `src` loader, constitution, policy, templates, agent configs, and runtime skills so downstream installs read the knowledge layer by default and role reports include `Candidate Learnings`.
+- Added a shipped `learning` helper skill under `src/.agents/skills/learning/` to classify candidate learnings and decide whether to append, promote, or write directly into truths or facts.
+- Verified the new `src` knowledge files exist, the seeded JSON and JSONL parse successfully, the shipped read order references the new context files, and `src/install-manifest.txt` includes `.ralph/context/`.
+- Patched `INSTALLATION.md` so the documented AGENTS merge guidance, copied-path list, target reset steps, setup flow, and verification checklist all include the shipped `.ralph/context/` knowledge layer.
+- Added a root constitution rule requiring `INSTALLATION.md` to be updated in the same change whenever `src/` installation behavior or copied/generated install surface changes.
+- Verified the revised installation guide now mentions `.ralph/context/`, `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, `.ralph/context/learning-summary.md`, and `.ralph/context/learning-log.jsonl`, matching the shipped scaffold contracts.
+- Declared `INSTALLATION.md` as the canonical install authority, with `src/install-manifest.txt` and `src/generated-runtime-manifest.txt` as subordinate install subcontracts and `skills/ralph-install/SKILL.md` as an execution adapter only.
+- Refactored `skills/ralph-install/SKILL.md` into a thin adapter that points to `INSTALLATION.md` instead of restating copied paths, generated runtime files, and loader behavior.
+- Removed the secondary install-truth reference files under `skills/ralph-install/references/` and kept only the explanatory source-vs-runtime note.
+- Added `scripts/verify-installation-contract.sh` and verified that the install guide, manifests, shipped loader, and `ralph-install` skill are aligned.
+- Refined `INSTALLATION.md` so the guide stands alone: `ralph-install` is now documented only as an optional helper, not as a prerequisite for installation.
+- Removed local filesystem references from `INSTALLATION.md` and replaced them with repo-relative references or the public GitHub repository URL so the guide is portable and does not leak local path details.
 - Remaining runtime caveat: the declared multi-agent config still needs to be exercised in a live Codex session to prove exact runtime acceptance.

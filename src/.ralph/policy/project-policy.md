@@ -48,6 +48,15 @@
 - Use recent events for normal resume.
 - Use older logs only for blocker diagnosis or audit reconstruction.
 
+## Learning Policy
+
+- Explicit human instructions belong in `.ralph/context/project-truths.md`.
+- Candidate implicit learnings append to `.ralph/context/learning-log.jsonl` with evidence and role attribution.
+- Promoted stable learnings belong in `.ralph/context/learning-summary.md`.
+- Structured project facts belong in `.ralph/context/project-facts.json` only when they actually apply to the target repo.
+- Do not invent facts for categories that are not relevant to the project.
+- When a learning is uncertain or one-off, keep it in the append-only log instead of promoting it.
+
 ## Role Policy
 
 - One primary skill per role run.
