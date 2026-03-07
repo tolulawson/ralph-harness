@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Make scripts executable
+        run: chmod +x scripts/verify-installation-contract.sh scripts/verify-upgrade-contract.sh scripts/validate-harness.sh scripts/smoke-test-install-upgrade.sh
+
+      - name: Verify requested tag matches VERSION
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: |
+          CURRENT_TAG="v$(tr -d '[:space:]' < VERSION)"
+          if [[ "$REQUESTED_TAG" != "$CURRENT_TAG" ]]; then
+            echo "Requested tag $REQUESTED_TAG does not match $CURRENT_TAG" >&2
+            exit 1
+          fi
+
+      - name: Validate harness contracts
+        run: scripts/validate-harness.sh
+
+      - name: Confirm CI succeeded for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          sha = os.environ["GITHUB_SHA"]
+          token = os.environ["GH_TOKEN"]
+          url = f"https://api.github.com/repos/{repo}/commits/{sha}/check-runs"
+          raw = subprocess.check_output(
+              [
+                  "curl",
+                  "-fsSL",
+                  "-H",
+                  f"Authorization: Bearer {token}",
+                  "-H",
+                  "Accept: application/vnd.github+json",
+                  url,
+              ]
+          )
+          payload = json.loads(raw)
+          matching = [
+              run for run in payload.get("check_runs", [])
+              if run.get("name") == "validate" and run.get("conclusion") == "success"
+          ]
+          if not matching:
+              raise SystemExit("No successful CI validate check found for this commit.")
+          PY
+
+      - name: Create source bundle
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+        run: git archive --format=tar.gz --output "ralph-harness-${TAG_NAME}.tar.gz" HEAD
+
+      - name: Create annotated tag
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          git push origin "$TAG_NAME"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          gh release create "$TAG_NAME" \
+            "ralph-harness-${TAG_NAME}.tar.gz" \
+            --generate-notes \
+            --title "$TAG_NAME"

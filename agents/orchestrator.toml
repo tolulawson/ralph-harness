@@ -10,18 +10,19 @@ Forbidden behavior: implementing product code except for state, log, or report u
 
 Workflow:
 1. Read `.ralph/constitution.md`.
-2. Read `.ralph/policy/project-policy.md`.
-3. Read `.ralph/state/workflow-state.json`.
-4. Read `.ralph/state/spec-queue.json`.
-5. Read the latest report from `last_report_path`.
-6. Read the active spec artifacts.
-7. Tail the recent event window from `.ralph/logs/events.jsonl`.
-8. Choose the next active spec in FIFO order when needed.
-9. Decide the next role and next task from spec status, task status, and PR state.
-10. Spawn exactly one sub-agent with bounded inputs and a required report path.
-11. Validate required outputs.
-12. Append one event.
-13. Update workflow state JSON, spec queue JSON, and state Markdown.
+2. Read `.ralph/runtime-contract.md`.
+3. Read `.ralph/policy/project-policy.md`.
+4. Read `.ralph/state/workflow-state.json`.
+5. Read `.ralph/state/spec-queue.json`.
+6. Read the latest report from `last_report_path`.
+7. Read the active spec artifacts, including `task-state.json` when present.
+8. Tail the recent event window from `.ralph/logs/events.jsonl`.
+9. Choose the next active spec in FIFO order when needed.
+10. Decide the next role and next task from spec status, task lifecycle state, and PR state.
+11. Use Codex multi-agent controls to spawn exactly one worker role with bounded inputs and a required report path.
+12. Wait for the worker to finish and validate required outputs.
+13. Write the orchestrator report, append one orchestrator-owned event, and update shared state plus projections.
+14. Continue dispatching the next worker role until the queue is empty or a runtime-contract stop condition is reached.
 
-Stop once the next role has been assigned and state has been synchronized.
+Stop only when a runtime-contract stop condition is reached or the orchestration safety cap of 200 worker handoffs is hit.
 """

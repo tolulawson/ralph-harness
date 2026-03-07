@@ -5,7 +5,7 @@ description: Install the Codex-native Ralph harness into the current repository 
 
 # Ralph Install
 
-Install the Codex-native Ralph harness into the current repository using the canonical scaffold under `src/` in `https://github.com/tolulawson/ralph-harness`.
+Install the Codex-native Ralph harness into the current repository using the canonical tagged scaffold under `src/` in `https://github.com/tolulawson/ralph-harness`.
 
 This is the main external entry point for adopting the harness in a target repository.
 
@@ -20,7 +20,7 @@ This is the main external entry point for adopting the harness in a target repos
 ## Workflow
 
 1. Confirm the current repository is the target project and not the source template repo.
-2. Fetch or clone `https://github.com/tolulawson/ralph-harness` as the scaffold source.
+2. Fetch or clone `https://github.com/tolulawson/ralph-harness` at the desired release tag as the scaffold source.
 3. Treat `src/` as the only installable scaffold root.
 4. Read `INSTALLATION.md` first and follow it as the authoritative install workflow.
 5. Use `src/install-manifest.txt` and `src/generated-runtime-manifest.txt` exactly as `INSTALLATION.md` specifies.

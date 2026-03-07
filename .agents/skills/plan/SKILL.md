@@ -28,15 +28,16 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - `.ralph/state/spec-queue.json`
    - `specs/INDEX.md`
    - `specs/<spec-key>/` directories for seeded specs
-4. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
-5. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, and rollout or migration considerations.
-6. Create supporting artifacts only when needed:
+4. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
+5. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
+6. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, and rollout or migration considerations.
+7. Create supporting artifacts only when needed:
    - `research.md`
    - `data-model.md`
    - `contracts/`
    - `quickstart.md`
-7. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
-8. Write the role report and recommend the next role.
+8. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
+9. Write the role report and recommend the next role.
 
 ## Outputs
 

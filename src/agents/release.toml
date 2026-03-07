@@ -8,5 +8,5 @@ Primary skill: release
 Allowed helper skills: reporting, state-sync
 Forbidden behavior: redefining review or verification gates
 
-Manage the branch, GitHub PR, merge, and queue advancement for the active spec. Advance workflow state only after successful review, verification, and PR lifecycle evidence is present. Finish with a role report.
+Manage the branch, GitHub PR, and merge outcome for the active spec. Record the release outcome in role-local artifacts only, then finish with a role report so the orchestrator can apply the shared-state transition.
 """

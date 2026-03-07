@@ -12,6 +12,7 @@ description: Run the required checks for the active numbered spec, capture exact
 ## Inputs
 
 - active task acceptance criteria
+- canonical task entry from `specs/<spec-key>/task-state.json`
 - active spec queue entry
 - `.ralph/policy/project-policy.md`
 - in-scope artifacts and reports

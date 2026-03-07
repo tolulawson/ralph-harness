@@ -10,28 +10,30 @@ The important separation is:
 
 - `src/` is the canonical scaffold that gets installed into other projects
 - repo root is the workshop and live Ralph-managed dogfood project for this repository
-- `skills/` stays at repo root as the public entry surface for installing or invoking the harness
+- `skills/` stays at repo root as the public entry surface for installing, upgrading, or invoking the harness
 
 ## Objective
 
 Use this repository when you want Codex to install an orchestrated coding system into a target project rather than treat that project as a series of one-off chat sessions. The harness gives Codex:
 
 - a thin Codex loader in `AGENTS.md`
-- a durable harness doctrine in `.ralph/constitution.md`
+- a project-specific harness constitution in `.ralph/constitution.md`
+- a generic installed-runtime doctrine in `.ralph/runtime-contract.md`
 - a durable control plane in `.codex/config.toml` and `agents/*.toml`
 - a role-based runtime skill system in `.agents/skills/`
 - a canonical runtime state in `.ralph/state/workflow-state.json`
 - a canonical spec queue in `.ralph/state/spec-queue.json`
+- a canonical per-spec task lifecycle registry in `specs/<spec-id>-<slug>/task-state.json`
 - a human-readable queue projection in `specs/INDEX.md`
 - an append-only audit trail in `.ralph/logs/events.jsonl`
 - standardized handoff reports in `.ralph/reports/<run-id>/`
 - repeatable planning and execution artifacts in `tasks/` and `specs/<spec-id>-<slug>/`
 
-Target repositories should install the scaffold from `src/`, then generate and maintain their own live runtime data locally.
+Target repositories should install or upgrade the scaffold from versioned tags, then generate and maintain their own live runtime data locally.
 
 ## How The Harness Works
 
-The parent Codex agent is the orchestrator. It reads the constitution, project policy, runtime state, spec queue, latest report, active spec files, and a short tail of recent events. It then decides which role should act next and invokes one focused sub-agent.
+The parent Codex agent is the orchestrator. It reads the constitution, runtime contract, project policy, runtime state, spec queue, latest report, active spec files, and a short tail of recent events. It then uses Codex multi-agent controls to spawn one focused worker at a time, wait for the result, validate it, update shared state, and continue until a documented stop condition occurs.
 
 ```mermaid
 flowchart TD
@@ -45,21 +47,22 @@ flowchart TD
     H --> I["Verify role runs required checks"]
     I --> J{"Review and verification pass?"}
     J -- "No" --> G
-    J -- "Yes" --> K["Release role records or updates the GitHub PR and merge outcome"]
+    J -- "Yes" --> K["Release role records the PR or merge outcome"]
     K --> L{"Spec complete and merged?"}
     L -- "No" --> E
     L -- "Yes" --> M["Orchestrator marks the spec done and advances the queue"]
     M --> N{"More ready specs?"}
     N -- "Yes" --> E
-    N -- "No" --> O["Workflow waits for the next PRD or spec"]
+    N -- "No" --> O["Workflow stops when queue is empty or blocked"]
 ```
 
 Each spec is the execution unit. The orchestrator:
 
 - selects the next ready spec in FIFO order
 - selects the next task inside that spec
+- uses `task-state.json` as the canonical task lifecycle record
 - ensures the active branch and active PR match the spec
-- routes work through implement, review, verify, and release
+- routes work through implement, review, verify, and release with exactly one active worker at a time
 - advances the queue only when the spec is done
 
 ## Repository Layout
@@ -69,11 +72,14 @@ skills/                           Public source skills
 src/                              Canonical installable scaffold
 src/install-manifest.txt          Install contract for target repos
 src/generated-runtime-manifest.txt Runtime files created after install
+src/upgrade-manifest.txt          Upgrade-safe overwrite contract
 src/AGENTS.md                     Scaffold loader copied into target repos
 src/.codex/                       Scaffold role declarations
 src/agents/                       Scaffold role configs
 src/.agents/skills/               Scaffold runtime role skills
 src/.ralph/                       Scaffold doctrine, policy, templates, neutral seed state
+src/.ralph/runtime-contract.md    Generic installed-runtime doctrine
+src/.ralph/harness-version.json   Installed-version metadata seed
 src/specs/INDEX.md                Neutral seed spec register
 
 AGENTS.md                         Root dogfood loader
@@ -85,6 +91,8 @@ tasks/                            Root dogfood PRDs, todo tracker, lessons
 specs/                            Root dogfood numbered specs and register
 README.md                         Repository overview
 INSTALLATION.md                   Installation guide
+UPGRADING.md                      Upgrade guide
+VERSION                           Canonical semver source
 ```
 
 ## Source Template Vs Dogfood Runtime
@@ -93,7 +101,7 @@ The repository intentionally keeps these layers separate:
 
 - `src/` is the installable scaffold source of truth
 - repo root is the live dogfood runtime for this repository
-- `skills/` is the public invocation surface used to install or invoke the harness
+- `skills/` is the public invocation surface used to install, upgrade, or invoke the harness
 
 That means:
 
@@ -114,6 +122,7 @@ When improving the harness itself in this repository:
 This repository exposes a small public skill surface under `skills/`:
 
 - `ralph-install`
+- `ralph-upgrade`
 - `ralph-prd`
 - `ralph-plan`
 - `ralph-execute`
@@ -122,6 +131,7 @@ Canonical GitHub source for third-party installation:
 
 - `tolulawson/ralph-harness`
 - `skills/ralph-install`
+- `skills/ralph-upgrade`
 - `skills/ralph-prd`
 - `skills/ralph-plan`
 - `skills/ralph-execute`
@@ -129,25 +139,35 @@ Canonical GitHub source for third-party installation:
 Use them like this:
 
 - use `ralph-install` from a target repository when the harness is not installed yet
+- use `ralph-upgrade` from a target repository when the harness is already installed and you want to move to a newer tagged scaffold release without overwriting project-owned runtime files
 - use `ralph-prd` when you want to create the project PRD and epoch framing directly
 - use `ralph-plan` when you want to seed the numbered spec queue and planning artifacts directly
 - use `ralph-execute` from a target repository when the harness is already installed and you want an explicit named resume entry point
 
 These are distinct from the runtime role skills under `.agents/skills/`.
 
-## Installation
+## Installation And Upgrade
 
 Read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md) for the full setup procedure.
+Read [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/main/UPGRADING.md) for the upgrade procedure.
 
 In short:
 
 - install the public `ralph-*` skills via a third-party skill installer when you want explicit named entry points
+- use the latest stable tag such as `v0.1.0` as the default public install or upgrade reference
 - treat `src/` as the only installable scaffold source
 - copy only the manifest-listed scaffold paths from `src/install-manifest.txt`
 - generate the runtime files listed in `src/generated-runtime-manifest.txt`
+- upgrade only the scaffold-owned paths from `src/upgrade-manifest.txt`
 - keep the repo root runtime history out of target projects
 - reset the workflow state and spec queue for the target project
 - create the initial project PRD, epoch map, numbered specs, and tasks
+
+## Versioning And Releases
+
+The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.1.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
+
+Releases are intentional and manual. CI validates the scaffold, install contract, upgrade contract, and fixture install or upgrade flow before a GitHub release is cut.
 
 ## Dogfood Runtime
 

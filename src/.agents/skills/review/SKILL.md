@@ -13,6 +13,7 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 
 - in-scope diff, branch, or PR
 - active task
+- canonical task entry from `specs/<spec-key>/task-state.json`
 - active spec queue entry
 - `.ralph/context/project-truths.md`
 - `.ralph/context/learning-summary.md`

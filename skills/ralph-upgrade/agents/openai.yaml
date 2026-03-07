@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ralph Upgrade"
+  short_description: "Upgrade an installed Ralph harness here"
+  default_prompt: "Use $ralph-upgrade to upgrade the installed Ralph harness in this repository from the latest tagged scaffold release."
+
+policy:
+  allow_implicit_invocation: false

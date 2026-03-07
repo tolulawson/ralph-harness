@@ -4,6 +4,8 @@ AGENTS.md
 agents/
 .agents/skills/
 .ralph/constitution.md
+.ralph/runtime-contract.md
+.ralph/harness-version.json
 .ralph/context/
 .ralph/policy/
 .ralph/state/

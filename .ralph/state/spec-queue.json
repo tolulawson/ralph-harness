@@ -1,10 +1,10 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "queue_policy": {
     "selection": "fifo",
     "preemption": "emergency_only"
   },
-  "active_spec_id": "001",
+  "active_spec_id": "002",
   "resume_spec_id": null,
   "specs": [
     {
@@ -23,6 +23,7 @@
       "spec_path": "specs/001-self-bootstrap-harness/spec.md",
       "plan_path": "specs/001-self-bootstrap-harness/plan.md",
       "tasks_path": "specs/001-self-bootstrap-harness/tasks.md",
+      "task_state_path": "specs/001-self-bootstrap-harness/task-state.json",
       "latest_report_path": ".ralph/reports/bootstrap-20260305/release.md",
       "branch_name": "codex/001-self-bootstrap-harness",
       "base_branch": "main",
@@ -33,6 +34,38 @@
       "task_summary": {
         "total": 9,
         "done": 9,
+        "in_progress": 0,
+        "blocked": 0
+      },
+      "next_task_id": null
+    },
+    {
+      "spec_id": "002",
+      "spec_slug": "deterministic-orchestration-versioning-and-upgrades",
+      "spec_key": "002-deterministic-orchestration-versioning-and-upgrades",
+      "title": "Deterministic Orchestration, Versioning, and Safe Upgrades",
+      "epoch_id": "E002",
+      "created_at": "2026-03-07T10:10:00-08:00",
+      "last_worked_at": "2026-03-07T12:00:00-08:00",
+      "status": "done",
+      "kind": "normal",
+      "priority_override": null,
+      "blocked_reason": null,
+      "prd_path": "tasks/prd-ralph-harness.md",
+      "spec_path": "specs/002-deterministic-orchestration-versioning-and-upgrades/spec.md",
+      "plan_path": "specs/002-deterministic-orchestration-versioning-and-upgrades/plan.md",
+      "tasks_path": "specs/002-deterministic-orchestration-versioning-and-upgrades/tasks.md",
+      "task_state_path": "specs/002-deterministic-orchestration-versioning-and-upgrades/task-state.json",
+      "latest_report_path": ".ralph/reports/spec002-20260307/orchestrator.md",
+      "branch_name": "codex/002-deterministic-orchestration-versioning-and-upgrades",
+      "base_branch": "main",
+      "pr_number": null,
+      "pr_url": null,
+      "pr_state": null,
+      "merge_commit": null,
+      "task_summary": {
+        "total": 5,
+        "done": 5,
         "in_progress": 0,
         "blocked": 0
       },

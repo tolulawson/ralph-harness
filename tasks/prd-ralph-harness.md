@@ -8,7 +8,7 @@ Create a Codex-native repository pattern that lets a fresh Codex run resume work
 
 - Make the repo itself the durable source of truth for queue state, logs, reports, and task progress.
 - Give Codex enough structure to continue work from a fresh run with bounded context.
-- Keep the harness Codex-native by using `AGENTS.md`, repo-local skills, role configs, GitHub PR metadata, and file artifacts.
+- Keep the harness Codex-native by using `AGENTS.md`, repo-local skills, GitHub Actions, semver tags, GitHub PR metadata, and file artifacts.
 
 ## Epoch Map
 
@@ -18,12 +18,11 @@ Create a Codex-native repository pattern that lets a fresh Codex run resume work
 - Intended specs:
   - `001-self-bootstrap-harness`
 
-### E002: Queue And PR Execution
+### E002: Deterministic Runtime And Release Surface
 
-- Theme: Extend installed target projects with deeper queue automation, PR synchronization, and downstream execution hardening.
+- Theme: Make orchestration deterministic with official Codex multi-agent controls, add canonical task lifecycle state, and add a versioned install, release, and upgrade contract.
 - Intended specs:
-  - `002-spec-queue-runtime`
-  - `003-github-pr-release-loop`
+  - `002-deterministic-orchestration-versioning-and-upgrades`
 
 ## User Stories
 
@@ -61,6 +60,17 @@ Create a Codex-native repository pattern that lets a fresh Codex run resume work
 - [x] Each spec owns its own task list, branch context, and PR metadata.
 - [x] The example artifacts show one completed numbered spec.
 
+### US-004: Version and upgrade the scaffold safely
+
+**Description:** As a maintainer, I want to cut tagged scaffold releases and upgrade installed repos without overwriting project-owned runtime records.
+
+**Acceptance Criteria:**
+
+- [x] The harness has a canonical semver source and tagged release workflow.
+- [x] The harness publishes an upgrade manifest and upgrade guide.
+- [x] The harness records installed version metadata in the target repo.
+- [x] The harness preserves project-owned runtime files during upgrade by default.
+
 ## Functional Requirements
 
 - FR-1: The harness must store canonical runtime state in `.ralph/state/workflow-state.json`.
@@ -71,18 +81,21 @@ Create a Codex-native repository pattern that lets a fresh Codex run resume work
 - FR-6: The harness must provide repo-local skills in `.agents/skills/*`.
 - FR-7: The harness must generate and track numbered specs under `specs/<spec-id>-<slug>/`.
 - FR-8: The harness must record GitHub PR metadata for installed target projects.
+- FR-9: The harness must use official Codex multi-agent features for deterministic worker delegation and waiting.
+- FR-10: The harness must publish tagged scaffold releases with a canonical version source and safe upgrade contract.
 
 ## Non-Goals
 
 - No standalone orchestrator service in v1.
 - No custom MCP server in v1.
 - No requirement to support non-Codex runtimes in v1.
+- No source-repo task to retrofit already-installed target repos automatically.
 
 ## Success Metrics
 
 - A fresh Codex run can identify the current spec, next task, and queue head in under one minute by reading the canonical files.
 - Each role has a single clear artifact contract and a matching report contract.
-- The reference repository leaves a complete, inspectable trail of state, logs, reports, spec index, and review notes.
+- The reference repository leaves a complete, inspectable trail of state, logs, reports, spec index, review notes, and release metadata.
 
 ## Open Questions
 

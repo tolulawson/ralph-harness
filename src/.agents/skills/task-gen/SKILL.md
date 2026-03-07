@@ -13,6 +13,7 @@ description: Generate dependency-ordered tasks for one numbered spec so each fre
 
 - `specs/<spec-key>/spec.md`
 - `specs/<spec-key>/plan.md`
+- `.ralph/templates/task-state-template.json`
 - optional `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`
 - active queue entry from `.ralph/state/spec-queue.json`
 
@@ -36,11 +37,13 @@ If the plan is missing, stop and report that the planning step must complete fir
 6. Ensure each task is executable by a fresh worker without hidden context.
 7. Record dependencies, parallel opportunities, independent test criteria, and PR readiness hooks.
 8. Write `specs/<spec-key>/tasks.md`.
-9. Write the role report and recommend the next role.
+9. Write `specs/<spec-key>/task-state.json` so every generated task has a canonical lifecycle record.
+10. Write the role report and recommend the next role.
 
 ## Outputs
 
 - `specs/<spec-key>/tasks.md`
+- `specs/<spec-key>/task-state.json`
 - `.ralph/reports/<run-id>/task-gen.md`
 
 ## Stop Condition

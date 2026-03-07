@@ -22,3 +22,11 @@
 - Do not frame `ralph-install` as a prerequisite in `INSTALLATION.md`. The guide itself must be sufficient for installation, and the skill should be documented only as an optional helper.
 - Do not commit local filesystem paths like `/Users/...` into installation docs or prompts. Shipped install instructions must use repo-relative references or the public repository URL so they are portable and do not leak local environment details.
 - In committed docs, prefer GitHub repository URLs for file links over local absolute paths. The docs should work for anyone reading the repo remotely, not just from this workspace.
+
+## 2026-03-07
+
+- Treat official Codex multi-agent support as the required orchestration runtime. Prompt-only delegation language is not enough when the harness claims deterministic worker spawning and waiting.
+- Keep the generic installed-runtime doctrine separate from the project-specific constitution so upgrades can refresh shared harness behavior without overwriting project mission or policy.
+- Use a managed Ralph block inside `AGENTS.md` for installs and upgrades. Refresh only that block in existing repos instead of replacing the whole loader file.
+- Version the shipped scaffold surface with a canonical `VERSION` file, then record the installed tag and resolved commit in `.ralph/harness-version.json`.
+- Keep upgrades scaffold-only by default. Policies, states, specs, tasks, reports, logs, and other project-owned runtime records should stay outside the automatic overwrite surface unless a named migration explicitly targets them.

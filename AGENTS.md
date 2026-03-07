@@ -15,25 +15,28 @@ All paths below are relative to this repository root, which is the live dogfood 
 Before doing substantial work, read these files in order:
 
 1. `.ralph/constitution.md`
-2. `.ralph/policy/project-policy.md`
-3. `.ralph/state/workflow-state.json`
-4. `.ralph/state/spec-queue.json`
-5. the report at `last_report_path`
-6. active spec artifacts under `specs/<spec-id>-<slug>/`
-7. `specs/INDEX.md`
-8. `tasks/todo.md`
-9. a recent tail of `.ralph/logs/events.jsonl`
+2. `.ralph/runtime-contract.md`
+3. `.ralph/policy/project-policy.md`
+4. `.ralph/state/workflow-state.json`
+5. `.ralph/state/spec-queue.json`
+6. the report at `last_report_path`
+7. active spec artifacts under `specs/<spec-id>-<slug>/`
+8. `specs/INDEX.md`
+9. `tasks/todo.md`
+10. a recent tail of `.ralph/logs/events.jsonl`
 
 When the task is about improving the shipped harness scaffold, also read:
 
-10. `src/install-manifest.txt`
-11. `src/generated-runtime-manifest.txt`
+11. `src/install-manifest.txt`
+12. `src/generated-runtime-manifest.txt`
+13. `src/upgrade-manifest.txt`
 
 ## Purpose Of This File
 
 `AGENTS.md` is the Codex-facing loader. It is intentionally thin.
 
 - The durable harness doctrine lives in `.ralph/constitution.md`.
+- The generic dogfood runtime doctrine lives in `.ralph/runtime-contract.md`.
 - Project-specific workflow rules live in `.ralph/policy/project-policy.md`.
 - Runtime execution state lives in `.ralph/state/workflow-state.json`.
 - The canonical spec queue lives in `.ralph/state/spec-queue.json`.

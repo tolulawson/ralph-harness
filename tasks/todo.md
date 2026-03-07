@@ -8,7 +8,7 @@
 - [x] Create repo-local role skills under `.agents/skills/`.
 - [x] Seed the example project PRD and numbered spec artifacts for the reference repo.
 - [x] Record bootstrap reports and event log entries so the harness can resume from disk alone.
-- [x] Run structure and schema verification, then record results in the review section below.
+- [x] Run structure and schema verification, then record the results in the review section below.
 - [x] Add a top-level `README.md` that explains the repository objective, control flow, installation, and operator scenarios for new projects, existing projects, features, and bug fixes.
 - [x] Split the long installation instructions into a separate installation guide and update the README to point to it.
 - [x] Adapt the local PRD and Speckit-derived role skills more closely to their source workflows and add an artifact-analysis helper skill.
@@ -65,7 +65,7 @@
 - Verified the scaffold now contains 12 repo-local skills and 8 bootstrap reports.
 - Added a Mermaid flow diagram to `README.md` that shows how the harness loop moves from project PRD through epochs, numbered specs, task execution, review, verification, release, and queue advancement.
 - Split the repository into a canonical scaffold under `src/` and a live dogfood runtime at the repo root.
-- Added `src/install-manifest.txt`, seed state files, starter task files, an empty spec register, and empty runtime directories so installed target repos receive clean scaffold state instead of dogfood history.
+- Added `src/install-manifest.txt`, seed scaffold state, and starter runtime files that can be copied into target projects without copying this repo's dogfood history.
 - Verified all 14 manifest-listed `src/` paths exist.
 - Verified a temp install copied clean scaffold files from `src/` and did not leak `tasks/prd-ralph-harness.md`, `specs/001-self-bootstrap-harness/`, or `.ralph/reports/bootstrap-20260305/`.
 - Refined the repository contract so root is the workshop and dogfood runtime, while `src/` is the clean shipped scaffold output for downstream repos.
@@ -81,7 +81,7 @@
 - Added a shipped `learning` helper skill under `src/.agents/skills/learning/` to classify candidate learnings and decide whether to append, promote, or write directly into truths or facts.
 - Verified the new `src` knowledge files exist, the seeded JSON and JSONL parse successfully, the shipped read order references the new context files, and `src/install-manifest.txt` includes `.ralph/context/`.
 - Patched `INSTALLATION.md` so the documented AGENTS merge guidance, copied-path list, target reset steps, setup flow, and verification checklist all include the shipped `.ralph/context/` knowledge layer.
-- Added a root constitution rule requiring `INSTALLATION.md` to be updated in the same change whenever `src/` installation behavior or copied/generated install surface changes.
+- Added a root constitution rule requiring `INSTALLATION.md` to be updated in the same change whenever `src` installation behavior or copied/generated install surface changes.
 - Verified the revised installation guide now mentions `.ralph/context/`, `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, `.ralph/context/learning-summary.md`, and `.ralph/context/learning-log.jsonl`, matching the shipped scaffold contracts.
 - Declared `INSTALLATION.md` as the canonical install authority, with `src/install-manifest.txt` and `src/generated-runtime-manifest.txt` as subordinate install subcontracts and `skills/ralph-install/SKILL.md` as an execution adapter only.
 - Refactored `skills/ralph-install/SKILL.md` into a thin adapter that points to `INSTALLATION.md` instead of restating copied paths, generated runtime files, and loader behavior.
@@ -91,3 +91,19 @@
 - Removed local filesystem references from `INSTALLATION.md` and replaced them with repo-relative references or the public GitHub repository URL so the guide is portable and does not leak local path details.
 - Replaced the remaining committed local-path links in `README.md` and `INSTALLATION.md` with GitHub repository URLs so repository docs no longer depend on this workspace path layout.
 - Remaining runtime caveat: the declared multi-agent config still needs to be exercised in a live Codex session to prove exact runtime acceptance.
+
+## Spec 002 Plan
+
+- [x] Enable official Codex multi-agent support in the shipped scaffold and rewrite the orchestrator contract around deterministic spawn/wait semantics.
+- [x] Add the runtime-contract split, canonical `task-state.json` template, and strict shared-state ownership rules across shipped and dogfood runtime files.
+- [x] Add `VERSION`, `UPGRADING.md`, `src/upgrade-manifest.txt`, `src/.ralph/harness-version.json`, and the public `ralph-upgrade` skill.
+- [x] Add validation scripts plus GitHub Actions CI and release workflows for tagged scaffold releases.
+- [x] Refresh the source-repo dogfood runtime, queue state, reports, and lessons so spec `002` proves the new contracts without touching installed target repos.
+
+## Spec 002 Review
+
+- Enabled official Codex multi-agent support in both the shipped and dogfood control planes and rewrote the orchestrator contracts to require deterministic spawn/wait semantics plus queue-drain stop conditions.
+- Added `.ralph/runtime-contract.md`, `task-state.json` templates, version metadata, upgrade docs, upgrade manifest, and the new public `ralph-upgrade` skill.
+- Added `scripts/validate-harness.sh`, `scripts/verify-upgrade-contract.sh`, and `scripts/smoke-test-install-upgrade.sh`, then wired them into `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+- Verified `bash scripts/validate-harness.sh` passes, including install-contract, upgrade-contract, and fixture install/upgrade checks.
+- Scope remains source-repo only. No installed target repository was modified.

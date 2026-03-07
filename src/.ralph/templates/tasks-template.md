@@ -21,3 +21,7 @@
 ## Review Notes
 
 - {{review_note_1}}
+
+## Canonical Task State
+
+- `specs/{{spec_key}}/task-state.json` is the machine-readable lifecycle source of truth for these tasks.

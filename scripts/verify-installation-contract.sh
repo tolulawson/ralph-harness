@@ -14,15 +14,22 @@ INSTALL_MANIFEST="src/install-manifest.txt"
 GENERATED_MANIFEST="src/generated-runtime-manifest.txt"
 SRC_AGENTS="src/AGENTS.md"
 INSTALL_SKILL="skills/ralph-install/SKILL.md"
+VERSION_FILE="VERSION"
 
 [[ -f "$INSTALLATION_MD" ]] || fail "missing $INSTALLATION_MD"
 [[ -f "$INSTALL_MANIFEST" ]] || fail "missing $INSTALL_MANIFEST"
 [[ -f "$GENERATED_MANIFEST" ]] || fail "missing $GENERATED_MANIFEST"
 [[ -f "$SRC_AGENTS" ]] || fail "missing $SRC_AGENTS"
 [[ -f "$INSTALL_SKILL" ]] || fail "missing $INSTALL_SKILL"
+[[ -f "$VERSION_FILE" ]] || fail "missing $VERSION_FILE"
+
+CURRENT_TAG="v$(tr -d '[:space:]' < "$VERSION_FILE")"
 
 grep -q '`INSTALLATION.md` is the canonical install source of truth' "$INSTALLATION_MD" \
   || fail "INSTALLATION.md must declare itself canonical"
+
+grep -Fq -- "$CURRENT_TAG" "$INSTALLATION_MD" \
+  || fail "INSTALLATION.md must reference current tag $CURRENT_TAG"
 
 while IFS= read -r path; do
   [[ -z "$path" || "$path" == \#* ]] && continue
@@ -36,6 +43,7 @@ done < "$GENERATED_MANIFEST"
 
 for required in \
   '.ralph/constitution.md' \
+  '.ralph/runtime-contract.md' \
   '.ralph/policy/project-policy.md' \
   '.ralph/context/project-truths.md' \
   '.ralph/context/project-facts.json' \
@@ -50,6 +58,12 @@ done
 
 grep -Fq -- 'the report at `last_report_path`' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing last_report_path read-order entry"
+
+grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_AGENTS" \
+  || fail "src/AGENTS.md missing managed block start marker"
+
+grep -Fq -- '<!-- RALPH-HARNESS:END -->' "$SRC_AGENTS" \
+  || fail "src/AGENTS.md missing managed block end marker"
 
 grep -Fq -- '`INSTALLATION.md` is the canonical install source of truth' "$INSTALL_SKILL" \
   || fail "ralph-install skill must defer to INSTALLATION.md"
