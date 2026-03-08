@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "repo_kind": null,
+  "runtime_kind": null,
+  "base_branch": null,
+  "verification_commands": [],
+  "deployment_model": null,
+  "tooling_facts": {},
+  "unknowns": [],
+  "fact_sources": []
+}

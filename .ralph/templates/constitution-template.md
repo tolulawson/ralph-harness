@@ -8,9 +8,16 @@
 
 1. `.ralph/constitution.md`
 2. `.ralph/policy/project-policy.md`
-3. `.ralph/state/workflow-state.json`
-4. `.ralph/state/spec-queue.json`
-5. active spec artifacts and latest role reports
+3. `.ralph/context/project-truths.md`
+4. `.ralph/context/project-facts.json`
+5. `.ralph/context/learning-summary.md`
+6. `.ralph/state/workflow-state.json`
+7. `.ralph/state/spec-queue.json`
+8. active spec artifacts and latest role reports
+
+## Knowledge Layer
+
+{{knowledge_layer}}
 
 ## Core Workflow
 

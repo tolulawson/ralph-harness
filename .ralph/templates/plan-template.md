@@ -5,6 +5,9 @@
 - Spec id: `{{spec_id}}`
 - Epoch id: `{{epoch_id}}`
 - Status: `{{status}}`
+- Kind: `{{kind}}`
+- Origin spec: `{{origin_spec_key}}`
+- Trigger source: `{{triggered_by_role}}`
 - Branch: `codex/{{spec_key}}`
 - PR number: `{{pr_number}}`
 
@@ -30,3 +33,4 @@
 ## Rollout Notes
 
 - {{rollout_1}}
+- Resume behavior: {{resume_behavior}}

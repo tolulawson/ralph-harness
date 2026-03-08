@@ -16,6 +16,19 @@
 
 - {{verification_1}}
 
+## Interruption Assessment
+
+- Scope: `{{interruption_scope}}`
+- Blocking: `{{interruption_blocking}}`
+- Origin spec key: `{{interruption_origin_spec_key}}`
+- Origin task id: `{{interruption_origin_task_id}}`
+- Summary: {{interruption_summary}}
+- Recommended fix direction: {{interruption_fix_direction}}
+
+## Candidate Learnings
+
+- {{learning_1}}
+
 ## Open Issues
 
 - {{open_issue_1}}

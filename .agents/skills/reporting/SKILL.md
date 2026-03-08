@@ -17,6 +17,7 @@ Every report must include:
 - `Inputs Read`
 - `Artifacts Written`
 - `Verification`
+- `Candidate Learnings`
 - `Open Issues`
 - `Recommended Next Role`
 
@@ -25,4 +26,5 @@ Every report must include:
 - Keep the report concise.
 - Include exact artifact paths.
 - Distinguish confirmed facts from recommendations.
+- Use `Candidate Learnings` to list durable observations or say `None` explicitly.
 - Name blockers explicitly instead of implying them.

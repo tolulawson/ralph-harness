@@ -16,8 +16,9 @@ description: Create a comprehensive product requirements document from a project
 2. Ask 3-5 essential clarifying questions with lettered options.
 3. Generate a structured project PRD based on the answers and reasonable defaults.
 4. Define an initial ordered epoch map.
-5. Save the PRD to `tasks/prd-<project>.md`.
-6. Write a harness report to `.ralph/reports/<run-id>/prd.md`.
+5. Record any explicit project truths already stated by the user in `.ralph/context/project-truths.md`.
+6. Save the PRD to `tasks/prd-<project>.md`.
+7. Write a harness report to `.ralph/reports/<run-id>/prd.md`.
 
 **Important:** Do not start implementing. Just create the PRD, epoch framing, and report.
 
@@ -59,6 +60,7 @@ Generate the PRD with these sections:
 ## Outputs
 
 - `tasks/prd-<project>.md`
+- optional updates to `.ralph/context/project-truths.md`
 - `.ralph/reports/<run-id>/prd.md`
 
 ## Harness Adaptation Rules

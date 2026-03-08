@@ -6,6 +6,7 @@
     {
       "task_id": "{{spec_id}}-T001",
       "status": "ready",
+      "previous_status": null,
       "last_role": null,
       "last_report_path": null,
       "updated_at": "{{updated_at}}",
