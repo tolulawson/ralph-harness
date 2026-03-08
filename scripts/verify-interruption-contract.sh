@@ -31,6 +31,14 @@ do
 done
 
 for path in \
+  skills/ralph-execute/SKILL.md \
+  skills/ralph-interrupt/SKILL.md
+do
+  grep -Fq -- 'preflight consistency check' "$path" || fail "$path must require preflight consistency checks"
+  grep -Fq -- 'mixed-version state' "$path" || fail "$path must block mixed-version state"
+done
+
+for path in \
   README.md \
   INSTALLATION.md \
   UPGRADING.md \
@@ -41,6 +49,9 @@ done
 
 grep -Fq -- 'Interruption Assessment' src/.ralph/templates/role-report-template.md \
   || fail "src/.ralph/templates/role-report-template.md missing Interruption Assessment"
+
+grep -Fq -- 'projection only' src/.agents/skills/state-sync/SKILL.md \
+  || fail "src/.agents/skills/state-sync/SKILL.md must describe workflow-state.md as a projection"
 
 python3 - <<'PY'
 import json

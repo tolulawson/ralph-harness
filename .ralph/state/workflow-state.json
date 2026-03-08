@@ -20,7 +20,7 @@
   "last_verified_at": "2026-03-07T12:00:00-08:00",
   "blocked_reason": null,
   "failure_count": 0,
-  "next_action": "Cut the first tagged scaffold release as `v0.1.0`, or seed the next numbered spec and continue the queue.",
+  "next_action": "Cut the next tagged scaffold release as `v0.4.0`, or seed the next numbered spec and continue the queue.",
   "queue_snapshot": [
     {
       "spec_id": "001",
@@ -38,5 +38,6 @@
       "branch_name": "codex/002-deterministic-orchestration-versioning-and-upgrades",
       "pr_number": null
     }
-  ]
+  ],
+  "resume_spec_stack": []
 }

@@ -4,6 +4,78 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.4.0 - 2026-03-08
+
+### Summary
+
+Role config TOMLs now live under `.codex/agents/`, matching how Codex resolves `config_file` entries from `.codex/config.toml`.
+
+This release removes the old repo-root `agents/` control-plane layout from the scaffold contract, adds migration and validation for the new canonical `.codex/agents/` location, and repairs the harness so fresh installs, upgrades, and dogfood runtimes all resolve agent configs correctly.
+
+### Highlights
+
+- Moved shipped and dogfood role config TOMLs under `.codex/agents/` while keeping `.codex/config.toml` as the entrypoint.
+- Added migration and preflight checks for legacy repo-root `agents/*.toml` installs.
+- Tightened validation so harness checks now resolve every `config_file` target and fail when the referenced TOMLs do not exist.
+- Updated install, upgrade, and repository-layout docs to treat `.codex/agents/*.toml` as canonical.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.4.0` as the default public install or upgrade reference.
+- Fresh installs now copy `.codex/config.toml` and `.codex/agents/` instead of repo-root `agents/`.
+- Upgrades move legacy repo-root `agents/*.toml` into `.codex/agents/` when safe and remove the old directory only after canonical targets exist.
+- `upgrade_contract_version` is now `3` for installs that use the canonical `.codex/agents/` layout.
+
+### Validation And Release Workflow
+
+- CI and local validation now resolve `config_file` targets from both the root dogfood config and the shipped scaffold config.
+- Smoke tests now prove fresh installs avoid repo-root `agents/`, legacy installs migrate into `.codex/agents/`, and unsafe legacy leftovers fail loudly.
+
+### Artifacts And References
+
+- Install guide: `INSTALLATION.md`
+- Upgrade guide: `UPGRADING.md`
+- Runtime migration: `scripts/migrate-installed-runtime.py`
+- Runtime preflight: `scripts/check-installed-runtime-state.py`
+- Release asset: `ralph-harness-v0.4.0.tar.gz`
+
+## v0.3.0 - 2026-03-08
+
+### Summary
+
+Upgrades are now migration-aware, and interrupt-capable execution refuses to continue from mixed-version runtime state.
+
+This release adds a live-state migration path for already-installed repos, current-state preflights for `ralph-execute` and `ralph-interrupt`, and stronger validation that catches drift between canonical JSON state and human-readable projections before the harness can hand off bad state.
+
+### Highlights
+
+- Added `scripts/migrate-installed-runtime.py` to normalize installed workflow state, queue state, projections, and missing `task-state.json` files.
+- Added `scripts/check-installed-runtime-state.py` so upgrades, resume entry points, and tests can fail fast on mixed-version or semantically drifted runtime state.
+- Tightened `ralph-upgrade`, `ralph-execute`, `ralph-interrupt`, and installed `state-sync` instructions around state-truth hierarchy and synchronized updates.
+- Refreshed the shipped seed workflow projection so the scaffold no longer ships a stale `workflow-state.md`.
+- Added repair-runbook guidance for the exact mismatch class where `workflow-state.json` points at a task already checked off in `tasks.md`.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.3.0` as the default public install or upgrade reference.
+- Upgrades still copy only the scaffold-owned manifest surface, but they must now run the live-state migration phase before the runtime is considered current.
+- `upgrade_contract_version` is now `2` for migration-aware installs.
+- Existing repos that only performed the older manifest-only `v0.2.0` upgrade need to rerun upgrade with migration before using interrupt creation or strict resume preflights.
+
+### Validation And Release Workflow
+
+- CI now validates migration-aware upgrade docs, installed-runtime preflight checks, and fixture migration behavior.
+- Smoke tests now cover positive migration from older state shapes plus fail-fast behavior for ambiguous task-history drift.
+- Live end-to-end Codex runtime execution remains the final proof beyond fixture validation.
+
+### Artifacts And References
+
+- Upgrade guide: `UPGRADING.md`
+- Runtime migration: `scripts/migrate-installed-runtime.py`
+- Runtime preflight: `scripts/check-installed-runtime-state.py`
+- Interrupt entry point: `skills/ralph-interrupt/SKILL.md`
+- Release asset: `ralph-harness-v0.3.0.tar.gz`
+
 ## v0.2.0 - 2026-03-07
 
 ### Summary

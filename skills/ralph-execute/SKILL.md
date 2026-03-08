@@ -42,10 +42,17 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 
 1. Verify the Ralph harness exists in the current repository.
 2. Read the constitution, runtime contract, project policy, workflow state, and spec queue.
-3. Read the latest report and active spec artifacts.
-4. Read a recent tail of the event log rather than the full history.
-5. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
-6. Guide Codex to use built-in multi-agent orchestration to:
+3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
+4. Run a preflight consistency check before selecting the next role:
+   - the runtime must already be on the current interrupt-capable state shape
+   - `.ralph/state/workflow-state.md` must match the canonical JSON projection
+   - `specs/INDEX.md` must match the canonical queue projection
+   - `tasks.md` and `task-state.json` must agree semantically
+5. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
+6. Read the latest report and active spec artifacts.
+7. Read a recent tail of the event log rather than the full history.
+8. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
+9. Guide Codex to use built-in multi-agent orchestration to:
    - spawn exactly one worker role at a time
    - wait for the worker to finish
    - create an interrupt spec automatically for any failing out-of-scope bug
@@ -53,7 +60,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - validate outputs
    - update shared state
    - continue dispatching until a runtime-contract stop condition occurs
-7. Stop with a concise summary of:
+10. Stop with a concise summary of:
    - what moved
    - what artifacts changed
    - why execution stopped
@@ -64,6 +71,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Do not install or reinstall the scaffold here.
 - If the harness files are missing, stop and tell the user to use `$ralph-install`.
 - Treat the constitution, runtime contract, policy, workflow state, and spec queue as source of truth.
+- Do not continue execution from stale projections or mixed-version runtime state.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
 - Do not stop after a single handoff unless the runtime contract says to stop.
 

@@ -13,11 +13,9 @@
 - Active PR URL: `null`
 - Queue head spec: `null`
 - Resume spec id: `null`
+- Resume stack depth: `0`
+- Current interrupt spec: `null`
+- Resume pending: `no`
 - Last event id: `null`
 - Last report: `null`
 - Next action: Create the project PRD, decompose it into epochs and numbered specs, then seed the FIFO spec queue.
-
-## Spec Queue Snapshot
-
-| Spec | Epoch | Status | Branch | PR |
-| --- | --- | --- | --- | --- |

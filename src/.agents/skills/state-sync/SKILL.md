@@ -17,8 +17,10 @@ description: Synchronize the human-readable workflow mirror with the canonical w
 ## Workflow
 
 1. Read the canonical JSON state.
-2. Update `.ralph/state/workflow-state.md` so it matches the JSON semantics.
-3. Keep the Markdown concise and directly inspectable.
+2. Treat `.ralph/state/workflow-state.json` as the source of truth and `.ralph/state/workflow-state.md` as a projection only.
+3. Render `.ralph/state/workflow-state.md` from the canonical JSON semantics instead of hand-editing individual lines.
+4. Preserve the current interrupt-aware projection rows for resume stack depth, current interrupt spec, and resume pending state.
+5. Keep the Markdown concise and directly inspectable.
 
 ## Outputs
 

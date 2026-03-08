@@ -19,7 +19,7 @@ Use this repository when you want Codex to install an orchestrated coding system
 - a thin Codex loader in `AGENTS.md`
 - a project-specific harness constitution in `.ralph/constitution.md`
 - a generic installed-runtime doctrine in `.ralph/runtime-contract.md`
-- a durable control plane in `.codex/config.toml` and `agents/*.toml`
+- a durable control plane in `.codex/config.toml` and `.codex/agents/*.toml`
 - a role-based runtime skill system in `.agents/skills/`
 - a canonical runtime state in `.ralph/state/workflow-state.json`
 - a canonical spec queue in `.ralph/state/spec-queue.json`
@@ -76,8 +76,8 @@ src/install-manifest.txt          Install contract for target repos
 src/generated-runtime-manifest.txt Runtime files created after install
 src/upgrade-manifest.txt          Upgrade-safe overwrite contract
 src/AGENTS.md                     Scaffold loader copied into target repos
-src/.codex/                       Scaffold role declarations
-src/agents/                       Scaffold role configs
+src/.codex/                       Scaffold role declarations and role configs
+src/.codex/agents/                Scaffold role configs
 src/.agents/skills/               Scaffold runtime role skills
 src/.ralph/                       Scaffold doctrine, policy, templates, neutral seed state
 src/.ralph/runtime-contract.md    Generic installed-runtime doctrine
@@ -85,8 +85,8 @@ src/.ralph/harness-version.json   Installed-version metadata seed
 src/specs/INDEX.md                Neutral seed spec register
 
 AGENTS.md                         Root dogfood loader
-.codex/                           Root dogfood role declarations
-agents/                           Root dogfood role configs
+.codex/                           Root dogfood role declarations and role configs
+.codex/agents/                    Root dogfood role configs
 .agents/skills/                   Root dogfood runtime role skills
 .ralph/                           Root dogfood runtime state, reports, logs, templates
 tasks/                            Root dogfood PRDs, todo tracker, lessons
@@ -144,10 +144,10 @@ Use them like this:
 
 - use `ralph-install` from a target repository when the harness is not installed yet
 - use `ralph-interrupt` from a target repository when a failing out-of-scope bug should be split into a new interrupt spec ahead of the remaining queue
-- use `ralph-upgrade` from a target repository when the harness is already installed and you want to move to a newer tagged scaffold release without overwriting project-owned runtime files
+- use `ralph-upgrade` from a target repository when the harness is already installed and you want to move to a newer tagged scaffold release plus migrate live runtime state without overwriting project-owned project history
 - use `ralph-prd` when you want to create the project PRD and epoch framing directly
 - use `ralph-plan` when you want to seed the numbered spec queue and planning artifacts directly
-- use `ralph-execute` from a target repository when the harness is already installed and you want an explicit named resume entry point
+- use `ralph-execute` from a target repository when the harness is already installed, current-state preflight passes, and you want an explicit named resume entry point
 
 These are distinct from the runtime role skills under `.agents/skills/`.
 
@@ -160,18 +160,18 @@ Read [CHANGELOG.md](https://github.com/tolulawson/ralph-harness/blob/main/CHANGE
 In short:
 
 - install the public `ralph-*` skills via a third-party skill installer when you want explicit named entry points
-- use the latest stable tag such as `v0.2.0` as the default public install or upgrade reference
+- use the latest stable tag such as `v0.4.0` as the default public install or upgrade reference
 - treat `src/` as the only installable scaffold source
 - copy only the manifest-listed scaffold paths from `src/install-manifest.txt`
 - generate the runtime files listed in `src/generated-runtime-manifest.txt`
-- upgrade only the scaffold-owned paths from `src/upgrade-manifest.txt`
+- upgrade the scaffold-owned paths from `src/upgrade-manifest.txt`, then run the live-state migration pass from `UPGRADING.md`
 - keep the repo root runtime history out of target projects
 - reset the workflow state and spec queue for the target project
 - create the initial project PRD, epoch map, numbered specs, and tasks
 
 ## Versioning And Releases
 
-The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.2.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
+The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.4.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
 
 Releases are intentional and manual. CI validates the scaffold, install contract, upgrade contract, and fixture install or upgrade flow before a GitHub release is cut.
 

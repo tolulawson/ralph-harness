@@ -7,7 +7,6 @@ cd "$ROOT_DIR"
 python3 - <<'PY'
 import json
 import pathlib
-import sys
 
 try:
     import tomllib  # type: ignore[attr-defined]
@@ -15,13 +14,6 @@ except ModuleNotFoundError:
     from pip._vendor import tomli as tomllib  # type: ignore
 
 root = pathlib.Path(".")
-
-toml_paths = [
-    root / ".codex/config.toml",
-    *sorted((root / "agents").glob("*.toml")),
-    root / "src/.codex/config.toml",
-    *sorted((root / "src/agents").glob("*.toml")),
-]
 
 json_paths = [
     *sorted((root / ".ralph").rglob("*.json")),
@@ -33,8 +25,36 @@ jsonl_paths = [
     *sorted((root / "src/.ralph").rglob("*.jsonl")),
 ]
 
-for path in toml_paths:
-    tomllib.loads(path.read_text())
+def parse_toml(path: pathlib.Path) -> dict:
+    return tomllib.loads(path.read_text())
+
+def resolve_agent_targets(config_path: pathlib.Path) -> list[pathlib.Path]:
+    config = parse_toml(config_path)
+    if not config.get("features", {}).get("multi_agent"):
+        raise SystemExit(f"{config_path} must enable multi_agent")
+    targets = []
+    for name, entry in (config.get("agents") or {}).items():
+        if not isinstance(entry, dict) or not isinstance(entry.get("config_file"), str):
+            continue
+        target = config_path.parent / entry["config_file"]
+        if not target.exists():
+            raise SystemExit(f"{config_path} points `{name}` at missing file {target}")
+        parse_toml(target)
+        targets.append(target)
+    if not targets:
+        raise SystemExit(f"{config_path} must declare at least one agent config_file target")
+    return targets
+
+for legacy_dir in (root / "agents", root / "src/agents"):
+    if legacy_dir.exists():
+        raise SystemExit(f"legacy agent directory must not exist: {legacy_dir}")
+
+config_paths = [root / ".codex/config.toml", root / "src/.codex/config.toml"]
+toml_paths = []
+for config_path in config_paths:
+    parse_toml(config_path)
+    toml_paths.append(config_path)
+    toml_paths.extend(resolve_agent_targets(config_path))
 
 for path in json_paths:
     json.loads(path.read_text())
@@ -46,10 +66,6 @@ for path in jsonl_paths:
                 json.loads(line)
             except json.JSONDecodeError as exc:
                 raise SystemExit(f"{path}:{lineno}: {exc}") from exc
-
-src_config = tomllib.loads((root / "src/.codex/config.toml").read_text())
-if not src_config.get("features", {}).get("multi_agent"):
-    raise SystemExit("src/.codex/config.toml must enable multi_agent")
 
 current_version = (root / "VERSION").read_text().strip()
 current_tag = f"v{current_version}"
