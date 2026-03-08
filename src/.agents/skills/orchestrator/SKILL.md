@@ -43,23 +43,31 @@ description: Coordinate the Codex-native Ralph harness loop by reading runtime s
 10. Read only the recent learning log window when diagnosing or promoting learnings.
 11. Choose the next task in this order:
    - first `in_progress`
+   - else first `paused`
    - else first `ready`
    - else first `review_failed`
    - else first `verification_failed`
    - else advance the spec toward PR, merge, or completion
-12. Decide the next role from spec status, task lifecycle state, PR state, and next action.
-13. Use Codex multi-agent controls such as `spawn_agent` and `wait` to run exactly one worker role at a time.
-14. Wait for the worker to finish before doing any further orchestration work.
-15. Validate that the worker wrote only the required role-local artifacts.
-16. Append candidate learnings from the worker report to `.ralph/context/learning-log.jsonl`.
-17. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
-18. Write `.ralph/reports/<run-id>/orchestrator.md`.
-19. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
-20. Update `.ralph/state/workflow-state.json`.
-21. Update `.ralph/state/spec-queue.json`.
-22. Regenerate `.ralph/state/workflow-state.md`.
-23. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
-24. Continue dispatching until the queue is empty or a runtime-contract stop condition occurs.
+12. Choose the next spec in this order:
+   - active interrupt spec
+   - oldest ready interrupt spec by `created_at`
+   - active normal spec
+   - oldest ready normal spec in FIFO order
+13. Decide the next role from spec status, task lifecycle state, PR state, interruption state, and next action.
+14. Use Codex multi-agent controls such as `spawn_agent` and `wait` to run exactly one worker role at a time.
+15. Wait for the worker to finish before doing any further orchestration work.
+16. Validate that the worker wrote only the required role-local artifacts and that any failure report includes an `Interruption Assessment`.
+17. If the worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, mark the current spec `paused`, mark the active task `paused`, push paused context onto `resume_spec_stack`, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
+18. Append candidate learnings from the worker report to `.ralph/context/learning-log.jsonl`.
+19. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
+20. Write `.ralph/reports/<run-id>/orchestrator.md`.
+21. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
+22. Update `.ralph/state/workflow-state.json`.
+23. Update `.ralph/state/spec-queue.json`.
+24. Regenerate `.ralph/state/workflow-state.md`.
+25. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
+26. After an interrupt spec is released, pop `resume_spec_stack`, restore the paused spec and task, and continue dispatching.
+27. Continue dispatching until the queue is empty or a runtime-contract stop condition occurs.
 
 ## Outputs
 

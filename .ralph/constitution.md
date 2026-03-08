@@ -31,9 +31,17 @@ Interpret the source repository in this order:
 
 In this source repository, scaffold behavior is edited in `src/` first. The repository root is the workshop and dogfood runtime for building and validating that scaffold.
 
+The source-of-truth implementation rule is strict:
+
+- all harness behavior, templates, configs, role skills, public skills, and install or upgrade contracts must be changed in `src/`
+- root dogfood files are reference runtime artifacts for this repository and are not the primary implementation surface
+- do not make direct implementation edits to root dogfood runtime files during normal harness work
+- only update root dogfood files when the task explicitly targets dogfood repair, inspection, or regeneration
+
 External named entry points exist via distributable source skills at repository root:
 
 - `ralph-install`
+- `ralph-interrupt`
 - `ralph-upgrade`
 - `ralph-prd`
 - `ralph-plan`
@@ -52,7 +60,8 @@ Those source skills are distinct from the runtime role skills under `.agents/ski
 - procedural source-repo work tracking does not belong in `src/`.
 - target runtime records such as `tasks/todo.md`, `tasks/lessons.md`, `.ralph/logs/events.jsonl`, and `.ralph/reports/` are generated during installation or first run.
 - any change to `src/` that affects installation behavior, upgrade behavior, copied paths, generated runtime files, managed loader content, version metadata, or required setup steps must update the relevant canonical guide in the same change.
-- changes to `src/` do not imply root dogfood-runtime changes unless the task explicitly includes dogfooding or source-repo runtime validation.
+- changes to `src/` do not imply root dogfood-runtime changes.
+- dogfood runtime updates require an explicit task to repair, inspect, or regenerate root runtime records.
 
 ## State Rules
 
@@ -104,6 +113,7 @@ Use this order whenever a fresh Codex run resumes work in this source repository
 - `queued`
 - `ready`
 - `in_progress`
+- `paused`
 - `awaiting_review`
 - `review_failed`
 - `awaiting_verification`
@@ -150,6 +160,7 @@ Every role report must include these sections:
 - `Inputs Read`
 - `Artifacts Written`
 - `Verification`
+- `Interruption Assessment`
 - `Open Issues`
 - `Recommended Next Role`
 

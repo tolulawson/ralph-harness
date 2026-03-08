@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to create, for example v0.1.0"
+        description: "Release tag to create, for example v0.2.0"
         required: true
         type: string
 
@@ -28,7 +28,7 @@ jobs:
           python-version: "3.11"
 
       - name: Make scripts executable
-        run: chmod +x scripts/verify-installation-contract.sh scripts/verify-upgrade-contract.sh scripts/validate-harness.sh scripts/smoke-test-install-upgrade.sh
+        run: chmod +x scripts/verify-installation-contract.sh scripts/verify-interruption-contract.sh scripts/verify-upgrade-contract.sh scripts/validate-harness.sh scripts/smoke-test-install-upgrade.sh scripts/render-release-notes.sh
 
       - name: Verify requested tag matches VERSION
         env:
@@ -84,6 +84,11 @@ jobs:
           TAG_NAME: ${{ inputs.tag }}
         run: git archive --format=tar.gz --output "ralph-harness-${TAG_NAME}.tar.gz" HEAD
 
+      - name: Render curated release notes
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+        run: scripts/render-release-notes.sh "$TAG_NAME" > release-notes.md
+
       - name: Create annotated tag
         env:
           TAG_NAME: ${{ inputs.tag }}
@@ -104,5 +109,5 @@ jobs:
         run: |
           gh release create "$TAG_NAME" \
             "ralph-harness-${TAG_NAME}.tar.gz" \
-            --generate-notes \
+            --notes-file release-notes.md \
             --title "$TAG_NAME"

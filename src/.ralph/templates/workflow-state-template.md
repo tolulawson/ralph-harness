@@ -13,6 +13,9 @@
 - Active PR URL: `{{active_pr_url}}`
 - Queue head spec: `{{queue_head_spec_id}}`
 - Resume spec id: `{{resume_spec_id}}`
+- Resume stack depth: `{{resume_spec_stack_depth}}`
+- Current interrupt spec: `{{interrupt_spec_id}}`
+- Resume pending: `{{resume_pending}}`
 - Last event id: `{{last_event_id}}`
 - Last report: `{{last_report_path}}`
 - Next action: {{next_action}}

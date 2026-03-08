@@ -54,13 +54,34 @@ if not src_config.get("features", {}).get("multi_agent"):
 current_version = (root / "VERSION").read_text().strip()
 current_tag = f"v{current_version}"
 
+changelog_path = root / "CHANGELOG.md"
+if not changelog_path.exists():
+    raise SystemExit("CHANGELOG.md must exist")
+
+changelog_text = changelog_path.read_text()
+if f"## {current_tag}" not in changelog_text:
+    raise SystemExit(f"CHANGELOG.md must contain a section for {current_tag}")
+
 for path in [root / "README.md", root / "INSTALLATION.md", root / "UPGRADING.md"]:
     if current_tag not in path.read_text():
         raise SystemExit(f"{path} must reference current tag {current_tag}")
 PY
 
+scripts/render-release-notes.sh "v$(tr -d '[:space:]' < VERSION)" >/dev/null
 scripts/verify-installation-contract.sh
+scripts/verify-interruption-contract.sh
 scripts/verify-upgrade-contract.sh
+
+if grep -Fq -- '--generate-notes' .github/workflows/release.yml; then
+  echo "validate-harness: release workflow must not use --generate-notes" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- 'scripts/render-release-notes.sh' .github/workflows/release.yml; then
+  echo "validate-harness: release workflow must render notes from CHANGELOG.md" >&2
+  exit 1
+fi
+
 scripts/smoke-test-install-upgrade.sh
 
 echo "validate-harness: ok"

@@ -2,7 +2,7 @@
   "schema_version": "2.0.0",
   "queue_policy": {
     "selection": "fifo",
-    "preemption": "emergency_only"
+    "preemption": "failing_out_of_scope_bug"
   },
   "active_spec_id": "{{active_spec_id}}",
   "resume_spec_id": "{{resume_spec_id}}",
@@ -17,6 +17,11 @@
       "last_worked_at": "{{last_worked_at}}",
       "status": "{{status}}",
       "kind": "{{kind}}",
+      "origin_spec_key": null,
+      "origin_task_id": null,
+      "triggered_by_role": null,
+      "trigger_report_path": null,
+      "trigger_summary": null,
       "priority_override": null,
       "blocked_reason": null,
       "prd_path": "tasks/prd-{{project_slug}}.md",

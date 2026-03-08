@@ -45,9 +45,10 @@ When the task is about improving the shipped harness scaffold, also read:
 
 Do not treat conversational memory as the source of truth when the harness files already contain the needed state or policy.
 
-- make harness and scaffold changes in `src/` first
-- treat root `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `tasks/`, and `specs/` as this repository's dogfood runtime records unless the task explicitly targets them
-- do not change the root dogfood runtime just because `src/` changed; apply root changes only when explicitly requested
+- make all harness behavior, scaffold, contract, template, skill, config, and implementation changes in `src/`
+- treat root `.ralph/`, root `.agents/skills/`, root `agents/`, root `.codex/`, `tasks/`, and `specs/` as this repository's dogfood/reference runtime, not as the primary implementation surface
+- do not make direct implementation edits to the root dogfood runtime in normal harness work
+- only touch root dogfood files when the task explicitly says to repair, inspect, or regenerate dogfood records themselves
 
 The root `AGENTS.md` and root `.ralph/constitution.md` describe this source repository itself. The copies shipped from `src/` are generic installed-harness documents and may differ from the root source-repo documents.
 

@@ -8,26 +8,26 @@ This guide explains how to upgrade an already-installed Ralph harness in a targe
 
 The upgrade-safe scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.1.0`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.2.0`
 
 The canonical upgrade overwrite contract is:
 
-- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.1.0/src/upgrade-manifest.txt)
+- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.2.0/src/upgrade-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.1.0/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.2.0/VERSION)
 
 The installed harness metadata file is:
 
-- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.1.0/src/.ralph/harness-version.json)
+- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.2.0/src/.ralph/harness-version.json)
 
 The upgrade authority order is:
 
-1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.1.0/UPGRADING.md)
-2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.1.0/src/upgrade-manifest.txt)
-3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.1.0/VERSION)
-4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.1.0/src/.ralph/harness-version.json)
+1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.2.0/UPGRADING.md)
+2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.2.0/src/upgrade-manifest.txt)
+3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.2.0/VERSION)
+4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.2.0/src/.ralph/harness-version.json)
 
 ## Goal
 
@@ -42,7 +42,7 @@ After upgrade, the target repository should:
 
 ## Default Reference
 
-Use the latest stable semver tag by default. The current stable example in this guide is `v0.1.0`.
+Use the latest stable semver tag by default. The current stable example in this guide is `v0.2.0`.
 
 If exact reproducibility matters more than readability, pin to a specific commit SHA instead and still record the human-facing tag when known.
 
@@ -52,6 +52,8 @@ No skill is required to upgrade the harness. This document is sufficient on its 
 
 If a user prefers a named helper entrypoint, this repository also exposes `ralph-upgrade` under `skills/`. That skill is optional and must follow this guide.
 
+Other public `ralph-*` skills such as `ralph-interrupt` are outside the upgrade contract and are used only after the harness is already installed.
+
 ## Upgrade Modes
 
 ### Option 1: Ask Codex to upgrade the harness
@@ -60,11 +62,11 @@ From inside the target repository, ask Codex to upgrade from a tagged release:
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the source repository.
-Upgrade this repository's installed Ralph harness to tag v0.1.0 using UPGRADING.md as the authoritative guide.
+Upgrade this repository's installed Ralph harness to tag v0.2.0 using UPGRADING.md as the authoritative guide.
 Only overwrite the scaffold-owned paths listed in src/upgrade-manifest.txt.
 Preserve project-owned files under .ralph/policy/, .ralph/context/, .ralph/state/, tasks/, specs/, .ralph/reports/, and .ralph/logs/ unless a named migration step explicitly targets them.
 Refresh the managed Ralph block inside AGENTS.md instead of replacing the whole file.
-Update .ralph/harness-version.json so it records version 0.1.0, tag v0.1.0, the source repo, and the resolved commit used for this upgrade.
+Update .ralph/harness-version.json so it records version 0.2.0, tag v0.2.0, the source repo, and the resolved commit used for this upgrade.
 Run the upgrade verification checklist from UPGRADING.md before finishing.
 ```
 
@@ -74,7 +76,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.1.0
+SOURCE_REF=v0.2.0
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 

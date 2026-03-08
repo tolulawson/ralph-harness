@@ -114,6 +114,7 @@ Use this order whenever a fresh Codex run resumes work:
 - `queued`
 - `ready`
 - `in_progress`
+- `paused`
 - `awaiting_review`
 - `review_failed`
 - `awaiting_verification`
@@ -148,6 +149,7 @@ Every role report must include these sections:
 - `Inputs Read`
 - `Artifacts Written`
 - `Verification`
+- `Interruption Assessment`
 - `Candidate Learnings`
 - `Open Issues`
 - `Recommended Next Role`

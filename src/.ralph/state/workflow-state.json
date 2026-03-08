@@ -14,6 +14,7 @@
   "active_pr_url": null,
   "queue_head_spec_id": null,
   "resume_spec_id": null,
+  "resume_spec_stack": [],
   "interruption_state": null,
   "last_event_id": null,
   "last_report_path": null,

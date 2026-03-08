@@ -48,6 +48,8 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 6. Guide Codex to use built-in multi-agent orchestration to:
    - spawn exactly one worker role at a time
    - wait for the worker to finish
+   - create an interrupt spec automatically for any failing out-of-scope bug
+   - pause the current spec and later resume it after the interrupt is released
    - validate outputs
    - update shared state
    - continue dispatching until a runtime-contract stop condition occurs

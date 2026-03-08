@@ -36,8 +36,11 @@ If the task list is missing or incomplete, stop and report that task generation 
 8. Update only the task-local artifacts that belong to implementation.
 9. Do not append orchestrator events or mutate shared queue, workflow state, or task lifecycle state directly.
 10. Capture exact validation or blocker evidence.
-11. Record any durable gotchas, successful fixes, or anti-patterns in `Candidate Learnings`.
-12. Write the implementation report.
+11. Fill in the `Interruption Assessment` section:
+   - use `Scope: current` for in-scope defects that belong to the active spec
+   - use `Scope: interrupt` only for failing out-of-scope bugs that belong to an earlier spec or no spec at all
+12. Record any durable gotchas, successful fixes, or anti-patterns in `Candidate Learnings`.
+13. Write the implementation report.
 
 ## Outputs
 

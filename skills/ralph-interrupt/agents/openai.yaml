@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ralph Interrupt"
+  short_description: "Create a queue-preempting interrupt spec here"
+  default_prompt: "Use $ralph-interrupt to create a new interrupt spec for a failing out-of-scope bug in this repository."
+
+policy:
+  allow_implicit_invocation: false

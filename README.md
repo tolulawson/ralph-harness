@@ -35,6 +35,8 @@ Target repositories should install or upgrade the scaffold from versioned tags, 
 
 The parent Codex agent is the orchestrator. It reads the constitution, runtime contract, project policy, runtime state, spec queue, latest report, active spec files, and a short tail of recent events. It then uses Codex multi-agent controls to spawn one focused worker at a time, wait for the result, validate it, update shared state, and continue until a documented stop condition occurs.
 
+If a worker finds a failing bug outside the current spec's intended scope, the canonical flow is to create a new interrupt spec, pause the current spec, push the paused context onto `resume_spec_stack`, fix the interrupt first, and then resume the paused work afterward.
+
 ```mermaid
 flowchart TD
     A["Project idea or backlog item"] --> B["PRD role writes project PRD"]
@@ -122,6 +124,7 @@ When improving the harness itself in this repository:
 This repository exposes a small public skill surface under `skills/`:
 
 - `ralph-install`
+- `ralph-interrupt`
 - `ralph-upgrade`
 - `ralph-prd`
 - `ralph-plan`
@@ -131,6 +134,7 @@ Canonical GitHub source for third-party installation:
 
 - `tolulawson/ralph-harness`
 - `skills/ralph-install`
+- `skills/ralph-interrupt`
 - `skills/ralph-upgrade`
 - `skills/ralph-prd`
 - `skills/ralph-plan`
@@ -139,6 +143,7 @@ Canonical GitHub source for third-party installation:
 Use them like this:
 
 - use `ralph-install` from a target repository when the harness is not installed yet
+- use `ralph-interrupt` from a target repository when a failing out-of-scope bug should be split into a new interrupt spec ahead of the remaining queue
 - use `ralph-upgrade` from a target repository when the harness is already installed and you want to move to a newer tagged scaffold release without overwriting project-owned runtime files
 - use `ralph-prd` when you want to create the project PRD and epoch framing directly
 - use `ralph-plan` when you want to seed the numbered spec queue and planning artifacts directly
@@ -150,11 +155,12 @@ These are distinct from the runtime role skills under `.agents/skills/`.
 
 Read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md) for the full setup procedure.
 Read [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/main/UPGRADING.md) for the upgrade procedure.
+Read [CHANGELOG.md](https://github.com/tolulawson/ralph-harness/blob/main/CHANGELOG.md) for curated release history.
 
 In short:
 
 - install the public `ralph-*` skills via a third-party skill installer when you want explicit named entry points
-- use the latest stable tag such as `v0.1.0` as the default public install or upgrade reference
+- use the latest stable tag such as `v0.2.0` as the default public install or upgrade reference
 - treat `src/` as the only installable scaffold source
 - copy only the manifest-listed scaffold paths from `src/install-manifest.txt`
 - generate the runtime files listed in `src/generated-runtime-manifest.txt`
@@ -165,7 +171,7 @@ In short:
 
 ## Versioning And Releases
 
-The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.1.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
+The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.2.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
 
 Releases are intentional and manual. CI validates the scaffold, install contract, upgrade contract, and fixture install or upgrade flow before a GitHub release is cut.
 

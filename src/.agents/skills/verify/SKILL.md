@@ -27,7 +27,8 @@ description: Run the required checks for the active numbered spec, capture exact
 3. Record exact pass, fail, or blocked evidence.
 4. Capture durable command truths or failure signatures in `Candidate Learnings` when they are project-relevant.
 5. Treat the active PR branch as the verification unit when PR metadata exists.
-6. Write a verification report.
+6. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only for failing out-of-scope bugs that should preempt the normal queue.
+7. Write a verification report.
 
 ## Outputs
 

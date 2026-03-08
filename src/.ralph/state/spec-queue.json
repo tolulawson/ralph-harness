@@ -2,7 +2,7 @@
   "schema_version": "2.0.0",
   "queue_policy": {
     "selection": "fifo",
-    "preemption": "emergency_only"
+    "preemption": "failing_out_of_scope_bug"
   },
   "active_spec_id": null,
   "resume_spec_id": null,

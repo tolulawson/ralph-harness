@@ -5,6 +5,10 @@
 - Spec id: `{{spec_id}}`
 - Epoch id: `{{epoch_id}}`
 - Status: `{{status}}`
+- Kind: `{{kind}}`
+- Origin spec: `{{origin_spec_key}}`
+- Origin task: `{{origin_task_id}}`
+- Triggered by role: `{{triggered_by_role}}`
 - Branch: `codex/{{spec_key}}`
 - PR number: `{{pr_number}}`
 
@@ -37,3 +41,7 @@
 ## Delivery Notes
 
 - {{delivery_note_1}}
+
+## Amendment Notes
+
+- Queue behavior: {{queue_behavior}}

@@ -20,7 +20,7 @@ jobs:
           python-version: "3.11"
 
       - name: Make scripts executable
-        run: chmod +x scripts/verify-installation-contract.sh scripts/verify-upgrade-contract.sh scripts/validate-harness.sh scripts/smoke-test-install-upgrade.sh
+        run: chmod +x scripts/verify-installation-contract.sh scripts/verify-interruption-contract.sh scripts/verify-upgrade-contract.sh scripts/validate-harness.sh scripts/smoke-test-install-upgrade.sh scripts/render-release-notes.sh
 
       - name: Validate harness contracts
         run: scripts/validate-harness.sh
