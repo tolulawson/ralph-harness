@@ -1,0 +1,676 @@
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+try:
+    import tomllib  # type: ignore[attr-defined]
+except ModuleNotFoundError:
+    from pip._vendor import tomli as tomllib  # type: ignore
+
+
+CURRENT_QUEUE_SCHEMA_VERSION = "2.0.0"
+CURRENT_WORKFLOW_SCHEMA_VERSION = "2.0.0"
+CURRENT_TASK_STATE_SCHEMA_VERSION = "1.0.0"
+CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
+CURRENT_UPGRADE_CONTRACT_VERSION = 3
+MANAGED_AGENT_FILES = (
+    "implement.toml",
+    "orchestrator.toml",
+    "plan.toml",
+    "prd.toml",
+    "release.toml",
+    "review.toml",
+    "specify.toml",
+    "task-gen.toml",
+    "verify.toml",
+)
+
+WORKFLOW_REQUIRED_KEYS = (
+    "schema_version",
+    "project_name",
+    "active_epoch_id",
+    "active_spec_id",
+    "active_spec_key",
+    "active_task_id",
+    "current_phase",
+    "task_status",
+    "assigned_role",
+    "current_branch",
+    "current_run_id",
+    "active_pr_number",
+    "active_pr_url",
+    "queue_head_spec_id",
+    "resume_spec_id",
+    "resume_spec_stack",
+    "interruption_state",
+    "last_event_id",
+    "last_report_path",
+    "last_verified_at",
+    "blocked_reason",
+    "failure_count",
+    "next_action",
+    "queue_snapshot",
+)
+
+QUEUE_SPEC_REQUIRED_KEYS = (
+    "spec_id",
+    "spec_slug",
+    "spec_key",
+    "title",
+    "epoch_id",
+    "created_at",
+    "last_worked_at",
+    "status",
+    "kind",
+    "origin_spec_key",
+    "origin_task_id",
+    "triggered_by_role",
+    "trigger_report_path",
+    "trigger_summary",
+    "priority_override",
+    "blocked_reason",
+    "prd_path",
+    "spec_path",
+    "plan_path",
+    "tasks_path",
+    "task_state_path",
+    "latest_report_path",
+    "branch_name",
+    "base_branch",
+    "pr_number",
+    "pr_url",
+    "pr_state",
+    "merge_commit",
+    "task_summary",
+    "next_task_id",
+)
+
+TASK_LINE_RE = re.compile(r"^\s*-\s\[(?P<checked>[ xX])\]\s(?P<task_id>\d{3,}-T\d{3,})\b")
+
+UNCHECKED_TASK_STATUSES = {"queued", "ready", "in_progress", "paused", "blocked"}
+CHECKED_TASK_STATUSES = {
+    "awaiting_review",
+    "review_failed",
+    "awaiting_verification",
+    "verification_failed",
+    "awaiting_release",
+    "released",
+    "done",
+}
+ACTIVE_SPEC_STATUSES = {
+    "draft",
+    "planned",
+    "ready",
+    "in_progress",
+    "awaiting_pr",
+    "awaiting_review",
+    "review_failed",
+    "awaiting_verification",
+    "verification_failed",
+    "awaiting_merge",
+    "blocked",
+    "paused",
+}
+
+
+class RuntimeStateError(RuntimeError):
+    pass
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text())
+
+
+def load_toml(path: Path) -> dict[str, Any]:
+    return tomllib.loads(path.read_text())
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def format_code(value: Any) -> str:
+    if value is None:
+        return "null"
+    return str(value)
+
+
+def derive_interrupt_spec_id(workflow: dict[str, Any], queue: dict[str, Any]) -> Any:
+    interruption_state = workflow.get("interruption_state")
+    if isinstance(interruption_state, dict):
+        for key in ("interrupt_spec_id", "active_interrupt_spec_id", "spec_id"):
+            if interruption_state.get(key) is not None:
+                return interruption_state.get(key)
+    for spec in queue.get("specs", []):
+        if spec.get("kind") == "interrupt" and spec.get("status") in ACTIVE_SPEC_STATUSES:
+            return spec.get("spec_id")
+    return None
+
+
+def derive_queue_snapshot(queue: dict[str, Any]) -> list[dict[str, Any]]:
+    snapshot: list[dict[str, Any]] = []
+    for spec in queue.get("specs", []):
+        snapshot.append(
+            {
+                "spec_id": spec.get("spec_id"),
+                "spec_key": spec.get("spec_key"),
+                "epoch_id": spec.get("epoch_id"),
+                "status": spec.get("status"),
+                "branch_name": spec.get("branch_name"),
+                "pr_number": spec.get("pr_number"),
+            }
+        )
+    return snapshot
+
+
+def derive_queue_head_spec_id(queue: dict[str, Any]) -> Any:
+    for spec in queue.get("specs", []):
+        if spec.get("status") not in {"done", "superseded"}:
+            return spec.get("spec_id")
+    return None
+
+
+def render_workflow_state_markdown(workflow: dict[str, Any], queue: dict[str, Any]) -> str:
+    resume_stack = workflow.get("resume_spec_stack") or []
+    interrupt_spec_id = derive_interrupt_spec_id(workflow, queue)
+    resume_pending = "yes" if resume_stack else "no"
+    lines = [
+        "# Workflow State",
+        "",
+        f"- Project: `{format_code(workflow.get('project_name'))}`",
+        f"- Active epoch: `{format_code(workflow.get('active_epoch_id'))}`",
+        f"- Active spec: `{format_code(workflow.get('active_spec_key'))}`",
+        f"- Active task: `{format_code(workflow.get('active_task_id'))}`",
+        f"- Phase: `{format_code(workflow.get('current_phase'))}`",
+        f"- Task status: `{format_code(workflow.get('task_status'))}`",
+        f"- Assigned role: `{format_code(workflow.get('assigned_role'))}`",
+        f"- Branch: `{format_code(workflow.get('current_branch'))}`",
+        f"- Run id: `{format_code(workflow.get('current_run_id'))}`",
+        f"- Active PR number: `{format_code(workflow.get('active_pr_number'))}`",
+        f"- Active PR URL: `{format_code(workflow.get('active_pr_url'))}`",
+        f"- Queue head spec: `{format_code(workflow.get('queue_head_spec_id'))}`",
+        f"- Resume spec id: `{format_code(workflow.get('resume_spec_id'))}`",
+        f"- Resume stack depth: `{len(resume_stack)}`",
+        f"- Current interrupt spec: `{format_code(interrupt_spec_id)}`",
+        f"- Resume pending: `{resume_pending}`",
+        f"- Last event id: `{format_code(workflow.get('last_event_id'))}`",
+        f"- Last report: `{format_code(workflow.get('last_report_path'))}`",
+        f"- Next action: {workflow.get('next_action')}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def render_spec_index_markdown(queue: dict[str, Any]) -> str:
+    lines = [
+        "# Spec Register",
+        "",
+        "| Spec | Kind | Origin | Epoch | Title | Status | Branch | PR | Latest Report |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for spec in queue.get("specs", []):
+        branch_name = spec.get("branch_name") or f"codex/{spec.get('spec_key')}"
+        lines.append(
+            "| {spec_key} | {kind} | {origin} | {epoch} | {title} | {status} | `{branch}` | `{pr}` | `{report}` |".format(
+                spec_key=spec.get("spec_key"),
+                kind=spec.get("kind"),
+                origin=format_code(spec.get("origin_spec_key")),
+                epoch=spec.get("epoch_id"),
+                title=spec.get("title"),
+                status=spec.get("status"),
+                branch=branch_name,
+                pr=format_code(spec.get("pr_number")),
+                report=format_code(spec.get("latest_report_path")),
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
+def parse_tasks_markdown(tasks_path: Path) -> list[dict[str, Any]]:
+    tasks: list[dict[str, Any]] = []
+    for raw_line in tasks_path.read_text().splitlines():
+        match = TASK_LINE_RE.match(raw_line)
+        if match:
+            tasks.append(
+                {
+                    "task_id": match.group("task_id"),
+                    "checked": match.group("checked").lower() == "x",
+                }
+            )
+    return tasks
+
+
+def task_checkbox_matches_status(status: str) -> bool | None:
+    if status in CHECKED_TASK_STATUSES:
+        return True
+    if status in UNCHECKED_TASK_STATUSES:
+        return False
+    return None
+
+
+def report_role_from_path(report_path: Any) -> Any:
+    if not report_path:
+        return None
+    return Path(str(report_path)).stem
+
+
+def configured_agent_targets(repo_root: Path) -> tuple[Path, dict[str, Path], list[str]]:
+    issues: list[str] = []
+    config_path = repo_root / ".codex/config.toml"
+    if not config_path.exists():
+        return config_path, {}, ["missing required Codex config: .codex/config.toml"]
+
+    config = load_toml(config_path)
+    if not config.get("features", {}).get("multi_agent"):
+        issues.append(".codex/config.toml must enable Codex multi-agent support")
+
+    targets: dict[str, Path] = {}
+    for name, entry in (config.get("agents") or {}).items():
+        if isinstance(entry, dict) and isinstance(entry.get("config_file"), str):
+            targets[name] = config_path.parent / entry["config_file"]
+
+    if not targets:
+        issues.append(".codex/config.toml does not declare any agent config_file targets")
+
+    return config_path, targets, issues
+
+
+def migrate_legacy_agent_configs(repo_root: Path) -> None:
+    config_path, configured_targets, config_issues = configured_agent_targets(repo_root)
+    if config_issues:
+        raise RuntimeStateError("; ".join(config_issues))
+
+    legacy_dir = repo_root / "agents"
+    canonical_dir = repo_root / ".codex/agents"
+    if not legacy_dir.exists():
+        return
+
+    legacy_files = sorted(path.name for path in legacy_dir.glob("*.toml"))
+    unknown_legacy = [name for name in legacy_files if name not in MANAGED_AGENT_FILES]
+    if unknown_legacy:
+        raise RuntimeStateError(
+            "legacy repo-root agents/ contains unknown files: " + ", ".join(unknown_legacy)
+        )
+
+    canonical_dir.mkdir(parents=True, exist_ok=True)
+    for target in configured_targets.values():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        legacy_path = legacy_dir / target.name
+        if target.exists():
+            load_toml(target)
+            continue
+        if not legacy_path.exists():
+            raise RuntimeStateError(
+                f"missing canonical agent config target: {target.relative_to(repo_root)}"
+            )
+        target.write_text(legacy_path.read_text())
+        load_toml(target)
+
+    for path in legacy_dir.glob("*.toml"):
+        path.unlink()
+
+    leftovers = sorted(path.name for path in legacy_dir.iterdir())
+    if leftovers:
+        raise RuntimeStateError(
+            "legacy repo-root agents/ still contains non-managed files after migration: "
+            + ", ".join(leftovers)
+        )
+    legacy_dir.rmdir()
+
+
+def infer_target_task_id(spec: dict[str, Any], tasks: list[dict[str, Any]], workflow: dict[str, Any]) -> Any:
+    if workflow.get("active_spec_id") == spec.get("spec_id") and workflow.get("active_task_id"):
+        return workflow.get("active_task_id")
+    if spec.get("next_task_id"):
+        return spec.get("next_task_id")
+    checked_ids = [task["task_id"] for task in tasks if task["checked"]]
+    unchecked_ids = [task["task_id"] for task in tasks if not task["checked"]]
+    status = spec.get("status")
+    if status in {"awaiting_review", "review_failed", "awaiting_verification", "verification_failed"}:
+        return checked_ids[-1] if checked_ids else None
+    if status in {"awaiting_release", "awaiting_pr", "awaiting_merge", "done"}:
+        return tasks[-1]["task_id"] if tasks else None
+    if status in {"blocked", "paused"}:
+        return unchecked_ids[0] if unchecked_ids else (checked_ids[-1] if checked_ids else None)
+    return unchecked_ids[0] if unchecked_ids else None
+
+
+def infer_task_entries(spec: dict[str, Any], tasks: list[dict[str, Any]], workflow: dict[str, Any]) -> list[dict[str, Any]]:
+    if not tasks:
+        raise RuntimeStateError(f"{spec['spec_key']}: tasks.md does not contain any numbered task lines")
+
+    target_task_id = infer_target_task_id(spec, tasks, workflow)
+    task_lookup = {task["task_id"]: task for task in tasks}
+    if target_task_id and target_task_id not in task_lookup:
+        raise RuntimeStateError(f"{spec['spec_key']}: target task {target_task_id} is missing from tasks.md")
+
+    status = spec.get("status")
+    if status == "done":
+        if any(not task["checked"] for task in tasks):
+            raise RuntimeStateError(
+                f"{spec['spec_key']}: spec is marked done but tasks.md still has unchecked tasks"
+            )
+    if (
+        workflow.get("active_spec_id") == spec.get("spec_id")
+        and workflow.get("task_status") in UNCHECKED_TASK_STATUSES
+        and target_task_id
+        and task_lookup[target_task_id]["checked"]
+    ):
+        raise RuntimeStateError(
+            f"{spec['spec_key']}: workflow state points at {target_task_id} but tasks.md already marks it complete"
+        )
+
+    target_status = None
+    if status == "done":
+        target_status = "done"
+    elif status in {"awaiting_review", "review_failed", "awaiting_verification", "verification_failed"}:
+        target_status = status
+    elif status in {"awaiting_release", "awaiting_pr", "awaiting_merge"}:
+        target_status = "awaiting_release"
+    elif status in {"blocked", "paused"}:
+        target_status = status
+    elif workflow.get("active_spec_id") == spec.get("spec_id") and workflow.get("task_status"):
+        target_status = workflow.get("task_status")
+    elif status in {"draft", "planned", "ready"}:
+        target_status = "ready"
+    else:
+        target_status = "in_progress"
+
+    entries: list[dict[str, Any]] = []
+    latest_role = report_role_from_path(spec.get("latest_report_path"))
+    updated_at = spec.get("last_worked_at") or spec.get("created_at")
+    target_seen = False
+    for task in tasks:
+        task_id = task["task_id"]
+        checkbox_checked = task["checked"]
+        if status == "done":
+            entry_status = "done"
+        elif task_id == target_task_id:
+            entry_status = target_status
+            target_seen = True
+        elif target_task_id and not target_seen:
+            if checkbox_checked:
+                entry_status = "done"
+            else:
+                raise RuntimeStateError(
+                    f"{spec['spec_key']}: found an unchecked task before target task {target_task_id}"
+                )
+        else:
+            entry_status = "done" if checkbox_checked else "queued"
+
+        expected_checked = task_checkbox_matches_status(entry_status)
+        if expected_checked is not None and expected_checked != checkbox_checked:
+            raise RuntimeStateError(
+                f"{spec['spec_key']}: cannot infer task-state for {task_id} because tasks.md and spec status disagree"
+            )
+
+        entries.append(
+            {
+                "task_id": task_id,
+                "status": entry_status,
+                "previous_status": None,
+                "last_role": latest_role,
+                "last_report_path": spec.get("latest_report_path"),
+                "updated_at": updated_at,
+                "blocked_reason": spec.get("blocked_reason"),
+                "review_result": "passed" if entry_status in {"awaiting_verification", "awaiting_release", "released", "done"} else None,
+                "verification_result": "passed" if entry_status in {"awaiting_release", "released", "done"} else None,
+            }
+        )
+
+    return entries
+
+
+def summarize_task_entries(entries: list[dict[str, Any]]) -> dict[str, int]:
+    total = len(entries)
+    done = sum(1 for entry in entries if entry["status"] in CHECKED_TASK_STATUSES)
+    in_progress = sum(
+        1
+        for entry in entries
+        if entry["status"] not in {"queued", "ready", "released", "done", "blocked"}
+    )
+    blocked = sum(1 for entry in entries if entry["status"] == "blocked")
+    return {"total": total, "done": done, "in_progress": in_progress, "blocked": blocked}
+
+
+def normalize_spec_entry(spec: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(spec)
+    normalized["kind"] = normalized.get("kind") or "normal"
+    normalized["origin_spec_key"] = normalized.get("origin_spec_key")
+    normalized["origin_task_id"] = normalized.get("origin_task_id")
+    normalized["triggered_by_role"] = normalized.get("triggered_by_role")
+    normalized["trigger_report_path"] = normalized.get("trigger_report_path")
+    normalized["trigger_summary"] = normalized.get("trigger_summary")
+    normalized["task_state_path"] = normalized.get("task_state_path") or f"specs/{normalized['spec_key']}/task-state.json"
+    normalized["branch_name"] = normalized.get("branch_name") or f"codex/{normalized['spec_key']}"
+    normalized["task_summary"] = normalized.get("task_summary") or {"total": 0, "done": 0, "in_progress": 0, "blocked": 0}
+    normalized["next_task_id"] = normalized.get("next_task_id")
+    normalized["blocked_reason"] = normalized.get("blocked_reason")
+    return normalized
+
+
+def normalize_queue(queue: dict[str, Any], workflow: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(queue)
+    normalized["schema_version"] = CURRENT_QUEUE_SCHEMA_VERSION
+    queue_policy = dict(normalized.get("queue_policy") or {})
+    queue_policy["selection"] = "fifo"
+    queue_policy["preemption"] = CURRENT_PREEMPTION_POLICY
+    normalized["queue_policy"] = queue_policy
+    normalized_specs = [normalize_spec_entry(spec) for spec in normalized.get("specs", [])]
+    normalized["specs"] = normalized_specs
+
+    active_spec_id = normalized.get("active_spec_id")
+    if active_spec_id is None:
+        for spec in normalized_specs:
+            if spec.get("status") in ACTIVE_SPEC_STATUSES and spec.get("kind") != "interrupt":
+                active_spec_id = spec.get("spec_id")
+                break
+    normalized["active_spec_id"] = active_spec_id
+    normalized["resume_spec_id"] = workflow.get("resume_spec_id")
+    return normalized
+
+
+def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(workflow)
+    normalized["schema_version"] = CURRENT_WORKFLOW_SCHEMA_VERSION
+    normalized["resume_spec_stack"] = list(normalized.get("resume_spec_stack") or [])
+    normalized["interruption_state"] = normalized.get("interruption_state")
+    normalized["queue_head_spec_id"] = derive_queue_head_spec_id(queue)
+    normalized["queue_snapshot"] = derive_queue_snapshot(queue)
+    active_spec_id = normalized.get("active_spec_id") or queue.get("active_spec_id")
+    normalized["active_spec_id"] = active_spec_id
+    active_spec = None
+    if active_spec_id is not None:
+        for spec in queue.get("specs", []):
+            if spec.get("spec_id") == active_spec_id:
+                active_spec = spec
+                break
+    normalized["active_spec_key"] = active_spec.get("spec_key") if active_spec else None
+    normalized["active_epoch_id"] = active_spec.get("epoch_id") if active_spec else normalized.get("active_epoch_id")
+    if active_spec and not normalized.get("current_branch"):
+        normalized["current_branch"] = active_spec.get("branch_name")
+    if active_spec is None:
+        normalized["active_task_id"] = None
+        if normalized.get("current_phase") == "complete":
+            normalized["task_status"] = None
+            normalized["assigned_role"] = None
+    return normalized
+
+
+def migrate_repo_state(repo_root: Path) -> None:
+    migrate_legacy_agent_configs(repo_root)
+
+    workflow_path = repo_root / ".ralph/state/workflow-state.json"
+    queue_path = repo_root / ".ralph/state/spec-queue.json"
+    workflow = load_json(workflow_path)
+    queue = load_json(queue_path)
+    queue = normalize_queue(queue, workflow)
+    workflow = normalize_workflow(workflow, queue)
+
+    for spec in queue.get("specs", []):
+        tasks_path = repo_root / spec["tasks_path"]
+        task_state_path = repo_root / spec["task_state_path"]
+        tasks = parse_tasks_markdown(tasks_path)
+        if not task_state_path.exists():
+            entries = infer_task_entries(spec, tasks, workflow)
+            task_state_path.parent.mkdir(parents=True, exist_ok=True)
+            write_json(
+                task_state_path,
+                {
+                    "schema_version": CURRENT_TASK_STATE_SCHEMA_VERSION,
+                    "spec_id": spec["spec_id"],
+                    "spec_key": spec["spec_key"],
+                    "tasks": entries,
+                },
+            )
+        task_state = load_json(task_state_path)
+        spec["task_summary"] = summarize_task_entries(task_state.get("tasks", []))
+        if spec.get("status") == "done":
+            spec["next_task_id"] = None
+
+    workflow["queue_snapshot"] = derive_queue_snapshot(queue)
+    workflow["queue_head_spec_id"] = derive_queue_head_spec_id(queue)
+
+    harness_version_path = repo_root / ".ralph/harness-version.json"
+    if harness_version_path.exists():
+        harness_version = load_json(harness_version_path)
+        harness_version["upgrade_contract_version"] = CURRENT_UPGRADE_CONTRACT_VERSION
+        write_json(harness_version_path, harness_version)
+
+    write_json(queue_path, queue)
+    write_json(workflow_path, workflow)
+    (repo_root / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
+    (repo_root / "specs/INDEX.md").write_text(render_spec_index_markdown(queue))
+
+
+def validate_task_state_alignment(
+    spec: dict[str, Any], tasks: list[dict[str, Any]], task_state: dict[str, Any]
+) -> list[str]:
+    issues: list[str] = []
+    task_entries = task_state.get("tasks", [])
+    task_ids_from_markdown = [task["task_id"] for task in tasks]
+    task_ids_from_state = [entry.get("task_id") for entry in task_entries]
+    if task_ids_from_markdown != task_ids_from_state:
+        issues.append(f"{spec['spec_key']}: task-state.json task ids do not match tasks.md")
+        return issues
+
+    for task, entry in zip(tasks, task_entries):
+        status = entry.get("status")
+        expected_checked = task_checkbox_matches_status(status)
+        if expected_checked is not None and expected_checked != task["checked"]:
+            issues.append(
+                f"{spec['spec_key']}: {task['task_id']} is {status} in task-state.json but tasks.md checkbox disagrees"
+            )
+    return issues
+
+
+def validate_installed_runtime(repo_root: Path) -> list[str]:
+    issues: list[str] = []
+
+    config_path, configured_targets, config_issues = configured_agent_targets(repo_root)
+    issues.extend(config_issues)
+    if config_path.exists():
+        for role, target in configured_targets.items():
+            rel_target = target.relative_to(repo_root) if target.is_relative_to(repo_root) else target
+            if not target.exists():
+                issues.append(f".codex/config.toml points `{role}` at missing file `{rel_target}`")
+                continue
+            try:
+                load_toml(target)
+            except Exception as exc:
+                issues.append(f"{rel_target} does not parse as TOML: {exc}")
+
+    legacy_dir = repo_root / "agents"
+    if legacy_dir.exists():
+        legacy_files = sorted(path.name for path in legacy_dir.glob("*.toml"))
+        if legacy_files:
+            issues.append("legacy repo-root agents/ still exists; migrate the role configs into .codex/agents/")
+
+    workflow_json_path = repo_root / ".ralph/state/workflow-state.json"
+    queue_json_path = repo_root / ".ralph/state/spec-queue.json"
+    workflow_md_path = repo_root / ".ralph/state/workflow-state.md"
+    spec_index_path = repo_root / "specs/INDEX.md"
+    for path in (workflow_json_path, queue_json_path, workflow_md_path, spec_index_path):
+        if not path.exists():
+            issues.append(f"missing required runtime file: {path.relative_to(repo_root)}")
+
+    if issues:
+        return issues
+
+    workflow = load_json(workflow_json_path)
+    queue = load_json(queue_json_path)
+
+    harness_version_path = repo_root / ".ralph/harness-version.json"
+    if harness_version_path.exists():
+        harness_version = load_json(harness_version_path)
+        if harness_version.get("upgrade_contract_version") != CURRENT_UPGRADE_CONTRACT_VERSION:
+            issues.append(
+                ".ralph/harness-version.json upgrade_contract_version does not match the current migration-aware contract"
+            )
+
+    for key in WORKFLOW_REQUIRED_KEYS:
+        if key not in workflow:
+            issues.append(f".ralph/state/workflow-state.json is missing `{key}`")
+
+    if queue.get("schema_version") != CURRENT_QUEUE_SCHEMA_VERSION:
+        issues.append(".ralph/state/spec-queue.json schema_version is not current")
+    if queue.get("queue_policy", {}).get("preemption") != CURRENT_PREEMPTION_POLICY:
+        issues.append(".ralph/state/spec-queue.json still uses a pre-interrupt preemption policy")
+
+    for spec in queue.get("specs", []):
+        for key in QUEUE_SPEC_REQUIRED_KEYS:
+            if key not in spec:
+                issues.append(f"{spec.get('spec_key', 'unknown-spec')}: queue entry is missing `{key}`")
+
+    expected_workflow_md = render_workflow_state_markdown(workflow, queue)
+    actual_workflow_md = workflow_md_path.read_text()
+    if actual_workflow_md != expected_workflow_md:
+        issues.append(".ralph/state/workflow-state.md does not match the canonical JSON projection")
+
+    expected_spec_index = render_spec_index_markdown(queue)
+    actual_spec_index = spec_index_path.read_text()
+    if actual_spec_index != expected_spec_index:
+        issues.append("specs/INDEX.md does not match the canonical spec queue projection")
+
+    if workflow.get("queue_snapshot") != derive_queue_snapshot(queue):
+        issues.append(".ralph/state/workflow-state.json queue_snapshot does not match spec-queue.json")
+
+    if workflow.get("active_spec_id") != queue.get("active_spec_id"):
+        issues.append("workflow-state active_spec_id does not match spec-queue active_spec_id")
+
+    for spec in queue.get("specs", []):
+        task_state_relpath = spec.get("task_state_path")
+        if not task_state_relpath:
+            issues.append(f"{spec.get('spec_key', 'unknown-spec')}: queue entry is missing task_state_path")
+            continue
+        task_state_path = repo_root / task_state_relpath
+        if not task_state_path.exists():
+            issues.append(f"{spec['spec_key']}: missing {task_state_relpath}")
+            continue
+        tasks_relpath = spec.get("tasks_path")
+        if not tasks_relpath:
+            issues.append(f"{spec['spec_key']}: queue entry is missing tasks_path")
+            continue
+        task_state = load_json(task_state_path)
+        tasks = parse_tasks_markdown(repo_root / tasks_relpath)
+        issues.extend(validate_task_state_alignment(spec, tasks, task_state))
+
+    active_spec_id = workflow.get("active_spec_id")
+    active_task_id = workflow.get("active_task_id")
+    if active_spec_id and active_task_id:
+        for spec in queue.get("specs", []):
+            if spec.get("spec_id") != active_spec_id:
+                continue
+            tasks = parse_tasks_markdown(repo_root / spec["tasks_path"])
+            lookup = {task["task_id"]: task for task in tasks}
+            if active_task_id not in lookup:
+                issues.append(f"workflow-state active_task_id {active_task_id} is not present in {spec['tasks_path']}")
+                continue
+            if workflow.get("task_status") in UNCHECKED_TASK_STATUSES and lookup[active_task_id]["checked"]:
+                issues.append(
+                    f"workflow-state points at {active_task_id} as the next action but tasks.md already marks it complete"
+                )
+
+    return issues

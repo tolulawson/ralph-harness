@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 TAG_NAME="${1:-}"
 
 if [[ -z "$TAG_NAME" ]]; then
-  echo "render-release-notes: expected a tag argument like v0.2.0" >&2
+  echo "render-release-notes: expected a tag argument like v0.4.0" >&2
   exit 1
 fi
 

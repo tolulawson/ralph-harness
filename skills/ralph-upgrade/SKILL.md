@@ -24,8 +24,11 @@ This is the main external entry point for refreshing an existing install without
 3. Read `UPGRADING.md` first and follow it as the authoritative upgrade workflow.
 4. Use `src/upgrade-manifest.txt` exactly as `UPGRADING.md` specifies.
 5. Refresh only the managed Ralph block inside `AGENTS.md` instead of replacing the full file.
-6. Update `.ralph/harness-version.json` with the selected tag and resolved commit.
-7. Complete the upgrade without overwriting project-owned runtime files unless a named migration step requires it.
+6. Run `python3 scripts/migrate-installed-runtime.py --repo <target-repo>` from the checked-out source repo after the scaffold-owned files have been refreshed.
+7. Let the migration rewrite only Ralph-owned runtime state and projections, plus create missing `task-state.json` files when inference is clear.
+8. If migration reports ambiguous history, stop and repair that spec state instead of guessing.
+9. Update `.ralph/harness-version.json` with the selected tag and resolved commit.
+10. Complete the upgrade without overwriting project-owned runtime files unless a named migration step requires it.
 
 ## Outputs
 

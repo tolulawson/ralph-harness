@@ -12,6 +12,8 @@ When resuming the harness:
 8. read the latest report referenced by `last_report_path`
 9. read active spec files under `specs/<spec-id>-<slug>/`
 10. tail only recent events from `.ralph/logs/events.jsonl`
-11. check `resume_spec_stack` and `interruption_state` before selecting the next spec
-12. choose the next role from spec status, task lifecycle state, interruption state, and PR state
-13. continue orchestrating until the queue is empty or a runtime-contract stop condition occurs
+11. treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as canonical machine state
+12. verify `workflow-state.md` and `specs/INDEX.md` still match their canonical JSON projections
+13. check `resume_spec_stack` and `interruption_state` before selecting the next spec
+14. choose the next role from spec status, task lifecycle state, interruption state, and PR state
+15. continue orchestrating until the queue is empty or a runtime-contract stop condition occurs
