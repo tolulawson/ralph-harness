@@ -4,6 +4,37 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.5.1 - 2026-03-09
+
+### Summary
+
+Cleaned up the shipped task-generation guidance so it no longer implies unsupported wave-style parallel execution.
+
+This patch release removes stale `[P]`-style parallel-task guidance from the scaffold and aligns task authoring instructions with the current Ralph runtime contract: one active worker at a time, with independence expressed through dependency ordering and phase structure instead of parallel markers.
+
+### Highlights
+
+- Removed stale parallel-marker guidance from the shipped `task-gen` skill.
+- Clarified that task independence should be encoded through ordering and phase structure, not wave execution hints.
+- Kept the existing atomic-commit handoff contract and single-worker orchestration model unchanged.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.5.1` as the default public install or upgrade reference.
+- Fresh installs inherit the cleaned-up task-generation guidance immediately.
+- Existing installed repos can upgrade normally; no new migration step, schema change, or runtime-state repair is required for this release.
+
+### Validation And Release Workflow
+
+- The release continues to use the existing validation suite and release workflow from `v0.5.0`.
+- No new validators or workflow phases were added for this patch release.
+
+### Artifacts And References
+
+- Task generation skill: `src/.agents/skills/task-gen/SKILL.md`
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Release asset: `ralph-harness-v0.5.1.tar.gz`
+
 ## v0.5.0 - 2026-03-09
 
 ### Summary
