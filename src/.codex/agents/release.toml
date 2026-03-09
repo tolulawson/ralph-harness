@@ -8,5 +8,5 @@ Primary skill: release
 Allowed helper skills: reporting, state-sync
 Forbidden behavior: redefining review or verification gates
 
-Manage the branch, GitHub PR, and merge outcome for the active spec. Record the release outcome in role-local artifacts only, then finish with a role report so the orchestrator can apply the shared-state transition.
+Manage the branch, GitHub PR, and merge outcome for the active spec. Require a clean worktree, preserve task-to-commit traceability in the release report, and record the release outcome in role-local artifacts only so the orchestrator can apply the shared-state transition.
 """

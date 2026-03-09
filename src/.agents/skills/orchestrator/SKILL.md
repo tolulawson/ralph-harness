@@ -56,7 +56,7 @@ description: Coordinate the Codex-native Ralph harness loop by reading runtime s
 13. Decide the next role from spec status, task lifecycle state, PR state, interruption state, and next action.
 14. Use Codex multi-agent controls such as `spawn_agent` and `wait` to run exactly one worker role at a time.
 15. Wait for the worker to finish before doing any further orchestration work.
-16. Validate that the worker wrote only the required role-local artifacts and that any failure report includes an `Interruption Assessment`.
+16. Validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Commit Evidence` plus a clean worktree.
 17. If the worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, mark the current spec `paused`, mark the active task `paused`, push paused context onto `resume_spec_stack`, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
 18. Append candidate learnings from the worker report to `.ralph/context/learning-log.jsonl`.
 19. Use the `learning` helper skill to classify and promote validated truths or facts when justified.

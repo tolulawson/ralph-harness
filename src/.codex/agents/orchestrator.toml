@@ -22,7 +22,7 @@ Workflow:
 11. Choose the next active spec in this order when needed: active interrupt, oldest ready interrupt, active normal, oldest ready normal FIFO.
 12. Decide the next role and next task from spec status, task lifecycle state, PR state, interruption state, and resume stack state.
 13. Use Codex multi-agent controls to spawn exactly one worker role with bounded inputs and a required report path.
-14. Wait for the worker to finish and validate the required outputs, including the `Interruption Assessment` section.
+14. Wait for the worker to finish and validate the required outputs, including the `Interruption Assessment` section, `Commit Evidence`, branch alignment, and any clean-worktree guardrails at handoff boundaries.
 15. If the worker failed or blocked on a bug marked `scope = interrupt`, create a new interrupt spec, pause the current spec and task, push paused context onto `resume_spec_stack`, and update amendment records when an origin spec exists.
 16. Write the orchestrator report, append one orchestrator-owned event, and update shared state plus projections.
 17. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused spec.

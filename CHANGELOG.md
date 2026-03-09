@@ -4,6 +4,42 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.5.0 - 2026-03-09
+
+### Summary
+
+Completed tasks now require atomic commit checkpoints before handoff, and Ralph enforces that traceability at runtime preflight instead of treating it as a loose convention.
+
+This release adds checkpoint-level `Commit Evidence` to the shipped report contract, tightens the shipped implement, review, verify, release, and orchestrator instructions around clean-worktree handoff, and expands runtime validation so review, verification, and release refuse to advance from a dirty branch or a report that lacks checkpoint traceability.
+
+### Highlights
+
+- Added a required `Commit Evidence` section to the shipped role report template and doctrine.
+- Tightened the shipped role skills and Codex agent role configs so implementation must create atomic task checkpoints and review treats missing commit evidence as a finding.
+- Extended installed-runtime preflight to validate active branch alignment, clean worktree handoff, and checkpoint commit evidence from the latest relevant worker report.
+- Added a dedicated atomic-commit contract verifier plus git-backed smoke fixtures for passing and failing handoff scenarios.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.5.0` as the default public install or upgrade reference.
+- Fresh installs inherit the atomic-commit handoff rule through the shipped scaffold doctrine, role skills, and report template.
+- Upgrades continue to use the same manifest-copy and migration flow as `v0.4.0`; no new scaffold paths or migration phases were added for this release.
+- Existing installed repos that upgrade to `v0.5.0` should expect stricter `ralph-execute` preflight when a completed task lacks checkpoint traceability or the branch is dirty at handoff.
+
+### Validation And Release Workflow
+
+- CI and local validation now run `scripts/verify-atomic-commit-contract.sh` alongside the existing install, interrupt, and upgrade contract checks.
+- Smoke tests now include git-backed fixtures that prove atomic checkpoint handoff passes and dirty-worktree, missing-evidence, and branch-mismatch cases fail.
+- The GitHub release workflow now makes the new verifier executable before running the full validation suite.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Project policy: `src/.ralph/policy/project-policy.md`
+- Report template: `src/.ralph/templates/role-report-template.md`
+- Public resume entrypoint: `skills/ralph-execute/SKILL.md`
+- Release asset: `ralph-harness-v0.5.0.tar.gz`
+
 ## v0.4.0 - 2026-03-08
 
 ### Summary

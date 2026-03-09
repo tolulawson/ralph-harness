@@ -14,6 +14,8 @@ When resuming the harness:
 10. tail only recent events from `.ralph/logs/events.jsonl`
 11. treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as canonical machine state
 12. verify `workflow-state.md` and `specs/INDEX.md` still match their canonical JSON projections
-13. check `resume_spec_stack` and `interruption_state` before selecting the next spec
-14. choose the next role from spec status, task lifecycle state, interruption state, and PR state
-15. continue orchestrating until the queue is empty or a runtime-contract stop condition occurs
+13. verify the active git branch still matches the active spec branch when a spec is active
+14. confirm review, verification, and release handoffs are on a clean worktree and the latest relevant worker report includes `Commit Evidence`
+15. check `resume_spec_stack` and `interruption_state` before selecting the next spec
+16. choose the next role from spec status, task lifecycle state, interruption state, and PR state
+17. continue orchestrating until the queue is empty or a runtime-contract stop condition occurs

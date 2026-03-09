@@ -26,6 +26,7 @@ Interpret an installed Ralph harness in this order:
 - The orchestrator must use built-in Codex agent controls such as `spawn_agent` and `wait` rather than narrating delegation without actually delegating.
 - Exactly one worker role may be active at a time for normal execution.
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
+- Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
 
 ## Core Loop
 
@@ -54,7 +55,7 @@ Interpret an installed Ralph harness in this order:
 13. decide the next role from spec status, task lifecycle state, PR state, and next action
 14. spawn exactly one worker role with bounded inputs and a required report path
 15. wait for that worker to finish
-16. validate the worker outputs
+16. validate the worker outputs, including required commit evidence and any clean-worktree guardrails at role boundaries
 17. if the worker failed or blocked on an out-of-scope bug, create a new interrupt spec, pause the current spec, and push paused context onto `resume_spec_stack`
 18. write the orchestrator report
 19. append one orchestrator-owned event
@@ -158,6 +159,10 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 
 ## Git And PR Policy
 
+- Each completed task must end with at least one atomic commit before handoff.
+- Multiple commits inside one task are allowed only when each commit is a coherent checkpoint within that same task.
+- Git SHAs and commit ranges belong in role reports and git history, not in canonical workflow JSON.
+- Review, verification, and release may not advance from a dirty worktree when the active task has already been handed off; a clean worktree is required at those handoff boundaries.
 - Review and verification must pass before release completes.
 - A spec is not `done` until its PR lifecycle is complete according to project policy.
 - The release worker records the PR or merge outcome, and the orchestrator applies the resulting shared-state transition.

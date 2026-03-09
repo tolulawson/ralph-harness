@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -114,6 +115,17 @@ ACTIVE_SPEC_STATUSES = {
     "blocked",
     "paused",
 }
+HANDOFF_PHASES = {"review", "verification", "release"}
+HANDOFF_TASK_STATUSES = {
+    "awaiting_review",
+    "review_failed",
+    "awaiting_verification",
+    "verification_failed",
+    "awaiting_release",
+    "released",
+}
+REPORT_COMMIT_ROLES = {"implement", "review", "verify", "release"}
+COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{7,40}$")
 
 
 class RuntimeStateError(RuntimeError):
@@ -254,6 +266,136 @@ def report_role_from_path(report_path: Any) -> Any:
     if not report_path:
         return None
     return Path(str(report_path)).stem
+
+
+def run_git(repo_root: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def is_git_worktree(repo_root: Path) -> bool:
+    try:
+        return run_git(repo_root, "rev-parse", "--is-inside-work-tree") == "true"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def current_git_branch(repo_root: Path) -> str | None:
+    try:
+        return run_git(repo_root, "rev-parse", "--abbrev-ref", "HEAD")
+    except subprocess.CalledProcessError:
+        return None
+
+
+def git_worktree_dirty(repo_root: Path) -> bool:
+    try:
+        return bool(run_git(repo_root, "status", "--porcelain"))
+    except subprocess.CalledProcessError:
+        return False
+
+
+def parse_markdown_sections(text: str) -> dict[str, list[str]]:
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            current = line[3:].strip()
+            sections[current] = []
+            continue
+        if current is not None:
+            sections[current].append(line)
+    return sections
+
+
+def parse_commit_evidence(report_path: Path) -> tuple[dict[str, str], list[str]]:
+    issues: list[str] = []
+    if not report_path.exists():
+        return {}, [f"missing relevant report: {report_path}"]
+
+    sections = parse_markdown_sections(report_path.read_text())
+    lines = sections.get("Commit Evidence")
+    if lines is None:
+        return {}, [f"{report_path}: missing `Commit Evidence` section"]
+
+    evidence: dict[str, str] = {}
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        if not stripped.startswith("- "):
+            continue
+        body = stripped[2:]
+        if ":" not in body:
+            continue
+        label, value = body.split(":", 1)
+        evidence[label.strip().lower()] = value.strip().strip("`")
+
+    required = (
+        "head commit",
+        "commit subject",
+        "task ids covered",
+        "validation run",
+        "additional commits or range",
+    )
+    for key in required:
+        if not evidence.get(key):
+            issues.append(f"{report_path}: `Commit Evidence` is missing `{key}`")
+    return evidence, issues
+
+
+def handoff_requires_git_checks(workflow: dict[str, Any]) -> bool:
+    return (
+        workflow.get("active_spec_id") is not None
+        or workflow.get("current_phase") in HANDOFF_PHASES
+        or workflow.get("task_status") in HANDOFF_TASK_STATUSES
+    )
+
+
+def handoff_requires_clean_worktree(workflow: dict[str, Any]) -> bool:
+    return workflow.get("current_phase") in HANDOFF_PHASES or workflow.get("task_status") in HANDOFF_TASK_STATUSES
+
+
+def handoff_requires_commit_evidence(workflow: dict[str, Any]) -> bool:
+    return workflow.get("current_phase") in HANDOFF_PHASES or workflow.get("task_status") in HANDOFF_TASK_STATUSES
+
+
+def find_task_entry(task_state: dict[str, Any], task_id: Any) -> dict[str, Any] | None:
+    if not task_id:
+        return None
+    for entry in task_state.get("tasks", []):
+        if entry.get("task_id") == task_id:
+            return entry
+    return None
+
+
+def resolve_relevant_report_path(
+    repo_root: Path,
+    workflow: dict[str, Any],
+    spec: dict[str, Any] | None,
+    task_state: dict[str, Any] | None,
+) -> Path | None:
+    candidates: list[Any] = [workflow.get("last_report_path")]
+    if task_state is not None:
+        task_entry = find_task_entry(task_state, workflow.get("active_task_id"))
+        if task_entry:
+            candidates.append(task_entry.get("last_report_path"))
+    if spec is not None:
+        candidates.append(spec.get("latest_report_path"))
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate or not isinstance(candidate, str) or candidate in seen:
+            continue
+        seen.add(candidate)
+        role = report_role_from_path(candidate)
+        if role not in REPORT_COMMIT_ROLES:
+            continue
+        return repo_root / candidate
+    return None
 
 
 def configured_agent_targets(repo_root: Path) -> tuple[Path, dict[str, Path], list[str]]:
@@ -640,6 +782,9 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     if workflow.get("active_spec_id") != queue.get("active_spec_id"):
         issues.append("workflow-state active_spec_id does not match spec-queue active_spec_id")
 
+    active_spec: dict[str, Any] | None = None
+    active_task_state: dict[str, Any] | None = None
+
     for spec in queue.get("specs", []):
         task_state_relpath = spec.get("task_state_path")
         if not task_state_relpath:
@@ -656,6 +801,9 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         task_state = load_json(task_state_path)
         tasks = parse_tasks_markdown(repo_root / tasks_relpath)
         issues.extend(validate_task_state_alignment(spec, tasks, task_state))
+        if spec.get("spec_id") == workflow.get("active_spec_id"):
+            active_spec = spec
+            active_task_state = task_state
 
     active_spec_id = workflow.get("active_spec_id")
     active_task_id = workflow.get("active_task_id")
@@ -672,5 +820,65 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
                 issues.append(
                     f"workflow-state points at {active_task_id} as the next action but tasks.md already marks it complete"
                 )
+
+    if handoff_requires_git_checks(workflow):
+        if not is_git_worktree(repo_root):
+            issues.append("repository must be inside a git worktree for branch-aware Ralph execution")
+        else:
+            git_branch = current_git_branch(repo_root)
+            if active_spec and active_spec.get("branch_name") and git_branch != active_spec.get("branch_name"):
+                issues.append(
+                    "git branch does not match the active spec branch: "
+                    f"expected {active_spec.get('branch_name')}, got {git_branch}"
+                )
+
+            if handoff_requires_clean_worktree(workflow) and git_worktree_dirty(repo_root):
+                issues.append("dirty worktree blocks review, verification, release, or completed-task handoff")
+
+            if handoff_requires_commit_evidence(workflow):
+                report_path = resolve_relevant_report_path(repo_root, workflow, active_spec, active_task_state)
+                if report_path is None:
+                    issues.append("missing relevant implement/review/verify/release report for commit-evidence preflight")
+                else:
+                    evidence, evidence_issues = parse_commit_evidence(report_path)
+                    issues.extend(evidence_issues)
+                    if not evidence_issues:
+                        checkpoint_commit = evidence.get("head commit", "")
+                        if not COMMIT_SHA_RE.match(checkpoint_commit):
+                            issues.append(f"{report_path}: `Head commit` must be a 7-40 character git SHA")
+                        else:
+                            try:
+                                resolved_commit = run_git(repo_root, "rev-parse", checkpoint_commit)
+                            except subprocess.CalledProcessError:
+                                resolved_commit = ""
+                            if not resolved_commit:
+                                issues.append(
+                                    f"{report_path}: `Head commit` {checkpoint_commit} does not resolve to a git commit in this repo"
+                                )
+                            else:
+                                merge_base = subprocess.run(
+                                    ["git", "merge-base", "--is-ancestor", resolved_commit, "HEAD"],
+                                    cwd=repo_root,
+                                    capture_output=True,
+                                    text=True,
+                                )
+                                if merge_base.returncode != 0:
+                                    issues.append(
+                                        f"{report_path}: `Head commit` {checkpoint_commit} is not contained in the current branch tip"
+                                    )
+
+                                expected_subject = run_git(repo_root, "log", "-1", "--format=%s", resolved_commit)
+                                if evidence.get("commit subject") != expected_subject:
+                                    issues.append(
+                                        f"{report_path}: `Commit subject` does not match commit `{resolved_commit}` subject `{expected_subject}`"
+                                    )
+
+                        if active_task_id and active_task_id not in evidence.get("task ids covered", ""):
+                            issues.append(
+                                f"{report_path}: `Task ids covered` must include the active task {active_task_id}"
+                            )
+
+                        if evidence.get("validation run", "").lower() in {"none", "n/a", "null"}:
+                            issues.append(f"{report_path}: `Validation run` must record real checkpoint evidence")
 
     return issues
