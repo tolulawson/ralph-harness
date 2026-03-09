@@ -16,6 +16,14 @@
 
 - {{verification_1}}
 
+## Commit Evidence
+
+- Head commit: `{{head_commit_sha}}`
+- Commit subject: {{commit_subject}}
+- Task ids covered: `{{task_ids_covered}}`
+- Validation run: {{validation_run}}
+- Additional commits or range: {{additional_commits}}
+
 ## Interruption Assessment
 
 - Scope: `{{interruption_scope}}`

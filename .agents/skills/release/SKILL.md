@@ -22,11 +22,13 @@ description: Manage branch, GitHub PR, merge, and state advancement for an appro
 
 1. Confirm review and verification evidence exists.
 2. Confirm the active branch matches the active spec queue entry.
-3. If no PR exists yet and policy requires one, create or record the GitHub PR.
-4. If review and verification pass, merge the PR or record the merge result.
-5. Record the release outcome in role-local artifacts and the release report only.
-6. Do not mutate shared queue or workflow state directly.
-7. Write a release report.
+3. Confirm the worktree is clean before attempting PR or merge actions. A clean worktree is required for release.
+4. Read the latest `Commit Evidence` and summarize the task-to-commit traceability in the release report.
+5. If no PR exists yet and policy requires one, create or record the GitHub PR.
+6. If review and verification pass, merge the PR or record the merge result.
+7. Record the release outcome in role-local artifacts and the release report only.
+8. Do not mutate shared queue or workflow state directly.
+9. Write a release report.
 
 ## Outputs
 

@@ -1,13 +1,13 @@
 # Workflow State
 
 - Project: `ralph-harness`
-- Active epoch: `E002`
-- Active spec: `002-deterministic-orchestration-versioning-and-upgrades`
-- Active task: `002-T005`
+- Active epoch: `null`
+- Active spec: `null`
+- Active task: `null`
 - Phase: `complete`
-- Task status: `done`
-- Assigned role: `orchestrator`
-- Branch: `codex/002-deterministic-orchestration-versioning-and-upgrades`
+- Task status: `null`
+- Assigned role: `null`
+- Branch: `main`
 - Run id: `spec002-20260307`
 - Active PR number: `null`
 - Active PR URL: `null`
@@ -18,4 +18,4 @@
 - Resume pending: `no`
 - Last event id: `evt-0016`
 - Last report: `.ralph/reports/spec002-20260307/orchestrator.md`
-- Next action: Cut the next tagged scaffold release as `v0.4.0`, or seed the next numbered spec and continue the queue.
+- Next action: Queue complete. Seed the next numbered spec or upgrade the dogfood runtime when a newer release is available.

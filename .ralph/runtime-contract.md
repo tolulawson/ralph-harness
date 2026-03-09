@@ -27,6 +27,7 @@ Interpret an installed Ralph harness in this order:
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
 - Exactly one non-research worker role may be active at a time for normal execution.
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
+- Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
 - No role besides the orchestrator may mutate shared queue state, workflow state, projections, promoted learnings, or event logs.
 
 ## Core Loop
@@ -59,7 +60,7 @@ Interpret an installed Ralph harness in this order:
 16. outside the batch-scoped research step, decide the next role from spec status, task lifecycle state, PR state, and next action
 17. spawn exactly one non-research worker role with bounded inputs and a required report path
 18. wait for that worker to finish
-19. validate the worker outputs
+19. validate the worker outputs, including required commit evidence and any clean-worktree guardrails at role boundaries
 20. if the worker failed or blocked on an out-of-scope bug, create a new interrupt spec, pause the current spec, and push paused context onto `resume_spec_stack`
 21. write the orchestrator report
 22. append one orchestrator-owned event
@@ -181,6 +182,10 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 
 ## Git And PR Policy
 
+- Each completed task must end with at least one atomic commit before handoff.
+- Multiple commits inside one task are allowed only when each commit is a coherent checkpoint within that same task.
+- Git SHAs and commit ranges belong in role reports and git history, not in canonical workflow JSON.
+- Review, verification, and release may not advance from a dirty worktree when the active task has already been handed off; a clean worktree is required at those handoff boundaries.
 - Review and verification must pass before release completes.
 - A spec is not `done` until its PR lifecycle is complete according to project policy.
 - The release worker records the PR or merge outcome, and the orchestrator applies the resulting shared-state transition.
