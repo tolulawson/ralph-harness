@@ -160,7 +160,7 @@ Read [CHANGELOG.md](https://github.com/tolulawson/ralph-harness/blob/main/CHANGE
 In short:
 
 - install the public `ralph-*` skills via a third-party skill installer when you want explicit named entry points
-- use the latest stable tag such as `v0.5.0` as the default public install or upgrade reference
+- use the latest stable tag such as `v0.5.1` as the default public install or upgrade reference
 - treat `src/` as the only installable scaffold source
 - copy only the manifest-listed scaffold paths from `src/install-manifest.txt`
 - generate the runtime files listed in `src/generated-runtime-manifest.txt`
@@ -171,7 +171,7 @@ In short:
 
 ## Versioning And Releases
 
-The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.5.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
+The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.5.1`, while the exact commit SHA is recorded in the installed repo for reproducibility.
 
 Releases are intentional and manual. CI validates the scaffold, install contract, upgrade contract, and fixture install or upgrade flow before a GitHub release is cut.
 
