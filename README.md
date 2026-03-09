@@ -149,6 +149,13 @@ flowchart TD
     I --> J["Verify"]
     J --> K["Release"]
     K --> L["Advance queue"]
+    G -- "plan issues" --> E
+    G -- "task issues" --> F
+    I -- "review failed" --> H
+    J -- "verification failed" --> H
+    H -- "out-of-scope failing bug" --> M["Interrupt spec"]
+    M --> N["Pause current work and push resume_spec_stack"]
+    N --> H
 ```
 
 In practice, that means:
@@ -158,6 +165,8 @@ In practice, that means:
 - the orchestrator chooses the queue head and next task
 - implementation, review, verification, and release run one worker at a time
 - if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
+- `plan-check` can route work back to `plan` or `task-gen`
+- `review_failed` and `verification_failed` are canonical look-back states that send work back through implementation
 
 An installed Ralph repo gets:
 
