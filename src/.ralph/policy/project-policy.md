@@ -24,6 +24,8 @@
 - Default flow: one branch per spec
 - Branch format: `codex/<spec-key>`
 - Optional task branch format: `codex/<spec-key>/<task-id>` when explicitly required
+- Atomic commits required before task handoff: yes
+- Clean worktree required before review, verification, or release: yes
 - Base branch: `main`
 - Direct-to-main: disabled by default
 - GitHub PR required before merge: yes
@@ -72,3 +74,4 @@
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - Workers must not update shared workflow state, queue state, state Markdown, or orchestrator event logs directly.
 - Review and verification should treat the active spec branch or PR as the unit under inspection.
+- Review should treat missing commit evidence, dirty handoffs, or obviously mixed-scope task commits as findings.

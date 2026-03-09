@@ -149,12 +149,13 @@ Every role report must include these sections:
 - `Inputs Read`
 - `Artifacts Written`
 - `Verification`
+- `Commit Evidence`
 - `Interruption Assessment`
 - `Candidate Learnings`
 - `Open Issues`
 - `Recommended Next Role`
 
-Role reports are the handoff contract for the next fresh run and should name the active spec and active PR context whenever applicable. Candidate learnings must either list concrete observations with evidence or explicitly say `None`.
+Role reports are the handoff contract for the next fresh run and should name the active spec and active PR context whenever applicable. `Commit Evidence` is the git traceability layer for task handoff and must capture the checkpoint commit, covered task ids, and validation linkage without storing git SHAs in canonical machine state. Candidate learnings must either list concrete observations with evidence or explicitly say `None`.
 
 ## Git And PR Policy
 
@@ -169,3 +170,10 @@ Default policy is one branch and one GitHub PR per spec:
 - a spec is not `done` until its GitHub PR is merged
 
 The reference repo may contain example queue entries with null PR metadata when no live PR was opened locally. Installed target projects should treat real GitHub PR tracking as required.
+
+Completed tasks must also satisfy the atomic commit rule before handoff:
+
+- create at least one atomic commit for each completed task
+- keep each commit scoped to one task or one coherent sub-slice of that task
+- tie the report's validation evidence to the checkpoint commit or explicit commit list
+- do not hand a task to review, verification, or release from a dirty worktree

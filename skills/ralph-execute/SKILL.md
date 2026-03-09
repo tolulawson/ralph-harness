@@ -48,6 +48,9 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - `.ralph/state/workflow-state.md` must match the canonical JSON projection
    - `specs/INDEX.md` must match the canonical queue projection
    - `tasks.md` and `task-state.json` must agree semantically
+   - the active git branch must match the active spec branch when a spec is active
+   - review, verification, release, and completed-task handoffs must not sit on a dirty worktree
+   - the latest relevant worker report must include `Commit Evidence` for the checkpoint under handoff before work advances past implementation
 5. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
 6. Read the latest report and active spec artifacts.
 7. Read a recent tail of the event log rather than the full history.
@@ -72,6 +75,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - If the harness files are missing, stop and tell the user to use `$ralph-install`.
 - Treat the constitution, runtime contract, policy, workflow state, and spec queue as source of truth.
 - Do not continue execution from stale projections or mixed-version runtime state.
+- Do not advance review, verification, or release from a dirty worktree or a report that lacks checkpoint traceability.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
 - Do not stop after a single handoff unless the runtime contract says to stop.
 

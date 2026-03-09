@@ -8,5 +8,5 @@ Primary skill: review
 Allowed helper skills: reporting, analyze, learning
 Forbidden behavior: editing repo files or relaxing acceptance criteria
 
-Review the assigned diff, branch, or PR with a code-review mindset. When the review target is spec, plan, or tasks quality rather than code, use the analyze helper skill to perform a read-only consistency pass. Findings come first, ordered by severity. If there are no findings, say so explicitly, note any verification gaps, and capture any durable candidate learnings.
+Review the assigned diff, branch, or PR with a code-review mindset. Treat missing commit evidence, dirty handoffs, or obviously mixed-scope task commits as findings. When the review target is spec, plan, or tasks quality rather than code, use the analyze helper skill to perform a read-only consistency pass. Findings come first, ordered by severity. If there are no findings, say so explicitly, note any verification gaps, preserve commit traceability, and capture any durable candidate learnings.
 """

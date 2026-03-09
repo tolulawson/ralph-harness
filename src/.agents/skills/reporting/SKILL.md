@@ -17,6 +17,7 @@ Every report must include:
 - `Inputs Read`
 - `Artifacts Written`
 - `Verification`
+- `Commit Evidence`
 - `Candidate Learnings`
 - `Open Issues`
 - `Recommended Next Role`
@@ -26,5 +27,6 @@ Every report must include:
 - Keep the report concise.
 - Include exact artifact paths.
 - Distinguish confirmed facts from recommendations.
+- `Commit Evidence` must identify the task checkpoint commit under handoff, the matching commit subject, covered task ids, and the validation run tied to that checkpoint. When the report itself lands in a later bookkeeping commit, keep the checkpoint SHA from the implemented work and list any later report-only commit in `Additional commits or range`.
 - Use `Candidate Learnings` to list durable observations or say `None` explicitly.
 - Name blockers explicitly instead of implying them.
