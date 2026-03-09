@@ -812,6 +812,84 @@ assert spec["research_artifact_path"] == "specs/001-legacy-spec/research.md"
 assert spec["planning_batch_id"] is None
 PY
 
+CUSTOM_CONFIG_TARGET="$TMP_DIR/custom-config-target"
+mkdir -p "$CUSTOM_CONFIG_TARGET"
+copy_manifest_paths src/install-manifest.txt "$CUSTOM_CONFIG_TARGET"
+create_generated_runtime "$CUSTOM_CONFIG_TARGET"
+update_agents_file "$CUSTOM_CONFIG_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+cat > "$CUSTOM_CONFIG_TARGET/.codex/config.toml" <<'EOF'
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "danger-full-access"
+
+[features]
+multi_agent = false
+
+[agents]
+max_threads = 9
+max_depth = 3
+
+[agents.orchestrator]
+config_file = "../agents/orchestrator.toml"
+
+[agents.prd]
+config_file = "../agents/prd.toml"
+
+[agents.specify]
+config_file = "../agents/specify.toml"
+
+[agents.plan]
+config_file = "../agents/plan.toml"
+
+[agents.task_gen]
+config_file = "../agents/task-gen.toml"
+
+[agents.implement]
+config_file = "../agents/implement.toml"
+
+[agents.review]
+config_file = "../agents/review.toml"
+
+[agents.verify]
+config_file = "../agents/verify.toml"
+
+[agents.release]
+config_file = "../agents/release.toml"
+
+[agents.custom]
+config_file = "agents/custom.toml"
+EOF
+cat > "$CUSTOM_CONFIG_TARGET/.codex/agents/custom.toml" <<'EOF'
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Custom user agent.
+"""
+EOF
+copy_manifest_paths src/upgrade-manifest.txt "$CUSTOM_CONFIG_TARGET"
+python3 scripts/migrate-installed-runtime.py --repo "$CUSTOM_CONFIG_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$CUSTOM_CONFIG_TARGET"
+python3 - <<'PY' "$CUSTOM_CONFIG_TARGET"
+from pathlib import Path
+import sys
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    from pip._vendor import tomli as tomllib
+
+config = tomllib.loads((Path(sys.argv[1]) / ".codex/config.toml").read_text())
+assert config["sandbox_mode"] == "danger-full-access"
+assert config["features"]["multi_agent"] is True
+assert config["agents"]["max_threads"] == 9
+assert config["agents"]["max_depth"] == 3
+assert config["agents"]["orchestrator"]["config_file"] == "agents/orchestrator.toml"
+assert config["agents"]["research"]["config_file"] == "agents/research.toml"
+assert config["agents"]["plan_check"]["config_file"] == "agents/plan-check.toml"
+assert config["agents"]["custom"]["config_file"] == "agents/custom.toml"
+PY
+
 [[ -f "$LEGACY_TARGET/.ralph/runtime-contract.md" ]] || {
   echo "smoke-test-install-upgrade: runtime-contract missing after upgrade" >&2
   exit 1

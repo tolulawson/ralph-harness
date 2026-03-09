@@ -17,6 +17,20 @@ CURRENT_WORKFLOW_SCHEMA_VERSION = "2.0.0"
 CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
 CURRENT_UPGRADE_CONTRACT_VERSION = 4
+SCAFFOLD_ROOT = Path(__file__).resolve().parents[1]
+MANAGED_AGENT_NAMES = (
+    "orchestrator",
+    "prd",
+    "specify",
+    "research",
+    "plan",
+    "task_gen",
+    "plan_check",
+    "implement",
+    "review",
+    "verify",
+    "release",
+)
 MANAGED_AGENT_FILES = (
     "implement.toml",
     "orchestrator.toml",
@@ -113,6 +127,7 @@ ACTIVE_SPEC_STATUSES = {
     "draft",
     "planned",
     "ready",
+    "plan_check_failed",
     "in_progress",
     "awaiting_pr",
     "awaiting_review",
@@ -150,6 +165,91 @@ def load_toml(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def toml_literal(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, float):
+        return repr(value)
+    if isinstance(value, str):
+        return json.dumps(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(toml_literal(item) for item in value) + "]"
+    raise RuntimeStateError(f"unsupported TOML value type: {type(value).__name__}")
+
+
+def render_toml_table(table: dict[str, Any], prefix: tuple[str, ...] = ()) -> list[str]:
+    scalar_lines: list[str] = []
+    nested_tables: list[tuple[str, dict[str, Any]]] = []
+
+    for key, value in table.items():
+        if isinstance(value, dict):
+            nested_tables.append((key, value))
+        else:
+            scalar_lines.append(f"{key} = {toml_literal(value)}")
+
+    lines: list[str] = []
+    if prefix:
+        lines.append(f"[{'.'.join(prefix)}]")
+    lines.extend(scalar_lines)
+
+    for key, value in nested_tables:
+        if lines:
+            lines.append("")
+        lines.extend(render_toml_table(value, prefix + (key,)))
+
+    return lines
+
+
+def write_toml(path: Path, payload: dict[str, Any]) -> None:
+    path.write_text("\n".join(render_toml_table(payload)).rstrip() + "\n")
+
+
+def merge_codex_config(installed: dict[str, Any], scaffold: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(installed)
+
+    for key, value in scaffold.items():
+        if key in {"features", "agents"}:
+            continue
+        merged.setdefault(key, value)
+
+    merged_features = dict(installed.get("features") or {})
+    scaffold_features = dict(scaffold.get("features") or {})
+    for key, value in scaffold_features.items():
+        if key == "multi_agent":
+            merged_features[key] = True
+        else:
+            merged_features.setdefault(key, value)
+    merged["features"] = merged_features
+
+    merged_agents = dict(installed.get("agents") or {})
+    scaffold_agents = dict(scaffold.get("agents") or {})
+    for key, value in scaffold_agents.items():
+        if isinstance(value, dict):
+            existing = dict(merged_agents.get(key) or {})
+            if key in MANAGED_AGENT_NAMES and "config_file" in value:
+                existing["config_file"] = value["config_file"]
+            for nested_key, nested_value in value.items():
+                existing.setdefault(nested_key, nested_value)
+            merged_agents[key] = existing
+        else:
+            merged_agents.setdefault(key, value)
+    merged["agents"] = merged_agents
+
+    return merged
+
+
+def merge_installed_codex_config(repo_root: Path) -> None:
+    scaffold_config_path = SCAFFOLD_ROOT / "src/.codex/config.toml"
+    target_config_path = repo_root / ".codex/config.toml"
+    scaffold_config = load_toml(scaffold_config_path)
+    installed_config = load_toml(target_config_path) if target_config_path.exists() else {}
+    merged_config = merge_codex_config(installed_config, scaffold_config)
+    target_config_path.parent.mkdir(parents=True, exist_ok=True)
+    write_toml(target_config_path, merged_config)
 
 
 def format_code(value: Any) -> str:
@@ -676,6 +776,7 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
 
 
 def migrate_repo_state(repo_root: Path) -> None:
+    merge_installed_codex_config(repo_root)
     migrate_legacy_agent_configs(repo_root)
 
     workflow_path = repo_root / ".ralph/state/workflow-state.json"

@@ -1,6 +1,5 @@
 # Upgrade-safe scaffold paths that may be overwritten in an installed target repository
 AGENTS.md
-.codex/config.toml
 .codex/agents/
 .agents/skills/
 .ralph/runtime-contract.md

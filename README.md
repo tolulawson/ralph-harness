@@ -1,192 +1,225 @@
-# Codex-Native Ralph Harness
+# Ralph Harness
 
-This repository has three jobs at once:
+Ralph turns Codex from a one-shot coding assistant into a repo-resident engineering loop with durable state, explicit planning, structured handoffs, and resumable execution.
 
-- a **reference repo** that explains the Ralph loop
-- a **source-template repo** that exposes an installable scaffold under `src/`
-- a **live dogfood runtime** at the repo root that uses the harness on itself
+If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-The important separation is:
+## Why People Use Ralph
 
-- `src/` is the canonical scaffold that gets installed into other projects
-- repo root is the workshop and live Ralph-managed dogfood project for this repository
-- `skills/` stays at repo root as the public entry surface for installing, upgrading, or invoking the harness
+Ralph is for teams and solo builders who want:
 
-## Objective
+- long-running LLM work that survives restarts and context loss
+- project work to move through PRD, spec, plan, task, review, verify, and release stages
+- one active implementation task at a time instead of uncontrolled execution swarms
+- a harness that can be installed into real repositories and upgraded safely later
 
-Use this repository when you want Codex to install an orchestrated coding system into a target project rather than treat that project as a series of one-off chat sessions. The harness gives Codex:
+What you get:
 
-- a thin Codex loader in `AGENTS.md`
-- a project-specific harness constitution in `.ralph/constitution.md`
-- a generic installed-runtime doctrine in `.ralph/runtime-contract.md`
-- a durable control plane in `.codex/config.toml` and `.codex/agents/*.toml`
-- a role-based runtime skill system in `.agents/skills/`
-- a canonical runtime state in `.ralph/state/workflow-state.json`
-- a canonical spec queue in `.ralph/state/spec-queue.json`
-- a canonical per-spec task lifecycle registry in `specs/<spec-id>-<slug>/task-state.json`
-- a human-readable queue projection in `specs/INDEX.md`
-- an append-only audit trail in `.ralph/logs/events.jsonl`
-- standardized handoff reports in `.ralph/reports/<run-id>/`
-- repeatable planning and execution artifacts in `tasks/` and `specs/<spec-id>-<slug>/`
+- a thin loader in `AGENTS.md` that tells Codex where truth lives
+- a project constitution and runtime contract under `.ralph/`
+- a role-based control plane in `.codex/` and `.agents/skills/`
+- canonical workflow and queue state on disk
+- numbered specs, plans, tasks, reports, and logs that survive restarts
+- bounded parallel `research` during planning, with sequential execution afterward
 
-Target repositories should install or upgrade the scaffold from versioned tags, then generate and maintain their own live runtime data locally.
+## Human Installation Instructions
 
-## How The Harness Works
+Keep this simple.
 
-The parent Codex agent is the orchestrator. It reads the constitution, runtime contract, project policy, runtime state, spec queue, latest report, active spec files, and a short tail of recent events. It then uses Codex multi-agent controls to spawn one focused worker at a time for normal execution, while allowing only bounded same-batch `research` workers to run concurrently before planning hardens. The orchestrator still validates outputs, updates shared state itself, and continues until a documented stop condition occurs.
-
-If a worker finds a failing bug outside the current spec's intended scope, the canonical flow is to create a new interrupt spec, pause the current spec, push the paused context onto `resume_spec_stack`, fix the interrupt first, and then resume the paused work afterward.
-
-```mermaid
-flowchart TD
-    A["Project idea or backlog item"] --> B["PRD role writes project PRD"]
-    B --> C["Plan role decomposes PRD into epochs and numbered specs"]
-    C --> D["Spec queue stored in spec-queue.json and projected in specs/INDEX.md"]
-    D --> E["Specify finalizes numbered specs"]
-    E --> F["Research may run in parallel only for specs from the same planning batch"]
-    F --> G["Orchestrator selects the oldest ready spec for sequential planning"]
-    G --> H["Plan, task-gen, and plan-check prepare the active spec"]
-    H --> I["Implement role executes one task on the active spec branch"]
-    I --> J["Review role checks the task or PR branch"]
-    J --> K["Verify role runs required checks"]
-    K --> L{"Review and verification pass?"}
-    L -- "No" --> I
-    L -- "Yes" --> M["Release role records the PR or merge outcome"]
-    M --> N{"Spec complete and merged?"}
-    N -- "No" --> G
-    N -- "Yes" --> O["Orchestrator marks the spec done and advances the queue"]
-    O --> P{"More ready specs?"}
-    P -- "Yes" --> G
-    P -- "No" --> Q["Workflow stops when queue is empty or blocked"]
-```
-
-Each spec is the execution unit. The orchestrator:
-
-- selects the next ready spec in FIFO order
-- may join bounded same-batch `research` runs before queue-head planning begins
-- selects the next task inside that spec
-- uses `task-state.json` as the canonical task lifecycle record
-- ensures the active branch and active PR match the spec
-- routes work through plan, task-gen, plan-check, implement, review, verify, and release with exactly one non-research worker at a time
-- advances the queue only when the spec is done
-
-## Repository Layout
+Tell your LLM:
 
 ```text
-skills/                           Public source skills
-src/                              Canonical installable scaffold
-src/install-manifest.txt          Install contract for target repos
-src/generated-runtime-manifest.txt Runtime files created after install
-src/upgrade-manifest.txt          Upgrade-safe overwrite contract
-src/AGENTS.md                     Scaffold loader copied into target repos
-src/.codex/                       Scaffold role declarations and role configs
-src/.codex/agents/                Scaffold role configs
-src/.agents/skills/               Scaffold runtime role skills
-src/.ralph/                       Scaffold doctrine, policy, templates, neutral seed state
-src/.ralph/runtime-contract.md    Generic installed-runtime doctrine
-src/.ralph/harness-version.json   Installed-version metadata seed
-src/specs/INDEX.md                Neutral seed spec register
+Set up my project with Ralph using this repository:
+https://github.com/tolulawson/ralph-harness
 
-AGENTS.md                         Root dogfood loader
-.codex/                           Root dogfood role declarations and role configs
-.codex/agents/                    Root dogfood role configs
-.agents/skills/                   Root dogfood runtime role skills
-.ralph/                           Root dogfood runtime state, reports, logs, templates
-tasks/                            Root dogfood PRDs, todo tracker, lessons
-specs/                            Root dogfood numbered specs and register
-README.md                         Repository overview
-INSTALLATION.md                   Installation guide
-UPGRADING.md                      Upgrade guide
-VERSION                           Canonical semver source
+Install the required Ralph components into this project and prepare it for use.
 ```
 
-## Source Template Vs Dogfood Runtime
+If you want to be a little more explicit, say:
 
-The repository intentionally keeps these layers separate:
+```text
+Set up my project with Ralph using this repository:
+https://github.com/tolulawson/ralph-harness
 
-- `src/` is the installable scaffold source of truth
-- repo root is the live dogfood runtime for this repository
-- `skills/` is the public invocation surface used to install, upgrade, or invoke the harness
+Install Ralph into this project, keep my existing project files, and prepare the project so I can use Ralph right away.
+```
 
-That means:
+For the full installation contract, read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md).
 
-- `src/` contains installable scaffold files, templates, and neutral seed state
-- `src/` does not carry this repository's TODOs, lessons, event history, or bootstrap work records
-- repo root contains this repository’s real event log, real reports, real numbered spec history, and real queue state
-- target repos should never receive the root dogfood history
-- target runtime records such as `tasks/todo.md`, `tasks/lessons.md`, and `.ralph/logs/events.jsonl` are generated after the scaffold is copied
+## Skills Section
 
-When improving the harness itself in this repository:
+Ralph exposes a small public entry surface under `skills/`. These are the main ways end users interact with the repository:
 
-- edit scaffold behavior in `src/` first
-- keep root runtime records separate from shipped scaffold output
-- apply root updates only when the task explicitly requests changes to the dogfood runtime or source-repo documents
+- `ralph-install` installs the harness into a repository that does not have it yet
+- `ralph-upgrade` refreshes an existing install without clobbering project-owned runtime data
+- `ralph-prd` creates the project PRD
+- `ralph-plan` turns requirements into numbered specs, plans, and tasks
+- `ralph-execute` resumes the harness from disk and advances the queue
+- `ralph-interrupt` splits a failing out-of-scope bug into an interrupt spec
 
-## External Entry Points
+Example prompts:
 
-This repository exposes a small public skill surface under `skills/`:
+1. Creating a PRD
 
-- `ralph-install`
-- `ralph-interrupt`
-- `ralph-upgrade`
-- `ralph-prd`
-- `ralph-plan`
-- `ralph-execute`
+```text
+Use ralph-prd to create a PRD for a customer support inbox that prioritizes urgent tickets, tracks SLAs, and supports internal notes.
+```
 
-Canonical GitHub source for third-party installation:
+2. Executing QA
 
-- `tolulawson/ralph-harness`
-- `skills/ralph-install`
-- `skills/ralph-interrupt`
-- `skills/ralph-upgrade`
-- `skills/ralph-prd`
-- `skills/ralph-plan`
-- `skills/ralph-execute`
+```text
+Use ralph-execute to resume the installed Ralph harness, run the next verification or QA-related step from disk, and tell me what passed, failed, or is blocked.
+```
 
-Use them like this:
+3. Planning
 
-- use `ralph-install` from a target repository when the harness is not installed yet
-- use `ralph-interrupt` from a target repository when a failing out-of-scope bug should be split into a new interrupt spec ahead of the remaining queue
-- use `ralph-upgrade` from a target repository when the harness is already installed and you want to move to a newer tagged scaffold release plus migrate live runtime state without overwriting project-owned project history
-- use `ralph-prd` when you want to create the project PRD and epoch framing directly
-- use `ralph-plan` when you want to seed the numbered spec queue and planning artifacts directly
-- use `ralph-execute` from a target repository when the harness is already installed, current-state preflight passes, and you want an explicit named resume entry point
+```text
+Use ralph-plan to turn the existing PRD into numbered specs, planning artifacts, and dependency-ordered tasks without starting implementation.
+```
 
-These are distinct from the runtime role skills under `.agents/skills/`.
+These prompts are intentionally plain. Ralph is meant to be easy to point at real work quickly.
+
+## Simple Installation Instructions
+
+If you just want the shortest path:
+
+1. Send your LLM this repo URL:
+   `https://github.com/tolulawson/ralph-harness`
+2. Tell it:
+
+```text
+Set up my project with Ralph using this repository and prepare it for use.
+```
+
+Step-by-step usage after install:
+
+1. Use `ralph-prd` if the project still needs a PRD.
+2. Use `ralph-plan` once the requirements are clear and you want numbered specs plus tasks.
+3. Use `ralph-execute` once the harness is installed and ready to resume from disk.
+4. Use `ralph-interrupt` when a failing out-of-scope bug should become its own interrupt spec.
+5. Use `ralph-upgrade` when you want a newer scaffold release.
 
 ## Installation And Upgrade
 
-Read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md) for the full setup procedure.
-Read [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/main/UPGRADING.md) for the upgrade procedure.
-Read [CHANGELOG.md](https://github.com/tolulawson/ralph-harness/blob/main/CHANGELOG.md) for curated release history.
+Read the full guides:
 
-In short:
+- [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md)
+- [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/main/UPGRADING.md)
+- [CHANGELOG.md](https://github.com/tolulawson/ralph-harness/blob/main/CHANGELOG.md)
 
-- install the public `ralph-*` skills via a third-party skill installer when you want explicit named entry points
-- use the latest stable tag such as `v0.6.0` as the default public install or upgrade reference
-- treat `src/` as the only installable scaffold source
-- copy only the manifest-listed scaffold paths from `src/install-manifest.txt`
-- generate the runtime files listed in `src/generated-runtime-manifest.txt`
-- upgrade the scaffold-owned paths from `src/upgrade-manifest.txt`, then run the live-state migration pass from `UPGRADING.md`
-- keep research parallelism bounded to same-batch `research` only; all other runtime roles remain sequential
-- keep the repo root runtime history out of target projects
-- reset the workflow state and spec queue for the target project
-- create the initial project PRD, epoch map, numbered specs, and tasks
+The short version:
 
-## Versioning And Releases
+- install or upgrade from tagged releases, not arbitrary root snapshots
+- use `v0.6.1` as the default public reference right now
+- copy only manifest-listed scaffold paths from `src/`
+- let the target repo generate and own its runtime records
+- during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
 
-The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.6.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
+## For LLMs
 
-Releases are intentional and manual. CI validates the scaffold, install contract, upgrade contract, and fixture install or upgrade flow before a GitHub release is cut.
+When Codex or another LLM installs or upgrades Ralph, the important rules are:
 
-## Dogfood Runtime
+- use `src/` as the installable scaffold source
+- never copy the repo-root dogfood runtime into target repositories
+- use `src/install-manifest.txt` for fresh installs
+- use `src/upgrade-manifest.txt` for upgrades
+- treat `skills/` as the public entry surface
+- preserve user-owned config in installed `.codex/config.toml` during upgrade while still applying Ralph-managed entries
 
-The repo root remains a live Ralph-managed project. Its current runtime artifacts are examples of the harness working on itself:
+The source-of-truth split in this repository is:
+
+- `src/` is the scaffold shipped to other repos
+- repo root is this repository's live dogfood runtime
+- `skills/` is the public invocation surface for install, upgrade, and resume flows
+
+## Architectural Overview
+
+Ralph keeps the orchestrator in charge of shared state. Normal execution stays sequential. The only bounded parallelism is spec-local `research` for specs produced or refreshed in the same planning batch.
+
+```mermaid
+flowchart TD
+    A["Project idea"] --> B["PRD"]
+    B --> C["Numbered specs"]
+    C --> D["Spec-local research (bounded parallel only within one planning batch)"]
+    D --> E["Plan"]
+    E --> F["Task generation"]
+    F --> G["Plan check"]
+    G --> H["Implement one task"]
+    H --> I["Review"]
+    I --> J["Verify"]
+    J --> K["Release"]
+    K --> L["Advance queue"]
+```
+
+In practice, that means:
+
+- specs are the durable execution unit
+- `task-state.json` is the canonical task lifecycle record
+- the orchestrator chooses the queue head and next task
+- implementation, review, verification, and release run one worker at a time
+- if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
+
+An installed Ralph repo gets:
+
+- `.ralph/constitution.md`
+- `.ralph/runtime-contract.md`
+- `.ralph/policy/project-policy.md`
+- `.codex/config.toml`
+- `.codex/agents/*.toml`
+- `.agents/skills/`
+- `.ralph/state/workflow-state.json`
+- `.ralph/state/spec-queue.json`
+- `.ralph/templates/`
+- `specs/INDEX.md`
+
+Runtime records such as reports, logs, task state, and project-specific specs are then generated in the target repository.
+
+## Repository Layout
+
+For end users, the important directories are:
+
+```text
+skills/                      Public install, upgrade, and execution entry points
+src/                         Installable scaffold source
+src/install-manifest.txt     Fresh install contract
+src/upgrade-manifest.txt     Upgrade-safe overwrite contract
+src/generated-runtime-manifest.txt
+                             Runtime records created after install
+```
+
+For contributors to the harness itself:
+
+```text
+src/.codex/                  Shipped control plane
+src/.agents/skills/          Shipped runtime role skills
+src/.ralph/                  Shipped doctrine, policy, templates, and seed state
+
+.codex/                      Dogfood control plane for this source repo
+.agents/skills/              Dogfood runtime skills for this source repo
+.ralph/                      Live dogfood runtime state, reports, logs, and templates
+tasks/                       Dogfood PRDs and todo tracking
+specs/                       Dogfood numbered specs and register
+```
+
+## This Repository Also Dogfoods Ralph
+
+This repo is not just the source template. It is also a live Ralph-managed project.
+
+That means:
+
+- repo root contains real runtime history for this repository
+- `src/` contains the clean scaffold that gets shipped elsewhere
+- changes to the harness itself should usually be made in `src/` first
+
+Current dogfood examples live in:
 
 - [tasks/prd-ralph-harness.md](https://github.com/tolulawson/ralph-harness/blob/main/tasks/prd-ralph-harness.md)
 - [specs/INDEX.md](https://github.com/tolulawson/ralph-harness/blob/main/specs/INDEX.md)
-- [specs/001-self-bootstrap-harness/spec.md](https://github.com/tolulawson/ralph-harness/blob/main/specs/001-self-bootstrap-harness/spec.md)
 - [`.ralph/state/workflow-state.json`](https://github.com/tolulawson/ralph-harness/blob/main/.ralph/state/workflow-state.json)
 - [`.ralph/state/spec-queue.json`](https://github.com/tolulawson/ralph-harness/blob/main/.ralph/state/spec-queue.json)
 
-Those files are reference dogfood records, not the installable template content.
+Those are reference records, not the files target repos should copy directly.
+
+## Versioning
+
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.6.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

@@ -4,6 +4,39 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.6.1 - 2026-03-09
+
+### Summary
+
+Upgrades now preserve user-owned `.codex/config.toml` settings instead of overwriting the whole file, while still applying Ralph’s required feature flags and managed role mappings.
+
+This patch removes `.codex/config.toml` from the blind overwrite surface, teaches the migration phase to merge the installed config with the scaffold config, and adds smoke coverage for preserved user settings such as `sandbox_mode = "danger-full-access"`.
+
+### Highlights
+
+- Removed `.codex/config.toml` from the upgrade overwrite manifest.
+- Added merge-aware `.codex/config.toml` migration that preserves user-owned settings and custom agent entries.
+- Kept Ralph-managed `features.multi_agent` and managed role `config_file` mappings current during upgrade.
+- Added smoke coverage proving upgrades preserve custom `sandbox_mode` and thread settings while adding new Ralph roles.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.6.1` as the default public install or upgrade reference.
+- Fresh installs still copy the scaffold `.codex/config.toml` directly.
+- Upgrades now merge `.codex/config.toml` during migration instead of overwriting it from `src/upgrade-manifest.txt`.
+
+### Validation And Release Workflow
+
+- Upgrade contract validation now requires documentation of the config-merge behavior.
+- Smoke tests now include a user-customized config fixture that verifies preserved settings plus refreshed Ralph mappings.
+
+### Artifacts And References
+
+- Upgrade contract: `src/upgrade-manifest.txt`
+- Runtime migration helper: `scripts/runtime_state_helpers.py`
+- Upgrade guide: `UPGRADING.md`
+- Release asset: `ralph-harness-v0.6.1.tar.gz`
+
 ## v0.6.0 - 2026-03-09
 
 ### Summary

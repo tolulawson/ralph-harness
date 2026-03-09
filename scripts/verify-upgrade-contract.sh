@@ -44,6 +44,9 @@ done < "$UPGRADE_MANIFEST"
 grep -Fq -- 'scripts/migrate-installed-runtime.py' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the migration script"
 
+grep -Fq -- 'merge the installed `.codex/config.toml` with the scaffold config' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the config merge behavior"
+
 grep -Fq -- 'upgrade_contract_version' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document upgrade_contract_version"
 
