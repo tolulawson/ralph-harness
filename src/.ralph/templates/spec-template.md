@@ -21,6 +21,12 @@
 - In scope: {{in_scope}}
 - Out of scope: {{out_of_scope}}
 
+## Spec Constraints
+
+- Locked decisions: {{locked_decision_1}}
+- Required integrations: {{required_integration_1}}
+- Policy constraints: {{policy_constraint_1}}
+
 ## User Stories
 
 ### US-001: {{story_title}}
@@ -41,6 +47,10 @@
 ## Delivery Notes
 
 - {{delivery_note_1}}
+
+## Deferred Scope
+
+- {{deferred_scope_1}}
 
 ## Amendment Notes
 

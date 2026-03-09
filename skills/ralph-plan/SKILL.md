@@ -24,11 +24,13 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 3. Produce or update `.ralph/state/spec-queue.json`.
 4. Produce or update `specs/INDEX.md`.
 5. Produce or update `specs/<spec-id>-<slug>/spec.md`.
-6. Produce or update `specs/<spec-id>-<slug>/plan.md`.
-7. Produce or update `specs/<spec-id>-<slug>/tasks.md` when enough information exists.
-8. Keep the tasks dependency-ordered and small enough for focused implementation passes.
-9. Stop before code changes or implementation begin.
-10. Recommend the next entry point:
+6. Produce or update spec-local `research.md` artifacts when the planning batch is ready for research.
+7. Produce or update `specs/<spec-id>-<slug>/plan.md`.
+8. Produce or update `specs/<spec-id>-<slug>/tasks.md` when enough information exists.
+9. Keep the tasks dependency-ordered and small enough for focused implementation passes.
+10. Keep any parallelism bounded to same-batch `research` only; `plan`, `task-gen`, and later execution stay sequential.
+11. Stop before code changes or implementation begin.
+12. Recommend the next entry point:
    - `$ralph-execute` when the installed harness should take over execution
    - `$ralph-prd` when requirements are still too unclear and need reshaping
 
@@ -37,6 +39,7 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 - `.ralph/state/spec-queue.json`
 - `specs/INDEX.md`
 - `specs/<spec-id>-<slug>/spec.md`
+- `specs/<spec-id>-<slug>/research.md` when research is complete for that spec
 - `specs/<spec-id>-<slug>/plan.md`
 - `specs/<spec-id>-<slug>/tasks.md` when planning is sufficiently complete
 - a concise recommendation for the next public entry point

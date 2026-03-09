@@ -15,6 +15,8 @@
 - Scheduling rule: strict FIFO by `spec_id`
 - Queue unit: numbered spec
 - Epochs: grouping layer only
+- Bounded planning-time parallelism: allowed only for `research` on specs from the same planning batch
+- Non-research roles: strictly sequential
 - Automatic preemption: create an interrupt spec for any failing out-of-scope bug
 - Interrupt priority: interrupt specs run ahead of normal specs and stay FIFO among themselves by `created_at`
 - Resume rule after interruption: pop `resume_spec_stack`, mirror the top item in `resume_spec_id`, and continue the paused spec
@@ -45,6 +47,8 @@
   - spec queue JSON and `specs/INDEX.md` agree semantically
   - task-state JSON agrees semantically with `tasks.md` when `task-state.json` exists
   - interruption fields and resume-stack projections agree semantically across queue, workflow state, and spec index
+  - research metadata agrees semantically with queue state and role outputs
+  - runtime contract text forbids non-research parallelism
 - Stronger checks may be added by spec-specific tasks.
 - Project-specific gate commands should be encoded here rather than hard-coded into the harness loop.
 
@@ -71,6 +75,7 @@
 - A role stops when its assigned artifact and report are complete.
 - The parent orchestrator updates shared state after validating outputs.
 - The parent orchestrator drains the queue until a documented stop condition occurs.
+- The parent orchestrator may launch bounded parallel `research` only for specs in the same planning batch.
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - Workers must not update shared workflow state, queue state, state Markdown, or orchestrator event logs directly.
 - Review and verification should treat the active spec branch or PR as the unit under inspection.

@@ -19,6 +19,7 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 - `git status --short --branch`
 - `.ralph/context/project-truths.md`
 - `.ralph/context/learning-summary.md`
+- `specs/<spec-key>/research.md` when present
 - related spec and plan
 
 ## Workflow
@@ -31,9 +32,10 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 6. Call out residual risks or verification gaps.
 7. Record any durable anti-patterns, review rules, or repeat failure signatures in `Candidate Learnings`.
 8. Treat the active PR branch as the review unit when PR metadata exists.
-9. Preserve or refresh the `Commit Evidence` section so the verified checkpoint remains explicit for the next role.
-10. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only when a failing finding is outside the current spec's intended scope.
-11. Write a review report.
+9. Flag any implementation that materially violates the spec constraints or the confirmed guidance in `research.md`.
+10. Preserve or refresh the `Commit Evidence` section so the verified checkpoint remains explicit for the next role.
+11. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only when a failing finding is outside the current spec's intended scope.
+12. Write a review report.
 
 ## Outputs
 

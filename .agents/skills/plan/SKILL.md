@@ -19,6 +19,7 @@ description: Convert a project PRD or numbered feature specification into an epo
 - `.ralph/context/learning-summary.md`
 - `.ralph/state/spec-queue.json`
 - `.ralph/policy/project-policy.md`
+- optional active `specs/<spec-key>/research.md`
 - current harness state
 
 If the project PRD is missing, stop and report that the PRD step must complete first.
@@ -32,16 +33,21 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - `specs/INDEX.md`
    - `specs/<spec-key>/` directories for seeded specs
 4. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
-5. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
-6. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, and rollout or migration considerations.
-7. Create supporting artifacts only when needed:
+5. For the active spec, require `research.md` when the queue entry says `research_status = done`.
+6. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
+7. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, and rollout or migration considerations.
+8. Add:
+   - `Research Inputs`
+   - `Implementation Guardrails`
+   - `Goal-Backward Verification` with observable truths, required artifacts, and critical links
+9. Create supporting artifacts only when needed:
    - `research.md`
    - `data-model.md`
    - `contracts/`
    - `quickstart.md`
-8. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established.
-9. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
-10. Write the role report and recommend the next role.
+10. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established.
+11. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
+12. Write the role report and recommend the next role.
 
 ## Outputs
 

@@ -69,6 +69,7 @@ Those source skills are distinct from the runtime role skills under `.agents/ski
 - `.ralph/state/spec-queue.json` is the canonical machine-readable spec queue and spec-state registry.
 - `.ralph/state/workflow-state.md` is a human-readable companion file and must agree with the JSON state.
 - `specs/<spec-id>-<slug>/task-state.json` is the canonical machine-readable task lifecycle registry for a dogfood spec when it exists.
+- `specs/<spec-id>-<slug>/research.md` is the canonical spec-local research artifact when research has been completed for that spec.
 - `specs/INDEX.md` is a human-readable projection of the spec queue.
 - `tasks/`, `specs/`, `.ralph/reports/`, and `.ralph/logs/events.jsonl` are part of the durable memory of the harness.
 - do not rely on conversational memory when a file can carry the state.
@@ -99,8 +100,10 @@ Use this order whenever a fresh Codex run resumes work in this source repository
 - `prd`
 - `epoch_planning`
 - `specification`
+- `research`
 - `planning`
 - `task_generation`
+- `plan_review`
 - `implementation`
 - `review`
 - `verification`
@@ -134,6 +137,7 @@ Use this order whenever a fresh Codex run resumes work in this source repository
 - `review_failed`
 - `awaiting_verification`
 - `verification_failed`
+- `plan_check_failed`
 - `awaiting_merge`
 - `done`
 - `blocked`
@@ -147,8 +151,9 @@ The durable planning hierarchy is:
 1. project PRD
 2. epochs
 3. numbered specs
-4. dependency-ordered tasks
-5. branch and GitHub PR execution
+4. spec-local research
+5. dependency-ordered tasks
+6. branch and GitHub PR execution
 
 Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 

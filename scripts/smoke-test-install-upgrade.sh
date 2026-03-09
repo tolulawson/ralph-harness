@@ -146,7 +146,7 @@ write_atomic_runtime() {
 EOF
   cat > "$target/.ralph/state/spec-queue.json" <<'EOF'
 {
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "queue_policy": {
     "selection": "fifo",
     "preemption": "failing_out_of_scope_bug"
@@ -171,6 +171,11 @@ EOF
       "trigger_summary": null,
       "priority_override": null,
       "blocked_reason": null,
+      "research_status": "done",
+      "research_artifact_path": "specs/001-atomic-commit-demo/research.md",
+      "research_report_path": null,
+      "research_updated_at": "2026-03-08T13:05:00-08:00",
+      "planning_batch_id": "batch-20260308-atomic",
       "prd_path": "tasks/prd-atomic-target.md",
       "spec_path": "specs/001-atomic-commit-demo/spec.md",
       "plan_path": "specs/001-atomic-commit-demo/plan.md",
@@ -202,6 +207,9 @@ EOF
   cat > "$target/specs/001-atomic-commit-demo/plan.md" <<'EOF'
 # Atomic Commit Demo Plan
 EOF
+  cat > "$target/specs/001-atomic-commit-demo/research.md" <<'EOF'
+# Atomic Commit Demo Research
+EOF
   cat > "$target/specs/001-atomic-commit-demo/tasks.md" <<'EOF'
 # Tasks: 001-atomic-commit-demo
 
@@ -209,7 +217,7 @@ EOF
 EOF
   cat > "$target/specs/001-atomic-commit-demo/task-state.json" <<'EOF'
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "spec_id": "001",
   "spec_key": "001-atomic-commit-demo",
   "tasks": [
@@ -222,10 +230,213 @@ EOF
       "updated_at": "2026-03-08T13:15:00-08:00",
       "blocked_reason": null,
       "review_result": null,
-      "verification_result": null
+      "verification_result": null,
+      "requirement_ids": [
+        "R1"
+      ],
+      "verification_commands": [
+        "python3 scripts/check-installed-runtime-state.py --repo ."
+      ],
+      "planned_artifacts": [
+        "specs/001-atomic-commit-demo/spec.md"
+      ]
     }
   ]
 }
+EOF
+  render_state_projections "$target"
+}
+
+write_parallel_research_runtime() {
+  local target="$1"
+  mkdir -p \
+    "$target/.ralph/reports/research-batch-20260308" \
+    "$target/specs/001-batch-head" \
+    "$target/specs/002-batch-follow-on"
+  cat > "$target/.ralph/state/workflow-state.json" <<'EOF'
+{
+  "schema_version": "2.0.0",
+  "project_name": "parallel-research-target",
+  "active_epoch_id": null,
+  "active_spec_id": null,
+  "active_spec_key": null,
+  "active_task_id": null,
+  "current_phase": "planning",
+  "task_status": null,
+  "assigned_role": "orchestrator",
+  "current_branch": "main",
+  "current_run_id": "research-batch-20260308",
+  "active_pr_number": null,
+  "active_pr_url": null,
+  "queue_head_spec_id": "001",
+  "resume_spec_id": null,
+  "resume_spec_stack": [],
+  "interruption_state": null,
+  "last_event_id": "evt-0009",
+  "last_report_path": ".ralph/reports/research-batch-20260308/orchestrator.md",
+  "last_verified_at": null,
+  "blocked_reason": null,
+  "failure_count": 0,
+  "next_action": "Plan the queue head after joined research completes.",
+  "queue_snapshot": [
+    {
+      "spec_id": "001",
+      "spec_key": "001-batch-head",
+      "epoch_id": "E001",
+      "status": "planned",
+      "branch_name": "codex/001-batch-head",
+      "pr_number": null
+    },
+    {
+      "spec_id": "002",
+      "spec_key": "002-batch-follow-on",
+      "epoch_id": "E001",
+      "status": "planned",
+      "branch_name": "codex/002-batch-follow-on",
+      "pr_number": null
+    }
+  ]
+}
+EOF
+  cat > "$target/.ralph/state/spec-queue.json" <<'EOF'
+{
+  "schema_version": "2.1.0",
+  "queue_policy": {
+    "selection": "fifo",
+    "preemption": "failing_out_of_scope_bug"
+  },
+  "active_spec_id": null,
+  "resume_spec_id": null,
+  "specs": [
+    {
+      "spec_id": "001",
+      "spec_slug": "batch-head",
+      "spec_key": "001-batch-head",
+      "title": "Batch head",
+      "epoch_id": "E001",
+      "created_at": "2026-03-08T14:00:00-08:00",
+      "last_worked_at": "2026-03-08T14:20:00-08:00",
+      "status": "planned",
+      "kind": "normal",
+      "origin_spec_key": null,
+      "origin_task_id": null,
+      "triggered_by_role": "specify",
+      "trigger_report_path": ".ralph/reports/research-batch-20260308/specify.md",
+      "trigger_summary": "Queued from the same planning batch.",
+      "priority_override": null,
+      "blocked_reason": null,
+      "research_status": "done",
+      "research_artifact_path": "specs/001-batch-head/research.md",
+      "research_report_path": ".ralph/reports/research-batch-20260308/research-001.md",
+      "research_updated_at": "2026-03-08T14:15:00-08:00",
+      "planning_batch_id": "batch-20260308-demo",
+      "prd_path": "tasks/prd-demo.md",
+      "spec_path": "specs/001-batch-head/spec.md",
+      "plan_path": "specs/001-batch-head/plan.md",
+      "tasks_path": "specs/001-batch-head/tasks.md",
+      "task_state_path": "specs/001-batch-head/task-state.json",
+      "latest_report_path": ".ralph/reports/research-batch-20260308/orchestrator.md",
+      "branch_name": "codex/001-batch-head",
+      "base_branch": "main",
+      "pr_number": null,
+      "pr_url": null,
+      "pr_state": null,
+      "merge_commit": null,
+      "task_summary": {
+        "total": 0,
+        "done": 0,
+        "in_progress": 0,
+        "blocked": 0
+      },
+      "next_task_id": null
+    },
+    {
+      "spec_id": "002",
+      "spec_slug": "batch-follow-on",
+      "spec_key": "002-batch-follow-on",
+      "title": "Batch follow-on",
+      "epoch_id": "E001",
+      "created_at": "2026-03-08T14:00:00-08:00",
+      "last_worked_at": "2026-03-08T14:20:00-08:00",
+      "status": "planned",
+      "kind": "normal",
+      "origin_spec_key": null,
+      "origin_task_id": null,
+      "triggered_by_role": "specify",
+      "trigger_report_path": ".ralph/reports/research-batch-20260308/specify.md",
+      "trigger_summary": "Queued from the same planning batch.",
+      "priority_override": null,
+      "blocked_reason": null,
+      "research_status": "in_progress",
+      "research_artifact_path": "specs/002-batch-follow-on/research.md",
+      "research_report_path": ".ralph/reports/research-batch-20260308/research-002.md",
+      "research_updated_at": "2026-03-08T14:16:00-08:00",
+      "planning_batch_id": "batch-20260308-demo",
+      "prd_path": "tasks/prd-demo.md",
+      "spec_path": "specs/002-batch-follow-on/spec.md",
+      "plan_path": "specs/002-batch-follow-on/plan.md",
+      "tasks_path": "specs/002-batch-follow-on/tasks.md",
+      "task_state_path": "specs/002-batch-follow-on/task-state.json",
+      "latest_report_path": ".ralph/reports/research-batch-20260308/orchestrator.md",
+      "branch_name": "codex/002-batch-follow-on",
+      "base_branch": "main",
+      "pr_number": null,
+      "pr_url": null,
+      "pr_state": null,
+      "merge_commit": null,
+      "task_summary": {
+        "total": 0,
+        "done": 0,
+        "in_progress": 0,
+        "blocked": 0
+      },
+      "next_task_id": null
+    }
+  ]
+}
+EOF
+  cat > "$target/specs/001-batch-head/spec.md" <<'EOF'
+# Batch Head Spec
+EOF
+  cat > "$target/specs/002-batch-follow-on/spec.md" <<'EOF'
+# Batch Follow-On Spec
+EOF
+  cat > "$target/specs/001-batch-head/plan.md" <<'EOF'
+# Batch Head Plan
+EOF
+  cat > "$target/specs/002-batch-follow-on/plan.md" <<'EOF'
+# Batch Follow-On Plan
+EOF
+  cat > "$target/specs/001-batch-head/research.md" <<'EOF'
+# Batch Head Research
+EOF
+  cat > "$target/specs/002-batch-follow-on/research.md" <<'EOF'
+# Batch Follow-On Research
+EOF
+  cat > "$target/specs/001-batch-head/tasks.md" <<'EOF'
+# Tasks: 001-batch-head
+EOF
+  cat > "$target/specs/002-batch-follow-on/tasks.md" <<'EOF'
+# Tasks: 002-batch-follow-on
+EOF
+  cat > "$target/specs/001-batch-head/task-state.json" <<'EOF'
+{
+  "schema_version": "1.1.0",
+  "spec_id": "001",
+  "spec_key": "001-batch-head",
+  "tasks": []
+}
+EOF
+  cat > "$target/specs/002-batch-follow-on/task-state.json" <<'EOF'
+{
+  "schema_version": "1.1.0",
+  "spec_id": "002",
+  "spec_key": "002-batch-follow-on",
+  "tasks": []
+}
+EOF
+  cat > "$target/specs/INDEX.md" <<'EOF'
+# stale projection
 EOF
   render_state_projections "$target"
 }
@@ -589,6 +800,18 @@ grep -Fq '# Legacy Spec' "$LEGACY_TARGET/specs/001-legacy-spec/spec.md" || {
   exit 1
 }
 
+python3 - <<'PY' "$LEGACY_TARGET"
+import json
+import sys
+from pathlib import Path
+
+queue = json.loads((Path(sys.argv[1]) / ".ralph/state/spec-queue.json").read_text())
+spec = queue["specs"][0]
+assert spec["research_status"] == "not_started"
+assert spec["research_artifact_path"] == "specs/001-legacy-spec/research.md"
+assert spec["planning_batch_id"] is None
+PY
+
 [[ -f "$LEGACY_TARGET/.ralph/runtime-contract.md" ]] || {
   echo "smoke-test-install-upgrade: runtime-contract missing after upgrade" >&2
   exit 1
@@ -639,6 +862,26 @@ write_atomic_report "$ATOMIC_PASS_TARGET" "None." "$ATOMIC_PASS_SHA"
 git -C "$ATOMIC_PASS_TARGET" add .ralph/reports/atomic-20260308/implement.md
 git -C "$ATOMIC_PASS_TARGET" commit -q -m "docs: record 001-T001 commit evidence"
 python3 scripts/check-installed-runtime-state.py --repo "$ATOMIC_PASS_TARGET"
+
+PARALLEL_RESEARCH_TARGET="$TMP_DIR/parallel-research-target"
+mkdir -p "$PARALLEL_RESEARCH_TARGET"
+copy_manifest_paths src/install-manifest.txt "$PARALLEL_RESEARCH_TARGET"
+create_generated_runtime "$PARALLEL_RESEARCH_TARGET"
+update_agents_file "$PARALLEL_RESEARCH_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+write_parallel_research_runtime "$PARALLEL_RESEARCH_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$PARALLEL_RESEARCH_TARGET"
+python3 - <<'PY' "$PARALLEL_RESEARCH_TARGET"
+import json
+import sys
+from pathlib import Path
+
+queue = json.loads((Path(sys.argv[1]) / ".ralph/state/spec-queue.json").read_text())
+batch_ids = {spec["planning_batch_id"] for spec in queue["specs"]}
+research_statuses = {spec["research_status"] for spec in queue["specs"]}
+assert batch_ids == {"batch-20260308-demo"}
+assert research_statuses == {"done", "in_progress"}
+assert queue["active_spec_id"] is None
+PY
 
 ATOMIC_MULTI_TARGET="$TMP_DIR/atomic-multi-target"
 mkdir -p "$ATOMIC_MULTI_TARGET"

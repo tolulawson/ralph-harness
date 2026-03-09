@@ -8,26 +8,26 @@ This guide explains how to upgrade an already-installed Ralph harness in a targe
 
 The upgrade-safe scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.5.1`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.6.0`
 
 The canonical upgrade overwrite contract is:
 
-- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.5.1/src/upgrade-manifest.txt)
+- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.6.0/src/upgrade-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.5.1/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.6.0/VERSION)
 
 The installed harness metadata file is:
 
-- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.5.1/src/.ralph/harness-version.json)
+- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.6.0/src/.ralph/harness-version.json)
 
 The upgrade authority order is:
 
-1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.5.1/UPGRADING.md)
-2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.5.1/src/upgrade-manifest.txt)
-3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.5.1/VERSION)
-4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.5.1/src/.ralph/harness-version.json)
+1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.6.0/UPGRADING.md)
+2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.6.0/src/upgrade-manifest.txt)
+3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.6.0/VERSION)
+4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.6.0/src/.ralph/harness-version.json)
 
 ## Goal
 
@@ -40,13 +40,14 @@ After upgrade, the target repository should:
 
 - keep its project-specific policy, context, reports, logs, and spec prose
 - gain the latest scaffold-owned role configs, runtime skills, templates, and runtime contract
+- gain the shipped `research` and `plan-check` roles plus the bounded same-batch research contract
 - carry current live-state files for workflow, queue, projections, and per-spec task lifecycle
 - record the installed Ralph version tag, resolved commit, and migration-aware upgrade contract in `.ralph/harness-version.json`
 - preserve or refresh the managed Ralph block in `AGENTS.md`
 
 ## Default Reference
 
-Use the latest stable semver tag by default. The current stable example in this guide is `v0.5.1`.
+Use the latest stable semver tag by default. The current stable example in this guide is `v0.6.0`.
 
 If exact reproducibility matters more than readability, pin to a specific commit SHA instead and still record the human-facing tag when known.
 
@@ -66,13 +67,13 @@ From inside the target repository, ask Codex to upgrade from a tagged release:
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the source repository.
-Upgrade this repository's installed Ralph harness to tag v0.5.1 using UPGRADING.md as the authoritative guide.
+Upgrade this repository's installed Ralph harness to tag v0.6.0 using UPGRADING.md as the authoritative guide.
 Only overwrite the scaffold-owned paths listed in src/upgrade-manifest.txt.
 Preserve project-owned files under .ralph/policy/, .ralph/context/, .ralph/reports/, and .ralph/logs/, and preserve spec prose unless a named migration step below says otherwise.
 Refresh the managed Ralph block inside AGENTS.md instead of replacing the whole file.
 Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, task-state, and projection files are upgraded together.
 If migration cannot infer historic task lifecycle safely, stop and report the ambiguous spec instead of guessing.
-Update .ralph/harness-version.json so it records version 0.5.1, tag v0.5.1, the source repo, the resolved commit used for this upgrade, and upgrade_contract_version 3.
+Update .ralph/harness-version.json so it records version 0.6.0, tag v0.6.0, the source repo, the resolved commit used for this upgrade, and upgrade_contract_version 4.
 Run the upgrade verification checklist from UPGRADING.md before finishing.
 ```
 
@@ -82,7 +83,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.5.1
+SOURCE_REF=v0.6.0
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 
@@ -175,6 +176,7 @@ The migration phase must:
 - normalize `.ralph/state/workflow-state.json` to the current interrupt-capable shape
 - normalize `.ralph/state/spec-queue.json` to the current schema and preemption policy
 - backfill missing `task-state.json` files when inference from `tasks.md` and latest reports is clear
+- normalize per-spec research metadata and task-state requirement or verification metadata to the current schema
 - regenerate `.ralph/state/workflow-state.md` and `specs/INDEX.md` from canonical JSON
 - stop with a repair error when historic task lifecycle is ambiguous
 
@@ -220,7 +222,7 @@ Set at minimum:
 - `resolved_commit`
 - `upgrade_contract_version`
 
-For the current migration-aware contract, `upgrade_contract_version` must equal `3`.
+For the current migration-aware contract, `upgrade_contract_version` must equal `4`.
 
 ## Verification After Upgrade
 
@@ -231,8 +233,9 @@ At the end of the upgrade, verify:
 - `.codex/agents/*.toml` exist and parse
 - `.ralph/runtime-contract.md` exists
 - `.ralph/harness-version.json` exists, parses, and records the selected tag plus resolved commit
-- `.ralph/harness-version.json` records `upgrade_contract_version` `3`
+- `.ralph/harness-version.json` records `upgrade_contract_version` `4`
 - `python3 scripts/check-installed-runtime-state.py --repo /path/to/target-repo` passes
+- queue entries now carry research metadata, and existing task-state files are normalized to the current schema
 - the managed Ralph block exists in `AGENTS.md`
 - project-owned files under `.ralph/policy/`, `.ralph/context/`, `.ralph/reports/`, and `.ralph/logs/` were preserved unless a named migration step intentionally changed them
 - install and upgrade contracts still agree with the current tagged release

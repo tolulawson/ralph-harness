@@ -29,10 +29,12 @@ If the project PRD or spec queue entry is missing, stop and report that planning
    - metadata
    - summary
    - scope
+   - spec constraints
    - user stories
    - requirements
    - edge cases
    - delivery notes
+   - deferred scope
 6. Ensure each requirement is testable and each user story is actionable.
 7. Create a lightweight quality checklist at `specs/<spec-key>/checklists/requirements.md`.
 8. Review the spec against the checklist and update it until it passes or until any remaining clarification items are explicit.

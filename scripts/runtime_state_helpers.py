@@ -12,16 +12,18 @@ except ModuleNotFoundError:
     from pip._vendor import tomli as tomllib  # type: ignore
 
 
-CURRENT_QUEUE_SCHEMA_VERSION = "2.0.0"
+CURRENT_QUEUE_SCHEMA_VERSION = "2.1.0"
 CURRENT_WORKFLOW_SCHEMA_VERSION = "2.0.0"
-CURRENT_TASK_STATE_SCHEMA_VERSION = "1.0.0"
+CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
-CURRENT_UPGRADE_CONTRACT_VERSION = 3
+CURRENT_UPGRADE_CONTRACT_VERSION = 4
 MANAGED_AGENT_FILES = (
     "implement.toml",
     "orchestrator.toml",
     "plan.toml",
+    "plan-check.toml",
     "prd.toml",
+    "research.toml",
     "release.toml",
     "review.toml",
     "specify.toml",
@@ -73,6 +75,11 @@ QUEUE_SPEC_REQUIRED_KEYS = (
     "trigger_summary",
     "priority_override",
     "blocked_reason",
+    "research_status",
+    "research_artifact_path",
+    "research_report_path",
+    "research_updated_at",
+    "planning_batch_id",
     "prd_path",
     "spec_path",
     "plan_path",
@@ -95,6 +102,7 @@ UNCHECKED_TASK_STATUSES = {"queued", "ready", "in_progress", "paused", "blocked"
 CHECKED_TASK_STATUSES = {
     "awaiting_review",
     "review_failed",
+    "plan_check_failed",
     "awaiting_verification",
     "verification_failed",
     "awaiting_release",
@@ -515,7 +523,7 @@ def infer_task_entries(spec: dict[str, Any], tasks: list[dict[str, Any]], workfl
         target_status = status
     elif workflow.get("active_spec_id") == spec.get("spec_id") and workflow.get("task_status"):
         target_status = workflow.get("task_status")
-    elif status in {"draft", "planned", "ready"}:
+    elif status in {"draft", "planned", "ready", "plan_check_failed"}:
         target_status = "ready"
     else:
         target_status = "in_progress"
@@ -559,6 +567,9 @@ def infer_task_entries(spec: dict[str, Any], tasks: list[dict[str, Any]], workfl
                 "blocked_reason": spec.get("blocked_reason"),
                 "review_result": "passed" if entry_status in {"awaiting_verification", "awaiting_release", "released", "done"} else None,
                 "verification_result": "passed" if entry_status in {"awaiting_release", "released", "done"} else None,
+                "requirement_ids": [],
+                "verification_commands": [],
+                "planned_artifacts": [],
             }
         )
 
@@ -577,6 +588,24 @@ def summarize_task_entries(entries: list[dict[str, Any]]) -> dict[str, int]:
     return {"total": total, "done": done, "in_progress": in_progress, "blocked": blocked}
 
 
+def normalize_task_state(task_state: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(task_state)
+    normalized["schema_version"] = CURRENT_TASK_STATE_SCHEMA_VERSION
+    normalized["spec_id"] = normalized.get("spec_id") or spec.get("spec_id")
+    normalized["spec_key"] = normalized.get("spec_key") or spec.get("spec_key")
+
+    normalized_tasks: list[dict[str, Any]] = []
+    for entry in normalized.get("tasks", []):
+        normalized_entry = dict(entry)
+        normalized_entry["requirement_ids"] = list(normalized_entry.get("requirement_ids") or [])
+        normalized_entry["verification_commands"] = list(normalized_entry.get("verification_commands") or [])
+        normalized_entry["planned_artifacts"] = list(normalized_entry.get("planned_artifacts") or [])
+        normalized_tasks.append(normalized_entry)
+
+    normalized["tasks"] = normalized_tasks
+    return normalized
+
+
 def normalize_spec_entry(spec: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(spec)
     normalized["kind"] = normalized.get("kind") or "normal"
@@ -585,6 +614,11 @@ def normalize_spec_entry(spec: dict[str, Any]) -> dict[str, Any]:
     normalized["triggered_by_role"] = normalized.get("triggered_by_role")
     normalized["trigger_report_path"] = normalized.get("trigger_report_path")
     normalized["trigger_summary"] = normalized.get("trigger_summary")
+    normalized["research_status"] = normalized.get("research_status") or "not_started"
+    normalized["research_artifact_path"] = normalized.get("research_artifact_path") or f"specs/{normalized['spec_key']}/research.md"
+    normalized["research_report_path"] = normalized.get("research_report_path")
+    normalized["research_updated_at"] = normalized.get("research_updated_at")
+    normalized["planning_batch_id"] = normalized.get("planning_batch_id")
     normalized["task_state_path"] = normalized.get("task_state_path") or f"specs/{normalized['spec_key']}/task-state.json"
     normalized["branch_name"] = normalized.get("branch_name") or f"codex/{normalized['spec_key']}"
     normalized["task_summary"] = normalized.get("task_summary") or {"total": 0, "done": 0, "in_progress": 0, "blocked": 0}
@@ -658,16 +692,16 @@ def migrate_repo_state(repo_root: Path) -> None:
         if not task_state_path.exists():
             entries = infer_task_entries(spec, tasks, workflow)
             task_state_path.parent.mkdir(parents=True, exist_ok=True)
-            write_json(
-                task_state_path,
-                {
-                    "schema_version": CURRENT_TASK_STATE_SCHEMA_VERSION,
-                    "spec_id": spec["spec_id"],
-                    "spec_key": spec["spec_key"],
-                    "tasks": entries,
-                },
-            )
-        task_state = load_json(task_state_path)
+            task_state = {
+                "schema_version": CURRENT_TASK_STATE_SCHEMA_VERSION,
+                "spec_id": spec["spec_id"],
+                "spec_key": spec["spec_key"],
+                "tasks": entries,
+            }
+        else:
+            task_state = load_json(task_state_path)
+        task_state = normalize_task_state(task_state, spec)
+        write_json(task_state_path, task_state)
         spec["task_summary"] = summarize_task_entries(task_state.get("tasks", []))
         if spec.get("status") == "done":
             spec["next_task_id"] = None
@@ -705,6 +739,13 @@ def validate_task_state_alignment(
             issues.append(
                 f"{spec['spec_key']}: {task['task_id']} is {status} in task-state.json but tasks.md checkbox disagrees"
             )
+        if not isinstance(entry.get("requirement_ids"), list):
+            issues.append(f"{spec['spec_key']}: {task['task_id']} requirement_ids must be a list")
+        if not isinstance(entry.get("verification_commands"), list):
+            issues.append(f"{spec['spec_key']}: {task['task_id']} verification_commands must be a list")
+        planned_artifacts = entry.get("planned_artifacts")
+        if planned_artifacts is not None and not isinstance(planned_artifacts, list):
+            issues.append(f"{spec['spec_key']}: {task['task_id']} planned_artifacts must be a list when present")
     return issues
 
 
@@ -765,6 +806,20 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         for key in QUEUE_SPEC_REQUIRED_KEYS:
             if key not in spec:
                 issues.append(f"{spec.get('spec_key', 'unknown-spec')}: queue entry is missing `{key}`")
+        if spec.get("research_status") not in {"not_started", "in_progress", "done", "failed"}:
+            issues.append(f"{spec.get('spec_key', 'unknown-spec')}: research_status must be one of not_started, in_progress, done, failed")
+        if not isinstance(spec.get("research_artifact_path"), str):
+            issues.append(f"{spec.get('spec_key', 'unknown-spec')}: research_artifact_path must be a string")
+        if spec.get("planning_batch_id") is not None and not isinstance(spec.get("planning_batch_id"), str):
+            issues.append(f"{spec.get('spec_key', 'unknown-spec')}: planning_batch_id must be a string or null")
+        research_status = spec.get("research_status")
+        research_artifact_path = spec.get("research_artifact_path")
+        if (
+            research_status in {"in_progress", "done"}
+            and isinstance(research_artifact_path, str)
+            and not (repo_root / research_artifact_path).exists()
+        ):
+            issues.append(f"{spec.get('spec_key', 'unknown-spec')}: research_status is {research_status} but {research_artifact_path} is missing")
 
     expected_workflow_md = render_workflow_state_markdown(workflow, queue)
     actual_workflow_md = workflow_md_path.read_text()
@@ -799,6 +854,12 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             issues.append(f"{spec['spec_key']}: queue entry is missing tasks_path")
             continue
         task_state = load_json(task_state_path)
+        if task_state.get("schema_version") != CURRENT_TASK_STATE_SCHEMA_VERSION:
+            issues.append(f"{spec['spec_key']}: task-state.json schema_version is not current")
+        if task_state.get("spec_id") != spec.get("spec_id"):
+            issues.append(f"{spec['spec_key']}: task-state.json spec_id does not match queue entry")
+        if task_state.get("spec_key") != spec.get("spec_key"):
+            issues.append(f"{spec['spec_key']}: task-state.json spec_key does not match queue entry")
         tasks = parse_tasks_markdown(repo_root / tasks_relpath)
         issues.extend(validate_task_state_alignment(spec, tasks, task_state))
         if spec.get("spec_id") == workflow.get("active_spec_id"):

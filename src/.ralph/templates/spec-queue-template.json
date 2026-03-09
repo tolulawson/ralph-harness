@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "queue_policy": {
     "selection": "fifo",
     "preemption": "failing_out_of_scope_bug"
@@ -24,6 +24,11 @@
       "trigger_summary": null,
       "priority_override": null,
       "blocked_reason": null,
+      "research_status": "not_started",
+      "research_artifact_path": "specs/{{spec_key}}/research.md",
+      "research_report_path": null,
+      "research_updated_at": null,
+      "planning_batch_id": null,
       "prd_path": "tasks/prd-{{project_slug}}.md",
       "spec_path": "specs/{{spec_key}}/spec.md",
       "plan_path": "specs/{{spec_key}}/plan.md",

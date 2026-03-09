@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "queue_policy": {
     "selection": "fifo",
     "preemption": "failing_out_of_scope_bug"
@@ -17,8 +17,18 @@
       "last_worked_at": "2026-03-05T12:08:00-08:00",
       "status": "done",
       "kind": "normal",
+      "origin_spec_key": null,
+      "origin_task_id": null,
+      "triggered_by_role": null,
+      "trigger_report_path": null,
+      "trigger_summary": null,
       "priority_override": null,
       "blocked_reason": null,
+      "research_status": "done",
+      "research_artifact_path": "specs/001-self-bootstrap-harness/research.md",
+      "research_report_path": null,
+      "research_updated_at": "2026-03-05T11:45:00-08:00",
+      "planning_batch_id": "batch-20260305-bootstrap",
       "prd_path": "tasks/prd-ralph-harness.md",
       "spec_path": "specs/001-self-bootstrap-harness/spec.md",
       "plan_path": "specs/001-self-bootstrap-harness/plan.md",
@@ -37,12 +47,7 @@
         "in_progress": 0,
         "blocked": 0
       },
-      "next_task_id": null,
-      "origin_spec_key": null,
-      "origin_task_id": null,
-      "triggered_by_role": null,
-      "trigger_report_path": null,
-      "trigger_summary": null
+      "next_task_id": null
     },
     {
       "spec_id": "002",
@@ -54,8 +59,18 @@
       "last_worked_at": "2026-03-07T12:00:00-08:00",
       "status": "done",
       "kind": "normal",
+      "origin_spec_key": null,
+      "origin_task_id": null,
+      "triggered_by_role": null,
+      "trigger_report_path": null,
+      "trigger_summary": null,
       "priority_override": null,
       "blocked_reason": null,
+      "research_status": "done",
+      "research_artifact_path": "specs/002-deterministic-orchestration-versioning-and-upgrades/research.md",
+      "research_report_path": null,
+      "research_updated_at": "2026-03-07T10:45:00-08:00",
+      "planning_batch_id": "batch-20260307-upgrades",
       "prd_path": "tasks/prd-ralph-harness.md",
       "spec_path": "specs/002-deterministic-orchestration-versioning-and-upgrades/spec.md",
       "plan_path": "specs/002-deterministic-orchestration-versioning-and-upgrades/plan.md",
@@ -74,12 +89,7 @@
         "in_progress": 0,
         "blocked": 0
       },
-      "next_task_id": null,
-      "origin_spec_key": null,
-      "origin_task_id": null,
-      "triggered_by_role": null,
-      "trigger_report_path": null,
-      "trigger_summary": null
+      "next_task_id": null
     }
   ]
 }

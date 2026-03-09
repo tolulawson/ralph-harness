@@ -15,6 +15,7 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 - active task
 - canonical task entry from `specs/<spec-key>/task-state.json`
 - active spec queue entry
+- `specs/<spec-key>/research.md` when present
 - `.ralph/context/project-truths.md`
 - `.ralph/context/learning-summary.md`
 - related spec and plan
@@ -28,8 +29,9 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 5. Call out residual risks or verification gaps.
 6. Record any durable anti-patterns, review rules, or repeat failure signatures in `Candidate Learnings`.
 7. Treat the active PR branch as the review unit when PR metadata exists.
-8. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only when a failing finding is outside the current spec's intended scope.
-9. Write a review report.
+8. Flag any implementation that materially violates the spec constraints or the confirmed guidance in `research.md`.
+9. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only when a failing finding is outside the current spec's intended scope.
+10. Write a review report.
 
 ## Outputs
 

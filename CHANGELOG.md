@@ -4,6 +4,40 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.6.0 - 2026-03-09
+
+### Summary
+
+Ralph now supports one narrow form of planning-time parallelism: spec-local `research` can run concurrently for specs created or refreshed in the same planning batch, while planning, task generation, implementation, review, verification, and release remain strictly sequential.
+
+This release also adds a dedicated `plan-check` gate, research-aware planning artifacts, and queue or task-state schema updates so upgrades and fresh installs preserve the sequential execution loop while improving pre-implementation rigor.
+
+### Highlights
+
+- Added shipped `research` and `plan-check` agent configs plus matching runtime skills.
+- Inserted a bounded parallel `research` phase between specification and planning in the shipped runtime doctrine.
+- Added research metadata to the canonical spec queue and requirement or verification metadata to `task-state.json`.
+- Strengthened shipped `spec`, `plan`, `review`, `verify`, and `analyze` guidance so planning consumes `research.md` and verification checks truths, artifacts, and critical links.
+- Added validation coverage for the research-only parallelism contract and smoke coverage for planning-batch research readiness.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.6.0` as the default public install or upgrade reference.
+- Fresh installs inherit the new `research` and `plan-check` phases, queue metadata, and research-aware templates immediately.
+- Upgrades must run the normal manifest-copy plus migration flow so queue entries and task-state files are normalized to the new schema and upgrade contract version `4`.
+
+### Validation And Release Workflow
+
+- CI and local validation now run `scripts/verify-parallel-research-contract.sh` alongside the existing installation, interruption, atomic-commit, and upgrade contract checks.
+- Smoke coverage now includes a planning-batch fixture that proves research metadata can exist for multiple specs without relaxing FIFO execution.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Research template: `src/.ralph/templates/research-template.md`
+- Task-state template: `src/.ralph/templates/task-state-template.json`
+- Release asset: `ralph-harness-v0.6.0.tar.gz`
+
 ## v0.5.1 - 2026-03-09
 
 ### Summary

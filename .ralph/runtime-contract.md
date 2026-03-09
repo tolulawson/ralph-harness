@@ -24,8 +24,10 @@ Interpret an installed Ralph harness in this order:
 
 - Official Codex multi-agent support is required.
 - The orchestrator must use built-in Codex agent controls such as `spawn_agent` and `wait` rather than narrating delegation without actually delegating.
-- Exactly one worker role may be active at a time for normal execution.
+- `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
+- Exactly one non-research worker role may be active at a time for normal execution.
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
+- No role besides the orchestrator may mutate shared queue state, workflow state, projections, promoted learnings, or event logs.
 
 ## Core Loop
 
@@ -51,16 +53,19 @@ Interpret an installed Ralph harness in this order:
    - oldest ready interrupt spec by `created_at`
    - active normal spec
    - oldest ready normal spec in FIFO order
-13. decide the next role from spec status, task lifecycle state, PR state, and next action
-14. spawn exactly one worker role with bounded inputs and a required report path
-15. wait for that worker to finish
-16. validate the worker outputs
-17. if the worker failed or blocked on an out-of-scope bug, create a new interrupt spec, pause the current spec, and push paused context onto `resume_spec_stack`
-18. write the orchestrator report
-19. append one orchestrator-owned event
-20. update shared state and projections
-21. after a released interrupt spec completes, pop `resume_spec_stack` and resume the paused spec
-22. continue dispatching until a stop condition occurs
+13. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
+14. if that batch contains specs with valid `spec.md` files and `research_status` needing work, spawn bounded parallel `research` workers only for those specs
+15. wait for the research batch to finish and validate every spec-local `research.md` plus report before mutating shared state
+16. outside the batch-scoped research step, decide the next role from spec status, task lifecycle state, PR state, and next action
+17. spawn exactly one non-research worker role with bounded inputs and a required report path
+18. wait for that worker to finish
+19. validate the worker outputs
+20. if the worker failed or blocked on an out-of-scope bug, create a new interrupt spec, pause the current spec, and push paused context onto `resume_spec_stack`
+21. write the orchestrator report
+22. append one orchestrator-owned event
+23. update shared state and projections
+24. after a released interrupt spec completes, pop `resume_spec_stack` and resume the paused spec
+25. continue dispatching until a stop condition occurs
 
 ## Stop Conditions
 
@@ -93,6 +98,7 @@ Worker roles must not silently mutate shared queue state or append orchestrator 
 
 ## Worker Ownership
 
+- `research`: `research.md` plus role-local report
 - `implement`: product files, in-scope spec artifacts, `implement.md`
 - `review`: `review.md` and optional spec review artifact
 - `verify`: `verify.md` and optional spec verification artifact
@@ -104,6 +110,7 @@ Each numbered spec should maintain:
 
 - `tasks.md` as the human-readable task projection
 - `task-state.json` as the canonical machine-readable task lifecycle registry
+- `research.md` as the spec-local implementation research artifact when research has been completed for that spec
 
 Task generation seeds `task-state.json`. After that, the orchestrator owns lifecycle transitions based on worker reports.
 
@@ -114,11 +121,24 @@ Each task record in `task-state.json` should include:
 - `last_role`
 - `last_report_path`
 - `updated_at`
+- `requirement_ids`
+- `verification_commands`
 - optional `blocked_reason`
 - optional `review_result`
 - optional `verification_result`
+- optional `planned_artifacts`
 
 `paused` is the canonical task status for an interrupted task that should later resume.
+
+Each spec queue entry should also track research preparation state:
+
+- `research_status`
+- `research_artifact_path`
+- `research_report_path`
+- `research_updated_at`
+- `planning_batch_id`
+
+`active_spec_id` still names the execution head only. Research metadata is queue-visible preparation state, not execution ownership.
 
 ## Interrupt Spec Contract
 
@@ -155,6 +175,9 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 - Interrupt specs preempt normal specs when they exist.
 - Only one normal spec may be active at a time.
 - Later ready specs may not start while an earlier ready spec remains unfinished.
+- Parallelism is forbidden for all roles except batch-scoped `research`.
+- Parallel research may improve later spec readiness but must never let a later spec bypass an earlier spec in execution.
+- Research batches are limited to specs produced or refreshed together by one orchestrator-led planning pass.
 
 ## Git And PR Policy
 

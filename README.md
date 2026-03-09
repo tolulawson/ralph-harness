@@ -33,7 +33,7 @@ Target repositories should install or upgrade the scaffold from versioned tags, 
 
 ## How The Harness Works
 
-The parent Codex agent is the orchestrator. It reads the constitution, runtime contract, project policy, runtime state, spec queue, latest report, active spec files, and a short tail of recent events. It then uses Codex multi-agent controls to spawn one focused worker at a time, wait for the result, validate it, update shared state, and continue until a documented stop condition occurs.
+The parent Codex agent is the orchestrator. It reads the constitution, runtime contract, project policy, runtime state, spec queue, latest report, active spec files, and a short tail of recent events. It then uses Codex multi-agent controls to spawn one focused worker at a time for normal execution, while allowing only bounded same-batch `research` workers to run concurrently before planning hardens. The orchestrator still validates outputs, updates shared state itself, and continues until a documented stop condition occurs.
 
 If a worker finds a failing bug outside the current spec's intended scope, the canonical flow is to create a new interrupt spec, pause the current spec, push the paused context onto `resume_spec_stack`, fix the interrupt first, and then resume the paused work afterward.
 
@@ -42,29 +42,32 @@ flowchart TD
     A["Project idea or backlog item"] --> B["PRD role writes project PRD"]
     B --> C["Plan role decomposes PRD into epochs and numbered specs"]
     C --> D["Spec queue stored in spec-queue.json and projected in specs/INDEX.md"]
-    D --> E["Orchestrator selects the oldest ready spec"]
-    E --> F["Specify and task-gen prepare the active spec"]
-    F --> G["Implement role executes one task on the active spec branch"]
-    G --> H["Review role checks the task or PR branch"]
-    H --> I["Verify role runs required checks"]
-    I --> J{"Review and verification pass?"}
-    J -- "No" --> G
-    J -- "Yes" --> K["Release role records the PR or merge outcome"]
-    K --> L{"Spec complete and merged?"}
-    L -- "No" --> E
-    L -- "Yes" --> M["Orchestrator marks the spec done and advances the queue"]
-    M --> N{"More ready specs?"}
-    N -- "Yes" --> E
-    N -- "No" --> O["Workflow stops when queue is empty or blocked"]
+    D --> E["Specify finalizes numbered specs"]
+    E --> F["Research may run in parallel only for specs from the same planning batch"]
+    F --> G["Orchestrator selects the oldest ready spec for sequential planning"]
+    G --> H["Plan, task-gen, and plan-check prepare the active spec"]
+    H --> I["Implement role executes one task on the active spec branch"]
+    I --> J["Review role checks the task or PR branch"]
+    J --> K["Verify role runs required checks"]
+    K --> L{"Review and verification pass?"}
+    L -- "No" --> I
+    L -- "Yes" --> M["Release role records the PR or merge outcome"]
+    M --> N{"Spec complete and merged?"}
+    N -- "No" --> G
+    N -- "Yes" --> O["Orchestrator marks the spec done and advances the queue"]
+    O --> P{"More ready specs?"}
+    P -- "Yes" --> G
+    P -- "No" --> Q["Workflow stops when queue is empty or blocked"]
 ```
 
 Each spec is the execution unit. The orchestrator:
 
 - selects the next ready spec in FIFO order
+- may join bounded same-batch `research` runs before queue-head planning begins
 - selects the next task inside that spec
 - uses `task-state.json` as the canonical task lifecycle record
 - ensures the active branch and active PR match the spec
-- routes work through implement, review, verify, and release with exactly one active worker at a time
+- routes work through plan, task-gen, plan-check, implement, review, verify, and release with exactly one non-research worker at a time
 - advances the queue only when the spec is done
 
 ## Repository Layout
@@ -160,18 +163,19 @@ Read [CHANGELOG.md](https://github.com/tolulawson/ralph-harness/blob/main/CHANGE
 In short:
 
 - install the public `ralph-*` skills via a third-party skill installer when you want explicit named entry points
-- use the latest stable tag such as `v0.5.1` as the default public install or upgrade reference
+- use the latest stable tag such as `v0.6.0` as the default public install or upgrade reference
 - treat `src/` as the only installable scaffold source
 - copy only the manifest-listed scaffold paths from `src/install-manifest.txt`
 - generate the runtime files listed in `src/generated-runtime-manifest.txt`
 - upgrade the scaffold-owned paths from `src/upgrade-manifest.txt`, then run the live-state migration pass from `UPGRADING.md`
+- keep research parallelism bounded to same-batch `research` only; all other runtime roles remain sequential
 - keep the repo root runtime history out of target projects
 - reset the workflow state and spec queue for the target project
 - create the initial project PRD, epoch map, numbered specs, and tasks
 
 ## Versioning And Releases
 
-The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.5.1`, while the exact commit SHA is recorded in the installed repo for reproducibility.
+The harness now uses semver tags. The public install or upgrade reference is a tag such as `v0.6.0`, while the exact commit SHA is recorded in the installed repo for reproducibility.
 
 Releases are intentional and manual. CI validates the scaffold, install contract, upgrade contract, and fixture install or upgrade flow before a GitHub release is cut.
 

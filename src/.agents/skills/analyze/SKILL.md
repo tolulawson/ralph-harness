@@ -1,6 +1,6 @@
 ---
 name: analyze
-description: Perform a read-only cross-artifact consistency analysis across a numbered spec's spec, plan, and tasks files, surfacing duplication, ambiguity, coverage gaps, and inconsistencies before implementation continues.
+description: Perform a read-only cross-artifact consistency analysis across a numbered spec's spec, research, plan, and tasks files, surfacing duplication, ambiguity, coverage gaps, and inconsistencies before implementation continues.
 ---
 
 # Analyze
@@ -12,12 +12,13 @@ description: Perform a read-only cross-artifact consistency analysis across a nu
 
 ## Goal
 
-Identify inconsistencies, ambiguities, duplicated requirements, coverage gaps, and unmapped tasks across the core planning artifacts before implementation proceeds.
+Identify inconsistencies, ambiguities, duplicated requirements, research-plan-task drift, coverage gaps, and unmapped tasks across the core planning artifacts before implementation proceeds.
 
 ## Inputs
 
 - `.ralph/constitution.md`
 - `specs/<spec-key>/spec.md`
+- `specs/<spec-key>/research.md` when present
 - `specs/<spec-key>/plan.md`
 - `specs/<spec-key>/tasks.md`
 - `.ralph/policy/project-policy.md`
@@ -31,12 +32,13 @@ Identify inconsistencies, ambiguities, duplicated requirements, coverage gaps, a
 
 ## Workflow
 
-1. Load the minimum required context from the constitution, policy, spec, plan, and tasks.
-2. Build a requirements inventory, user-story inventory, and task coverage map.
+1. Load the minimum required context from the constitution, policy, spec, research artifact when present, plan, and tasks.
+2. Build a requirements inventory, user-story inventory, research guidance inventory, and task coverage map.
 3. Detect:
    - duplication
    - ambiguity
    - underspecification
+   - research-to-plan drift
    - policy or constitution conflicts
    - coverage gaps
    - inconsistencies in terminology, ordering, or artifact references

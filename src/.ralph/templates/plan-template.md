@@ -15,6 +15,11 @@
 
 {{summary}}
 
+## Research Inputs
+
+- {{research_input_1}}
+- {{research_input_2}}
+
 ## Architecture
 
 - Entry points: {{entry_points}}
@@ -25,10 +30,21 @@
 
 - {{interface_1}}
 
+## Implementation Guardrails
+
+- Do not hand-roll: {{guardrail_1}}
+- Pitfalls: {{guardrail_2}}
+
 ## Testing Strategy
 
 - {{test_1}}
 - {{test_2}}
+
+## Goal-Backward Verification
+
+- Observable truths: {{truth_1}}
+- Required artifacts: {{artifact_1}}
+- Critical links: {{link_1}}
 
 ## Rollout Notes
 

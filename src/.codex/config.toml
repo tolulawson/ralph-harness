@@ -18,11 +18,17 @@ config_file = "agents/prd.toml"
 [agents.specify]
 config_file = "agents/specify.toml"
 
+[agents.research]
+config_file = "agents/research.toml"
+
 [agents.plan]
 config_file = "agents/plan.toml"
 
 [agents.task_gen]
 config_file = "agents/task-gen.toml"
+
+[agents.plan_check]
+config_file = "agents/plan-check.toml"
 
 [agents.implement]
 config_file = "agents/implement.toml"

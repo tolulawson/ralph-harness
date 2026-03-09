@@ -31,13 +31,13 @@ If the plan is missing, stop and report that the planning step must complete fir
    - Final phase: polish, PR readiness, and cross-cutting concerns
 5. Use strict task formatting:
    - `- [ ] 001-T001 Description`
-   - include `[P]` only for safe parallel work
    - include `[US1]`, `[US2]`, etc. for story-specific tasks
    - include exact file paths whenever feasible
+   - express independence through dependency ordering and phase structure rather than parallel markers, because the runtime still executes one worker at a time
 6. Ensure each task is executable by a fresh worker without hidden context.
-7. Record dependencies, parallel opportunities, independent test criteria, and PR readiness hooks.
+7. Record dependencies, per-task requirement ids, verification commands, planned artifacts, independent test criteria, and PR readiness hooks.
 8. Write `specs/<spec-key>/tasks.md`.
-9. Write `specs/<spec-key>/task-state.json` so every generated task has a canonical lifecycle record.
+9. Write `specs/<spec-key>/task-state.json` so every generated task has a canonical lifecycle record plus requirement and verification metadata.
 10. Write the role report and recommend the next role.
 
 ## Outputs

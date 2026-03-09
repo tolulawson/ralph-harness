@@ -80,8 +80,8 @@ if payload.get("version") != version:
     raise SystemExit("verify-upgrade-contract: harness-version.json version mismatch")
 if payload.get("tag") != current_tag:
     raise SystemExit("verify-upgrade-contract: harness-version.json tag mismatch")
-if payload.get("upgrade_contract_version") != 3:
-    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 3")
+if payload.get("upgrade_contract_version") != 4:
+    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 4")
 PY
 
 echo "verify-upgrade-contract: ok"

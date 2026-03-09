@@ -56,7 +56,8 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 7. Read a recent tail of the event log rather than the full history.
 8. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
 9. Guide Codex to use built-in multi-agent orchestration to:
-   - spawn exactly one worker role at a time
+   - allow bounded same-batch `research` workers only before queue-head planning resumes
+   - spawn exactly one non-research worker role at a time
    - wait for the worker to finish
    - create an interrupt spec automatically for any failing out-of-scope bug
    - pause the current spec and later resume it after the interrupt is released
@@ -75,6 +76,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - If the harness files are missing, stop and tell the user to use `$ralph-install`.
 - Treat the constitution, runtime contract, policy, workflow state, and spec queue as source of truth.
 - Do not continue execution from stale projections or mixed-version runtime state.
+- Keep all parallelism bounded to same-batch `research`; `plan`, `task-gen`, `plan-check`, `implement`, `review`, `verify`, and `release` remain sequential.
 - Do not advance review, verification, or release from a dirty worktree or a report that lacks checkpoint traceability.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
 - Do not stop after a single handoff unless the runtime contract says to stop.

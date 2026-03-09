@@ -53,8 +53,9 @@ The durable planning hierarchy is:
 1. project PRD
 2. epochs
 3. numbered specs
-4. dependency-ordered tasks
-5. branch and GitHub PR execution
+4. spec-local research
+5. dependency-ordered tasks
+6. branch and GitHub PR execution
 
 Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 
@@ -64,6 +65,7 @@ Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 - `.ralph/state/spec-queue.json` is the canonical machine-readable spec queue and spec-state registry.
 - `.ralph/state/workflow-state.md` is a human-readable companion file and must agree with the JSON state.
 - `specs/<spec-id>-<slug>/task-state.json` is the canonical machine-readable task lifecycle registry for a spec when it exists.
+- `specs/<spec-id>-<slug>/research.md` is the canonical spec-local research artifact when research has been completed for that spec.
 - `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, and `.ralph/context/learning-summary.md` are part of the default harness context.
 - `.ralph/context/learning-log.jsonl` is the append-only learning ledger and should be tailed selectively rather than loaded in full.
 - `specs/INDEX.md` is a human-readable projection of the spec queue.
@@ -100,8 +102,10 @@ Use this order whenever a fresh Codex run resumes work:
 - `prd`
 - `epoch_planning`
 - `specification`
+- `research`
 - `planning`
 - `task_generation`
+- `plan_review`
 - `implementation`
 - `review`
 - `verification`
@@ -135,6 +139,7 @@ Use this order whenever a fresh Codex run resumes work:
 - `review_failed`
 - `awaiting_verification`
 - `verification_failed`
+- `plan_check_failed`
 - `awaiting_merge`
 - `done`
 - `blocked`
