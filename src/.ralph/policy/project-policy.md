@@ -4,6 +4,8 @@
 
 - Runtime: Codex-native multi-agent harness
 - Official Codex multi-agent support is required.
+- Orchestrator-spawned workers must run with forked context semantics to isolate worker context from orchestrator context.
+- All role configs use `sandbox_mode = "danger-full-access"`.
 - Codex loader: `AGENTS.md`
 - Harness doctrine: `.ralph/constitution.md` plus `.ralph/runtime-contract.md`
 - Control plane: repo files plus `.codex/config.toml`
@@ -76,6 +78,9 @@
 - The parent orchestrator updates shared state after validating outputs.
 - The parent orchestrator drains the queue until a documented stop condition occurs.
 - The parent orchestrator may launch bounded parallel `research` only for specs in the same planning batch.
+- The parent orchestrator must spawn workers with `fork_context = true`.
+- The parent orchestrator should use `agent_type = "explorer"` for analysis-heavy roles and `agent_type = "worker"` for delivery-heavy roles.
+- Child roles must not spawn nested workers.
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - Workers must not update shared workflow state, queue state, state Markdown, or orchestrator event logs directly.
 - Review and verification should treat the active spec branch or PR as the unit under inspection.

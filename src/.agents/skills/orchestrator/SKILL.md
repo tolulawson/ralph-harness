@@ -55,11 +55,16 @@ description: Coordinate the Codex-native Ralph harness loop by reading runtime s
    - active normal spec
    - oldest ready normal spec in FIFO order
 13. After a PRD-to-spec pass creates or refreshes a planning batch, identify only the specs from that batch whose `spec.md` exists and whose `research_status` still needs work.
-14. Use Codex multi-agent controls such as `spawn_agent` and `wait` to run bounded parallel `research` only for that batch, with no nested fan-out and no shared-state writes from the research workers.
-15. Join the research batch, validate each `research.md`, and then update shared queue metadata once.
+14. Spawn research workers for that batch with:
+   - `fork_context = true`
+   - `agent_type = "explorer"`
+   - bounded fan-out only for same-batch `research`
+15. Join the research batch with `wait`, close each completed research worker, validate each `research.md`, and then update shared queue metadata once.
 16. Outside that batch-scoped research step, decide the next role from spec status, task lifecycle state, PR state, interruption state, and next action.
-17. Use Codex multi-agent controls such as `spawn_agent` and `wait` to run exactly one non-research worker role at a time.
-18. Wait for the worker to finish before doing any further orchestration work.
+17. Spawn exactly one non-research worker with `fork_context = true` and role-based `agent_type` mapping:
+   - `explorer`: `plan_check`, `review`, and optionally `research` when analysis depth is the primary concern
+   - `worker`: `prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`
+18. Wait for the worker to finish, close that worker thread, and only then continue orchestration.
 19. Validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Commit Evidence` plus a clean worktree.
 20. If the worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, mark the current spec `paused`, mark the active task `paused`, push paused context onto `resume_spec_stack`, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
 21. Append candidate learnings from the worker report to `.ralph/context/learning-log.jsonl`.

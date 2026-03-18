@@ -110,7 +110,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.6.1` as the default public reference right now
+- use `v0.7.0` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
@@ -135,6 +135,7 @@ The source-of-truth split in this repository is:
 ## Architectural Overview
 
 Ralph keeps the orchestrator in charge of shared state. Normal execution stays sequential. The only bounded parallelism is spec-local `research` for specs produced or refreshed in the same planning batch.
+Worker runs are forked from the orchestrator context so noisy role-specific reasoning stays isolated, and only validated outputs are promoted back into shared runtime artifacts.
 
 ```mermaid
 flowchart TD
@@ -163,7 +164,9 @@ In practice, that means:
 - specs are the durable execution unit
 - `task-state.json` is the canonical task lifecycle record
 - the orchestrator chooses the queue head and next task
+- orchestrator-spawned workers run with forked context semantics (`fork_context = true`)
 - implementation, review, verification, and release run one worker at a time
+- all role configs run with `sandbox_mode = "danger-full-access"`
 - if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
 - `plan-check` can route work back to `plan` or `task-gen`
 - `review_failed` and `verification_failed` are canonical look-back states that send work back through implementation
@@ -231,4 +234,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.6.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.7.0`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

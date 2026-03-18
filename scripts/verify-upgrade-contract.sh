@@ -50,6 +50,12 @@ grep -Fq -- 'merge the installed `.codex/config.toml` with the scaffold config' 
 grep -Fq -- 'upgrade_contract_version' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document upgrade_contract_version"
 
+grep -Fq -- '`fork_context = true`' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document forked worker-context isolation"
+
+grep -Fq -- 'all role configs use `sandbox_mode = "danger-full-access"`' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document all-role full-permission mode"
+
 grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$UPGRADING_MD" \
   || fail "UPGRADING.md missing managed AGENTS block start marker"
 
@@ -83,8 +89,8 @@ if payload.get("version") != version:
     raise SystemExit("verify-upgrade-contract: harness-version.json version mismatch")
 if payload.get("tag") != current_tag:
     raise SystemExit("verify-upgrade-contract: harness-version.json tag mismatch")
-if payload.get("upgrade_contract_version") != 4:
-    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 4")
+if payload.get("upgrade_contract_version") != 5:
+    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 5")
 PY
 
 echo "verify-upgrade-contract: ok"

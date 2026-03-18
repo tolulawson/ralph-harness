@@ -56,6 +56,13 @@ do
   grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing AGENTS loader requirement: $required"
 done
 
+for required in \
+  '`fork_context = true`' \
+  'all role configs use `sandbox_mode = "danger-full-access"`'
+do
+  grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing subagent isolation requirement: $required"
+done
+
 grep -Fq -- 'the report at `last_report_path`' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing last_report_path read-order entry"
 

@@ -28,7 +28,7 @@ jobs:
           python-version: "3.11"
 
       - name: Make scripts executable
-        run: chmod +x scripts/verify-installation-contract.sh scripts/verify-atomic-commit-contract.sh scripts/verify-interruption-contract.sh scripts/verify-parallel-research-contract.sh scripts/verify-upgrade-contract.sh scripts/validate-harness.sh scripts/smoke-test-install-upgrade.sh scripts/render-release-notes.sh
+        run: chmod +x scripts/verify-installation-contract.sh scripts/verify-atomic-commit-contract.sh scripts/verify-interruption-contract.sh scripts/verify-parallel-research-contract.sh scripts/verify-subagent-isolation-contract.sh scripts/verify-upgrade-contract.sh scripts/validate-harness.sh scripts/smoke-test-install-upgrade.sh scripts/render-release-notes.sh
 
       - name: Verify requested tag matches VERSION
         env:

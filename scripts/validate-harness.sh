@@ -88,6 +88,7 @@ scripts/verify-installation-contract.sh
 scripts/verify-atomic-commit-contract.sh
 scripts/verify-interruption-contract.sh
 scripts/verify-parallel-research-contract.sh
+scripts/verify-subagent-isolation-contract.sh
 scripts/verify-upgrade-contract.sh
 
 if grep -Fq -- '--generate-notes' .github/workflows/release.yml; then

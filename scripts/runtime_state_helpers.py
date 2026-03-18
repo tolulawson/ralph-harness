@@ -16,7 +16,7 @@ CURRENT_QUEUE_SCHEMA_VERSION = "2.1.0"
 CURRENT_WORKFLOW_SCHEMA_VERSION = "2.0.0"
 CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
-CURRENT_UPGRADE_CONTRACT_VERSION = 4
+CURRENT_UPGRADE_CONTRACT_VERSION = 5
 SCAFFOLD_ROOT = Path(__file__).resolve().parents[1]
 MANAGED_AGENT_NAMES = (
     "orchestrator",
@@ -43,6 +43,31 @@ MANAGED_AGENT_FILES = (
     "specify.toml",
     "task-gen.toml",
     "verify.toml",
+)
+MANAGED_AGENT_SANDBOX_MODES = {
+    "orchestrator": "danger-full-access",
+    "prd": "danger-full-access",
+    "specify": "danger-full-access",
+    "research": "danger-full-access",
+    "plan": "danger-full-access",
+    "task_gen": "danger-full-access",
+    "plan_check": "danger-full-access",
+    "implement": "danger-full-access",
+    "review": "danger-full-access",
+    "verify": "danger-full-access",
+    "release": "danger-full-access",
+}
+MAX_AGENT_DEPTH = 2
+RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
+    "forked context semantics (`fork_context = true`)",
+    'agent_type = "explorer"',
+    'agent_type = "worker"',
+    "Child roles must not spawn nested workers.",
+)
+ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
+    "`fork_context = true`",
+    "`agent_type` mapping",
+    "close that worker thread",
 )
 
 WORKFLOW_REQUIRED_KEYS = (
@@ -236,7 +261,14 @@ def merge_codex_config(installed: dict[str, Any], scaffold: dict[str, Any]) -> d
                 existing.setdefault(nested_key, nested_value)
             merged_agents[key] = existing
         else:
-            merged_agents.setdefault(key, value)
+            if key == "max_depth" and isinstance(value, int):
+                existing_depth = merged_agents.get(key)
+                if isinstance(existing_depth, int):
+                    merged_agents[key] = min(existing_depth, value)
+                else:
+                    merged_agents[key] = value
+            else:
+                merged_agents.setdefault(key, value)
     merged["agents"] = merged_agents
 
     return merged
@@ -852,19 +884,41 @@ def validate_task_state_alignment(
 
 def validate_installed_runtime(repo_root: Path) -> list[str]:
     issues: list[str] = []
+    parsed_agent_targets: dict[str, dict[str, Any]] = {}
 
     config_path, configured_targets, config_issues = configured_agent_targets(repo_root)
     issues.extend(config_issues)
     if config_path.exists():
+        config = load_toml(config_path)
+        max_depth = config.get("agents", {}).get("max_depth")
+        if not isinstance(max_depth, int):
+            issues.append(".codex/config.toml agents.max_depth must be an integer")
+        elif max_depth > MAX_AGENT_DEPTH:
+            issues.append(
+                f".codex/config.toml agents.max_depth must be <= {MAX_AGENT_DEPTH} to enforce no nested worker fan-out"
+            )
         for role, target in configured_targets.items():
             rel_target = target.relative_to(repo_root) if target.is_relative_to(repo_root) else target
             if not target.exists():
                 issues.append(f".codex/config.toml points `{role}` at missing file `{rel_target}`")
                 continue
             try:
-                load_toml(target)
+                payload = load_toml(target)
             except Exception as exc:
                 issues.append(f"{rel_target} does not parse as TOML: {exc}")
+                continue
+            parsed_agent_targets[role] = payload
+
+        for role, expected_mode in MANAGED_AGENT_SANDBOX_MODES.items():
+            payload = parsed_agent_targets.get(role)
+            if payload is None:
+                issues.append(f".codex/config.toml is missing managed agent mapping for `{role}`")
+                continue
+            actual_mode = payload.get("sandbox_mode")
+            if actual_mode != expected_mode:
+                issues.append(
+                    f"managed agent `{role}` must use sandbox_mode `{expected_mode}`, got `{actual_mode}`"
+                )
 
     legacy_dir = repo_root / "agents"
     if legacy_dir.exists():
@@ -876,9 +930,31 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     queue_json_path = repo_root / ".ralph/state/spec-queue.json"
     workflow_md_path = repo_root / ".ralph/state/workflow-state.md"
     spec_index_path = repo_root / "specs/INDEX.md"
+    runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
+    orchestrator_skill_path = repo_root / ".agents/skills/orchestrator/SKILL.md"
     for path in (workflow_json_path, queue_json_path, workflow_md_path, spec_index_path):
         if not path.exists():
             issues.append(f"missing required runtime file: {path.relative_to(repo_root)}")
+
+    if runtime_contract_path.exists():
+        runtime_contract_text = runtime_contract_path.read_text()
+        for snippet in RUNTIME_CONTRACT_REQUIRED_SNIPPETS:
+            if snippet not in runtime_contract_text:
+                issues.append(
+                    f".ralph/runtime-contract.md missing required subagent isolation contract snippet: `{snippet}`"
+                )
+    else:
+        issues.append("missing required runtime file: .ralph/runtime-contract.md")
+
+    if orchestrator_skill_path.exists():
+        orchestrator_skill_text = orchestrator_skill_path.read_text()
+        for snippet in ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS:
+            if snippet not in orchestrator_skill_text:
+                issues.append(
+                    f".agents/skills/orchestrator/SKILL.md missing required delegation snippet: `{snippet}`"
+                )
+    else:
+        issues.append("missing required runtime file: .agents/skills/orchestrator/SKILL.md")
 
     if issues:
         return issues

@@ -24,8 +24,13 @@ Interpret an installed Ralph harness in this order:
 
 - Official Codex multi-agent support is required.
 - The orchestrator must use built-in Codex agent controls such as `spawn_agent` and `wait` rather than narrating delegation without actually delegating.
+- The orchestrator must spawn every worker with forked context semantics (`fork_context = true`) so child deliberation stays isolated from the main orchestration context.
+- The orchestrator must map analysis-heavy roles (`research`, `plan_check`, `review`) to `agent_type = "explorer"` and delivery-heavy roles (`prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`) to `agent_type = "worker"`.
+- Child roles must not spawn nested workers.
+- The orchestrator may persist only validated worker outputs and reports into shared runtime state; worker chain-of-thought or scratch deliberation must not be copied into shared artifacts.
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
 - Exactly one non-research worker role may be active at a time for normal execution.
+- All role configs run with `sandbox_mode = "danger-full-access"` for maximum execution latitude.
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
 - Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
 - No role besides the orchestrator may mutate shared queue state, workflow state, projections, promoted learnings, or event logs.
@@ -55,11 +60,11 @@ Interpret an installed Ralph harness in this order:
    - active normal spec
    - oldest ready normal spec in FIFO order
 13. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
-14. if that batch contains specs with valid `spec.md` files and `research_status` needing work, spawn bounded parallel `research` workers only for those specs
-15. wait for the research batch to finish and validate every spec-local `research.md` plus report before mutating shared state
+14. if that batch contains specs with valid `spec.md` files and `research_status` needing work, spawn bounded parallel `research` workers only for those specs with `fork_context = true` and `agent_type = "explorer"`
+15. wait for the research batch to finish, close the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
 16. outside the batch-scoped research step, decide the next role from spec status, task lifecycle state, PR state, and next action
-17. spawn exactly one non-research worker role with bounded inputs and a required report path
-18. wait for that worker to finish
+17. spawn exactly one non-research worker role with bounded inputs, a required report path, `fork_context = true`, and the role-appropriate `agent_type`
+18. wait for that worker to finish and close the completed worker thread before further orchestration
 19. validate the worker outputs, including required commit evidence and any clean-worktree guardrails at role boundaries
 20. if the worker failed or blocked on an out-of-scope bug, create a new interrupt spec, pause the current spec, and push paused context onto `resume_spec_stack`
 21. write the orchestrator report

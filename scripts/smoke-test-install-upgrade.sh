@@ -883,11 +883,21 @@ config = tomllib.loads((Path(sys.argv[1]) / ".codex/config.toml").read_text())
 assert config["sandbox_mode"] == "danger-full-access"
 assert config["features"]["multi_agent"] is True
 assert config["agents"]["max_threads"] == 9
-assert config["agents"]["max_depth"] == 3
+assert config["agents"]["max_depth"] == 2
 assert config["agents"]["orchestrator"]["config_file"] == "agents/orchestrator.toml"
 assert config["agents"]["research"]["config_file"] == "agents/research.toml"
 assert config["agents"]["plan_check"]["config_file"] == "agents/plan-check.toml"
 assert config["agents"]["custom"]["config_file"] == "agents/custom.toml"
+
+orchestrator = tomllib.loads((Path(sys.argv[1]) / ".codex/agents/orchestrator.toml").read_text())
+implement = tomllib.loads((Path(sys.argv[1]) / ".codex/agents/implement.toml").read_text())
+review = tomllib.loads((Path(sys.argv[1]) / ".codex/agents/review.toml").read_text())
+plan_check = tomllib.loads((Path(sys.argv[1]) / ".codex/agents/plan-check.toml").read_text())
+
+assert orchestrator["sandbox_mode"] == "danger-full-access"
+assert implement["sandbox_mode"] == "danger-full-access"
+assert review["sandbox_mode"] == "danger-full-access"
+assert plan_check["sandbox_mode"] == "danger-full-access"
 PY
 
 [[ -f "$LEGACY_TARGET/.ralph/runtime-contract.md" ]] || {

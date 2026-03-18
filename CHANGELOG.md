@@ -4,6 +4,41 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.7.0 - 2026-03-17
+
+### Summary
+
+Ralph now isolates spawned worker context explicitly while standardizing the shipped control plane around full-permission role execution.
+
+This release adds a formal subagent-isolation contract to the shipped runtime doctrine, teaches install and upgrade flows to enforce forked worker delegation plus bounded depth, and moves every managed role config to `sandbox_mode = "danger-full-access"` so orchestrated work is no longer split across mixed privilege levels.
+
+### Highlights
+
+- Added explicit forked worker-context rules and role-to-agent mapping guidance to the shipped runtime contract and orchestrator instructions.
+- Switched all managed role configs under `src/.codex/agents/` to `sandbox_mode = "danger-full-access"`.
+- Reduced the managed delegation depth cap to `2` and taught migration to clamp installed configs to that cap.
+- Added `scripts/verify-subagent-isolation-contract.sh` and wired it into the full validation suite.
+- Expanded install and upgrade docs so the public contract documents full-permission roles, forked delegation, and the strengthened migration checks.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.7.0` as the default public install or upgrade reference.
+- Fresh installs inherit the new subagent-isolation contract, full-permission role configs, and bounded depth cap immediately.
+- Upgrades continue to merge installed `.codex/config.toml`, but now also normalize managed role sandbox modes and preserve the new depth cap.
+- `upgrade_contract_version` remains `5`; existing installs should rerun the normal upgrade flow to pick up the full-permission role configs and isolation checks.
+
+### Validation And Release Workflow
+
+- CI and local validation now run `scripts/verify-subagent-isolation-contract.sh` alongside the existing contract verifiers.
+- Smoke tests now assert that migrated installs end up with `danger-full-access` for every managed role while still preserving user-owned `.codex/config.toml` entries that Ralph does not manage.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Orchestrator skill: `src/.agents/skills/orchestrator/SKILL.md`
+- Runtime migration helper: `scripts/runtime_state_helpers.py`
+- Release asset: `ralph-harness-v0.7.0.tar.gz`
+
 ## v0.6.1 - 2026-03-09
 
 ### Summary
