@@ -14,7 +14,7 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 ## Use When
 
 - The current repository already has the Ralph harness installed.
-- A bug has been identified that is outside the current spec's intended scope.
+- A bug has been identified that is outside the currently executing or admitted normal spec's intended scope.
 - The bug should preempt the remaining normal queue and be tracked as its own numbered interrupt spec.
 
 ## Workflow
@@ -27,22 +27,24 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
    - `.ralph/state/workflow-state.md` must match the canonical JSON projection
    - `specs/INDEX.md` must match the canonical queue projection
    - the origin spec `tasks.md` and `task-state.json` must agree semantically
+   - `.ralph/state/orchestrator-lease.json` and `.ralph/state/orchestrator-intents.jsonl` must exist and parse
 5. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` instead of creating an interrupt.
-6. Confirm the bug is out of scope for the currently active spec.
-7. Create a new numbered spec with `kind = interrupt`.
-8. Link the interrupt to `origin_spec_key` and `origin_task_id` when they exist, else leave them `null`.
-9. Update the full synchronized state set together:
+6. Acquire the single-writer lease before mutating canonical shared state. If another healthy lease-holder is active, append a durable interrupt request to `.ralph/state/orchestrator-intents.jsonl` and stop instead of mutating the queue concurrently.
+7. Confirm the bug is out of scope for the currently executing or otherwise affected normal spec.
+8. Create a new numbered spec with `kind = interrupt`.
+9. Link the interrupt to `origin_spec_key` and `origin_task_id` when they exist, else leave them `null`.
+10. Update the full synchronized state set together:
    - pause the origin task in `task-state.json`
    - pause the origin spec in `.ralph/state/spec-queue.json`
    - add the new interrupt queue entry and interrupt metadata
    - freeze new normal admissions and mark any admitted normal slots paused at role boundaries
-   - update `resume_spec_stack`, `resume_spec_id`, and `interruption_state`
-   - update active spec, active task, phase, and branch fields in `.ralph/state/workflow-state.json`
+   - update `active_interrupt_spec_id`, `resume_spec_stack`, `resume_spec_id`, and `interruption_state`
+   - refresh deprecated compatibility mirrors in `.ralph/state/workflow-state.json` when applicable
    - preserve worktree metadata so the interrupted specs can resume safely
-10. Seed the new interrupt spec artifacts and `task-state.json`.
-11. Regenerate `.ralph/state/workflow-state.md` and `specs/INDEX.md` from canonical JSON after the machine state changes.
-12. If the bug belongs to an earlier spec, append an entry to `specs/<origin-spec-key>/amendments.md`.
-13. Recommend the next public entry point:
+11. Seed the new interrupt spec artifacts and `task-state.json`.
+12. Regenerate `.ralph/state/workflow-state.md` and `specs/INDEX.md` from canonical JSON after the machine state changes.
+13. If the bug belongs to an earlier spec, append an entry to `specs/<origin-spec-key>/amendments.md`.
+14. Recommend the next public entry point:
    - `$ralph-execute` when the installed harness should immediately run the interrupt spec
    - `$ralph-plan` only when the interrupt spec still needs broader planning before execution
 
@@ -50,6 +52,7 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 
 - updated `.ralph/state/spec-queue.json`
 - updated `.ralph/state/workflow-state.json`
+- updated `.ralph/state/orchestrator-intents.jsonl` when another healthy lease-holder is already active
 - updated `.ralph/state/workflow-state.md`
 - updated `specs/INDEX.md`
 - new `specs/<spec-key>/spec.md`
@@ -62,6 +65,7 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 
 - Do not use this for defects that still belong to the current spec's own scope.
 - Do not create an interrupt from mixed-version or drifted runtime state.
+- Do not mutate canonical shared state while another healthy lease-holder is active.
 - Do not rewrite the original spec, plan, or tasks in place as part of the canonical interrupt flow.
 - Keep earlier specs historically immutable and record corrected guidance through linked amendments.
 

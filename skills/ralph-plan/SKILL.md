@@ -28,10 +28,11 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 7. Produce or update `specs/<spec-id>-<slug>/plan.md`.
 8. Produce or update `specs/<spec-id>-<slug>/tasks.md` when enough information exists.
 9. Seed or refresh scheduler metadata such as `depends_on_spec_ids`, admission state, and default worktree metadata for each spec.
-10. Keep the tasks dependency-ordered and small enough for focused implementation passes.
-11. Keep any parallelism bounded to same-batch `research` only during planning; later execution uses the scheduler admission window and hard dependencies.
-12. Stop before code changes or implementation begin.
-13. Recommend the next entry point:
+10. Reject dependency cycles or missing dependency references instead of guessing.
+11. Keep the tasks dependency-ordered and small enough for focused implementation passes.
+12. Keep any parallelism bounded to same-batch `research` only during planning; later execution uses the scheduler admission window and hard dependencies.
+13. Stop before code changes or implementation begin.
+14. Recommend the next entry point:
    - `$ralph-execute` when the installed harness should take over execution
    - `$ralph-prd` when requirements are still too unclear and need reshaping
 

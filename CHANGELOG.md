@@ -4,6 +4,41 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.8.1 - 2026-03-21
+
+### Summary
+
+Aligned Ralph's installable documentation, shipped role skills, and public entry skills with the `v0.8.0` multi-spec runtime so operators get the right guidance for lease-safe coordination, dependency-aware scheduling, spec-scoped worker reports, and interrupt handling.
+
+This patch does not introduce another schema change. It tightens the human-facing contract around the already-shipped multi-spec control plane and makes the public skills match the actual runtime and upgrade behavior more closely.
+
+### Highlights
+
+- Updated `README.md` to describe the dependency-aware multi-spec scheduler, durable intent intake, single-writer lease, per-spec worktree execution, spec-scoped worker reports, and upgrade-safety rules.
+- Aligned shipped role skills under `src/.agents/skills/` so `specify`, `plan`, `research`, `task-gen`, and `plan-check` all point at the current spec-scoped worker report convention.
+- Tightened public `ralph-plan`, `ralph-interrupt`, and `ralph-execute` guidance so dependency validation, interrupt creation, lease ownership, durable intent flow, and compatibility mirrors reflect the current runtime contract.
+- Synced the dogfood runtime copies of the updated policy, runtime contract, and role skills with the shipped source surface for clearer source-repo verification.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.8.1` as the default public install or upgrade reference.
+- Fresh installs inherit the corrected documentation and shipped skill wording immediately.
+- Existing installs can upgrade normally to pick up the clarified skill and documentation surface; no new migration phase, schema bump, or `upgrade_contract_version` change is required beyond the existing `v0.8.0` upgrade flow.
+
+### Validation And Release Workflow
+
+- Local and CI validation continue to use the existing contract suite from `v0.8.0`.
+- Verified this release with `bash scripts/verify-installation-contract.sh`, `bash scripts/verify-upgrade-contract.sh`, and `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- README: `README.md`
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Project policy: `src/.ralph/policy/project-policy.md`
+- Public execute entrypoint: `skills/ralph-execute/SKILL.md`
+- Public interrupt entrypoint: `skills/ralph-interrupt/SKILL.md`
+- Release asset: `ralph-harness-v0.8.1.tar.gz`
+
 ## v0.8.0 - 2026-03-21
 
 ### Summary

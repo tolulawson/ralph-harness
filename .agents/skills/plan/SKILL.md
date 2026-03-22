@@ -66,7 +66,7 @@ If the project PRD is missing, stop and report that the PRD step must complete f
 - `specs/<spec-key>/quickstart.md` when needed
 - optional updates to `.ralph/context/project-truths.md`
 - optional updates to `.ralph/context/project-facts.json`
-- `.ralph/reports/<run-id>/plan.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/plan.md` when planning an existing numbered spec, or `.ralph/reports/<run-id>/plan.md` during project-level queue seeding
 
 ## Stop Condition
 

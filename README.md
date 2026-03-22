@@ -4,6 +4,8 @@ Ralph turns Codex from a one-shot coding assistant into a repo-resident engineer
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
+As of `v0.8.1`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, accept new user requests through a durable intent inbox while work is already running, and coordinate concurrent threads through a single-writer lease.
+
 ## Why People Use Ralph
 
 Ralph is for teams and solo builders who want:
@@ -21,6 +23,7 @@ What you get:
 - canonical workflow and queue state on disk
 - numbered specs, plans, tasks, reports, and logs that survive restarts
 - bounded parallel `research`, hard spec dependencies, durable intent intake, and per-spec worktree execution
+- spec-scoped worker reports, upgrade-safe state migration, and lease-aware cross-thread coordination
 
 ## Human Installation Instructions
 
@@ -110,10 +113,12 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.8.0` as the default public reference right now
+- use `v0.8.1` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
+- do not upgrade over a healthy live orchestrator lease
+- expect legacy installs to migrate into spec-scoped worker reports and per-spec worktree metadata
 
 ## For LLMs
 
@@ -169,12 +174,36 @@ In practice, that means:
 - `.ralph/state/orchestrator-lease.json` elects a temporary single-writer leader
 - `.ralph/state/orchestrator-intents.jsonl` records cross-thread requests durably
 - admitted specs run in dedicated git worktrees under `.ralph/worktrees/`
+- worker reports live at `.ralph/reports/<run-id>/<spec-key>/<role>.md`, while the orchestrator report stays at `.ralph/reports/<run-id>/orchestrator.md`
 - orchestrator-spawned workers run with forked context semantics (`fork_context = true`)
 - implementation, review, verification, and release run at most one worker per admitted spec
 - all role configs run with `sandbox_mode = "danger-full-access"`
 - if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
 - `plan-check` can route work back to `plan` or `task-gen`
 - `review_failed` and `verification_failed` are canonical look-back states that send work back through implementation
+
+## Operational Model
+
+Ralph now separates three concerns that used to get conflated in lighter-weight queue runners:
+
+- scheduling:
+  the queue tracks `active_spec_ids`, `active_interrupt_spec_id`, `depends_on_spec_ids`, admission state, and per-spec worktree metadata
+- coordination:
+  `.ralph/state/orchestrator-lease.json` prevents multiple threads from mutating shared state at the same time, while `.ralph/state/orchestrator-intents.jsonl` lets new work requests land durably even when another orchestrator run is active
+- execution:
+  every admitted spec gets one branch, one worktree, one active non-research worker at a time, and its own report path
+
+That means you can ask Ralph to start another spec while other work is already in progress, but the scheduler still decides when that spec becomes admissible. Hard dependencies are not bypassed, and later specs do not jump ahead of earlier eligible ones.
+
+## Upgrade Safety
+
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.8.1`, the shipped upgrade path:
+
+- blocks upgrades over a healthy live orchestrator lease
+- recovers stale held leases back to `idle`
+- normalizes safely-derivable legacy worktree assignments into unique per-spec worktrees
+- normalizes legacy worker report pointers into spec-scoped report paths when ownership is clear
+- fails loudly instead of guessing when branch ownership, worktree ownership, task lifecycle, or legacy report ownership is ambiguous
 
 An installed Ralph repo gets:
 
@@ -239,4 +268,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.0`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

@@ -40,7 +40,7 @@ description: Review a queue-head spec's spec, research, plan, and tasks artifact
 
 ## Outputs
 
-- `.ralph/reports/<run-id>/plan-check.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/plan-check.md`
 - optional `specs/<spec-key>/plan-check.md`
 
 ## Stop Condition

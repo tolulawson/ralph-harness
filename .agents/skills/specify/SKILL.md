@@ -44,7 +44,7 @@ If the project PRD or spec queue entry is missing, stop and report that planning
 
 - `specs/<spec-key>/spec.md`
 - `specs/<spec-key>/checklists/requirements.md`
-- `.ralph/reports/<run-id>/specify.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/specify.md`
 
 ## Stop Condition
 

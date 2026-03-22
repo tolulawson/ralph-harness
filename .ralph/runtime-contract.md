@@ -31,6 +31,7 @@ Interpret an installed Ralph harness in this order:
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
 - At most one non-research worker role may be active per admitted spec at any time.
 - The scheduler must coordinate through a single-writer lease stored in `.ralph/state/orchestrator-lease.json`.
+- A healthy held lease blocks concurrent shared-state mutation; expired or malformed held leases must be recovered to `idle` before mutation resumes.
 - Cross-thread operator requests must be recorded durably in `.ralph/state/orchestrator-intents.jsonl`.
 - Admitted specs must execute in dedicated git worktrees under `.ralph/worktrees/`, while the canonical control-plane checkout remains the only shared-state owner.
 - Hard spec dependencies declared in `depends_on_spec_ids` must be satisfied before a normal spec is admitted.
@@ -122,6 +123,8 @@ Worker roles must not silently mutate shared queue state or append orchestrator 
 - `verify`: `verify.md` and optional spec verification artifact in the assigned spec worktree
 - `release`: PR or merge artifacts plus `release.md` in the assigned spec worktree
 
+Worker reports should be recorded at `.ralph/reports/<run-id>/<spec-key>/<role>.md`. The orchestrator report remains `.ralph/reports/<run-id>/orchestrator.md`.
+
 ## Scheduler Contract
 
 The queue is the durable scheduler state.
@@ -148,6 +151,8 @@ Each spec queue entry must include:
 - `last_dispatch_at`
 
 `active_spec_id`, `active_spec_key`, `active_task_id`, `task_status`, `assigned_role`, `current_branch`, `active_pr_number`, and `active_pr_url` remain deprecated compatibility mirrors for one release and should reflect slot `0` or the most recently dispatched spec.
+
+`branch_name`, `worktree_name`, and `worktree_path` must remain unique across specs. Upgrade or migration steps may reassign safely-derivable worktree metadata, but duplicate branch ownership is a repair error.
 
 ## Task Lifecycle Contract
 

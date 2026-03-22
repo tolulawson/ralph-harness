@@ -58,8 +58,10 @@
   - interruption fields and resume-stack projections agree semantically across queue, workflow state, and spec index
   - research metadata agrees semantically with queue state and role outputs
   - lease file validity and heartbeat freshness are enforced
+  - healthy held leases block concurrent shared-state mutation, and stale held leases must be recovered before validation passes
   - durable intent records remain replay-safe and parseable
   - dependency graphs are acyclic and only target existing specs
+  - queue branch and worktree assignments remain unique across specs
   - admitted specs have valid git worktrees and branch alignment
   - canonical checkout cleanliness rules are enforced separately from spec worktree cleanliness
 - Stronger checks may be added by spec-specific tasks.
@@ -68,7 +70,8 @@
 ## Logging Policy
 
 - Append exactly one JSON event for each completed role transition.
-- Reports live in `.ralph/reports/<run-id>/`.
+- Orchestrator reports live in `.ralph/reports/<run-id>/`.
+- Spec-owned worker reports live in `.ralph/reports/<run-id>/<spec-key>/`.
 - Use recent events for normal resume.
 - Use older logs only for blocker diagnosis or audit reconstruction.
 

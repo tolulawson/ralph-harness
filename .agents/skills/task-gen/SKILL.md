@@ -45,7 +45,7 @@ If the plan is missing, stop and report that the planning step must complete fir
 
 - `specs/<spec-key>/tasks.md`
 - `specs/<spec-key>/task-state.json`
-- `.ralph/reports/<run-id>/task-gen.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/task-gen.md`
 
 ## Stop Condition
 

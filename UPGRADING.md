@@ -8,26 +8,26 @@ This guide explains how to upgrade an already-installed Ralph harness in a targe
 
 The upgrade-safe scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.8.0`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.8.1`
 
 The canonical upgrade overwrite contract is:
 
-- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.8.0/src/upgrade-manifest.txt)
+- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.8.1/src/upgrade-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.8.0/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.8.1/VERSION)
 
 The installed harness metadata file is:
 
-- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.8.0/src/.ralph/harness-version.json)
+- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.8.1/src/.ralph/harness-version.json)
 
 The upgrade authority order is:
 
-1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.8.0/UPGRADING.md)
-2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.8.0/src/upgrade-manifest.txt)
-3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.8.0/VERSION)
-4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.8.0/src/.ralph/harness-version.json)
+1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.8.1/UPGRADING.md)
+2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.8.1/src/upgrade-manifest.txt)
+3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.8.1/VERSION)
+4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.8.1/src/.ralph/harness-version.json)
 
 ## Goal
 
@@ -50,7 +50,7 @@ An upgrade must not run over a healthy live orchestrator lease. If `.ralph/state
 
 ## Default Reference
 
-Use the latest stable semver tag by default. The current stable example in this guide is `v0.8.0`.
+Use the latest stable semver tag by default. The current stable example in this guide is `v0.8.1`.
 
 If exact reproducibility matters more than readability, pin to a specific commit SHA instead and still record the human-facing tag when known.
 
@@ -70,14 +70,14 @@ From inside the target repository, ask Codex to upgrade from a tagged release:
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the source repository.
-Upgrade this repository's installed Ralph harness to tag v0.8.0 using UPGRADING.md as the authoritative guide.
+Upgrade this repository's installed Ralph harness to tag v0.8.1 using UPGRADING.md as the authoritative guide.
 Only overwrite the scaffold-owned paths listed in src/upgrade-manifest.txt.
 Preserve project-owned files under .ralph/policy/, .ralph/context/, .ralph/reports/, and .ralph/logs/, and preserve spec prose unless a named migration step below says otherwise.
 Refresh the managed Ralph block inside AGENTS.md instead of replacing the whole file.
 Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, lease state, durable intents, task-state, projection files, worktree metadata, and .codex/config.toml are upgraded together.
 If .ralph/state/orchestrator-lease.json still shows a healthy held lease, stop instead of upgrading over live orchestration.
 If migration cannot infer historic task lifecycle safely, stop and report the ambiguous spec instead of guessing.
-Update .ralph/harness-version.json so it records version 0.8.0, tag v0.8.0, the source repo, the resolved commit used for this upgrade, and upgrade_contract_version 6.
+Update .ralph/harness-version.json so it records version 0.8.1, tag v0.8.1, the source repo, the resolved commit used for this upgrade, and upgrade_contract_version 6.
 Run the upgrade verification checklist from UPGRADING.md before finishing.
 ```
 
@@ -87,7 +87,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.8.0
+SOURCE_REF=v0.8.1
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 

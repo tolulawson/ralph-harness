@@ -47,7 +47,7 @@ description: Research one numbered spec using project-global and spec-local cont
 ## Outputs
 
 - `specs/<spec-key>/research.md`
-- `.ralph/reports/<run-id>/research-<spec-id>.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/research.md`
 
 ## Stop Condition
 
