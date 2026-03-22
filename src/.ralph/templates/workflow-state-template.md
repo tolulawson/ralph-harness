@@ -2,6 +2,7 @@
 
 - Project: `{{project_name}}`
 - Active epoch: `{{active_epoch_id}}`
+- Active specs: `{{active_spec_ids}}`
 - Active spec: `{{active_spec_key}}`
 - Active task: `{{active_task_id}}`
 - Phase: `{{current_phase}}`
@@ -12,6 +13,13 @@
 - Active PR number: `{{active_pr_number}}`
 - Active PR URL: `{{active_pr_url}}`
 - Queue head spec: `{{queue_head_spec_id}}`
+- Active interrupt spec: `{{active_interrupt_spec_id}}`
+- Lease path: `{{orchestrator_lease_path}}`
+- Intents path: `{{orchestrator_intents_path}}`
+- Lease owner token: `{{lease_owner_token}}`
+- Lease heartbeat: `{{lease_heartbeat_at}}`
+- Lease expires: `{{lease_expires_at}}`
+- Scheduler summary: `{{scheduler_summary}}`
 - Resume spec id: `{{resume_spec_id}}`
 - Resume stack depth: `{{resume_spec_stack_depth}}`
 - Current interrupt spec: `{{interrupt_spec_id}}`

@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Coordinate the Codex-native Ralph harness loop by reading runtime state, managing the FIFO spec queue, spawning bounded parallel research only within one planning batch, and otherwise running one worker at a time while synchronizing shared state until a stop condition occurs.
+description: Coordinate the Codex-native Ralph harness loop by managing the dependency-aware scheduler, durable intent intake, lease ownership, per-spec worktrees, bounded research fan-out, and canonical shared-state synchronization until a stop condition occurs.
 ---
 
 # Orchestrator
@@ -9,7 +9,7 @@ description: Coordinate the Codex-native Ralph harness loop by reading runtime s
 
 - A fresh run needs to resume the harness.
 - A role has finished and the next role must be chosen.
-- Shared state, reports, the spec queue, and event history must be synchronized.
+- Shared state, reports, the spec queue, lease, durable intents, and event history must be synchronized.
 
 ## Inputs
 
@@ -22,8 +22,10 @@ description: Coordinate the Codex-native Ralph harness loop by reading runtime s
 - recent lines from `.ralph/context/learning-log.jsonl` when needed
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
-- latest report from `last_report_path`
-- active spec artifacts in `specs/<spec-id>-<slug>/`
+- `.ralph/state/orchestrator-lease.json`
+- recent lines from `.ralph/state/orchestrator-intents.jsonl`
+- latest relevant reports from admitted specs
+- admitted spec artifacts in `specs/<spec-id>-<slug>/`
 - `specs/<spec-id>-<slug>/task-state.json` when present
 - `specs/INDEX.md`
 - `tasks/todo.md`
@@ -37,11 +39,25 @@ description: Coordinate the Codex-native Ralph harness loop by reading runtime s
 4. Read project truths, project facts, and promoted learning summary.
 5. Read the canonical workflow state.
 6. Read the canonical spec queue.
-7. Activate the oldest ready spec if no active spec is already in progress.
-8. Load only the active spec artifacts, `task-state.json`, and the latest report.
-9. Tail the recent event window instead of loading the full event log.
-10. Read only the recent learning log window when diagnosing or promoting learnings.
-11. Choose the next task in this order:
+7. Read the canonical lease state and recent durable intent window.
+8. Attempt to acquire or renew the single-writer lease before mutating canonical shared state.
+9. If another healthy lease-holder already owns the scheduler, record any caller request as a durable intent and stop without mutating shared state.
+10. Re-read workflow, queue, lease, and intent state after the lease is held.
+11. Tail the recent event window instead of loading the full event log.
+12. Read only the recent learning log window when diagnosing or promoting learnings.
+13. Materialize durable intents in FIFO order:
+   - `create_spec`
+   - `schedule_spec`
+   - `pause_spec`
+   - `resume_spec`
+   - `status_request`
+14. For new specs, seed the queue entry, `depends_on_spec_ids`, default worktree metadata, and compatibility mirrors without bypassing hard dependencies.
+15. Compute the admission window:
+   - active interrupt spec
+   - oldest ready interrupt spec by `created_at`
+   - else oldest dependency-satisfied normal specs in FIFO order up to `queue_policy.normal_execution_limit`
+16. Ensure each admitted spec has a dedicated git worktree and branch before dispatching workers.
+17. For each admitted spec, choose the next task in this order:
    - first `in_progress`
    - else first `paused`
    - else first `ready`
@@ -49,34 +65,39 @@ description: Coordinate the Codex-native Ralph harness loop by reading runtime s
    - else first `verification_failed`
    - else first `plan_check_failed`
    - else advance the spec toward PR, merge, or completion
-12. Choose the next spec in this order:
-   - active interrupt spec
-   - oldest ready interrupt spec by `created_at`
-   - active normal spec
-   - oldest ready normal spec in FIFO order
-13. After a PRD-to-spec pass creates or refreshes a planning batch, identify only the specs from that batch whose `spec.md` exists and whose `research_status` still needs work.
-14. Use Codex multi-agent controls such as `spawn_agent` and `wait` to run bounded parallel `research` only for that batch, with no nested fan-out and no shared-state writes from the research workers.
-15. Join the research batch, validate each `research.md`, and then update shared queue metadata once.
-16. Outside that batch-scoped research step, decide the next role from spec status, task lifecycle state, PR state, interruption state, and next action.
-17. Use Codex multi-agent controls such as `spawn_agent` and `wait` to run exactly one non-research worker role at a time.
-18. Wait for the worker to finish before doing any further orchestration work.
-19. Validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Commit Evidence` plus a clean worktree.
-20. If the worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, mark the current spec `paused`, mark the active task `paused`, push paused context onto `resume_spec_stack`, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
-21. Append candidate learnings from the worker report to `.ralph/context/learning-log.jsonl`.
-22. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
-23. Write `.ralph/reports/<run-id>/orchestrator.md`.
-24. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
-25. Update `.ralph/state/workflow-state.json`.
-26. Update `.ralph/state/spec-queue.json`.
-27. Regenerate `.ralph/state/workflow-state.md`.
-28. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
-29. After an interrupt spec is released, pop `resume_spec_stack`, restore the paused spec and task, and continue dispatching.
-30. Continue dispatching until the queue is empty or a runtime-contract stop condition occurs.
+18. After a PRD-to-spec pass creates or refreshes a planning batch, identify only the specs from that batch whose `spec.md` exists and whose `research_status` still needs work.
+19. Spawn research workers for that batch with:
+   - `fork_context = true`
+   - `agent_type = "explorer"`
+   - bounded fan-out only for same-batch `research`
+20. Join the research batch with `wait`, close each completed research worker, validate each `research.md`, and then update shared queue metadata once.
+21. Outside that batch-scoped research step, decide the next role for each admitted spec from lifecycle state, dependency status, PR state, interruption state, and next action.
+22. Preserve the role-based `agent_type` mapping for every worker dispatch.
+23. Spawn bounded non-research workers only for admitted specs that do not already have a worker in flight:
+   - `explorer`: `plan_check`, `review`, and optionally `research` when analysis depth is the primary concern
+   - `worker`: `prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`
+24. Pass each worker a single spec, a single worktree path, and a single report path.
+25. Wait for completed workers, close that worker thread, and validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Commit Evidence` plus a clean worktree.
+26. Synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before mutating shared state.
+27. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
+28. Append candidate learnings from worker reports to `.ralph/context/learning-log.jsonl`.
+29. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
+30. Write `.ralph/reports/<run-id>/orchestrator.md`.
+31. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
+32. Update `.ralph/state/workflow-state.json`.
+33. Update `.ralph/state/spec-queue.json`.
+34. Update `.ralph/state/orchestrator-lease.json` heartbeat or release state as needed.
+35. Regenerate `.ralph/state/workflow-state.md`.
+36. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
+37. After an interrupt spec is released, pop `resume_spec_stack`, thaw normal admissions, restore paused specs and tasks, and continue dispatching.
+38. Continue dispatching until the queue is empty or a runtime-contract stop condition occurs.
 
 ## Outputs
 
 - updated workflow state JSON
 - updated spec queue JSON
+- updated lease state JSON
+- updated durable intent status when intents are drained
 - updated workflow state Markdown
 - updated spec register when needed
 - updated learning log, summary, truths, or facts when needed

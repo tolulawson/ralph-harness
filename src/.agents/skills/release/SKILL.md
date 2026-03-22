@@ -7,7 +7,7 @@ description: Manage branch, GitHub PR, merge, and state advancement for an appro
 
 ## Use When
 
-- Review and verification are complete and the active spec is ready to move through PR or merge.
+- Review and verification are complete and the active spec worktree is ready to move through PR or merge.
 
 ## Inputs
 
@@ -21,8 +21,8 @@ description: Manage branch, GitHub PR, merge, and state advancement for an appro
 ## Workflow
 
 1. Confirm review and verification evidence exists.
-2. Confirm the active branch matches the active spec queue entry.
-3. Confirm the worktree is clean before attempting PR or merge actions. A clean worktree is required for release.
+2. Confirm the active branch matches the active spec queue entry in the assigned spec worktree.
+3. Confirm the assigned spec worktree is clean before attempting PR or merge actions. A clean worktree is required for release.
 4. Read the latest `Commit Evidence` and summarize the task-to-commit traceability in the release report.
 5. If no PR exists yet and policy requires one, create or record the GitHub PR.
 6. If review and verification pass, merge the PR or record the merge result.
@@ -32,7 +32,7 @@ description: Manage branch, GitHub PR, merge, and state advancement for an appro
 
 ## Outputs
 
-- `.ralph/reports/<run-id>/release.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/release.md`
 
 ## Stop Condition
 

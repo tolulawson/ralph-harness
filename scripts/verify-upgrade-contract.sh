@@ -53,6 +53,24 @@ grep -Fq -- 'upgrade_contract_version' "$UPGRADING_MD" \
 grep -Fq -- '`fork_context = true`' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document forked worker-context isolation"
 
+grep -Fq -- 'orchestrator-lease.json' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the lease file"
+
+grep -Fq -- 'healthy held lease' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the live-lease upgrade block"
+
+grep -Fq -- 'orchestrator-intents.jsonl' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the durable intents file"
+
+grep -Fq -- '.ralph/worktrees/' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the worktree directory"
+
+grep -Fq -- 'spec-scoped' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document spec-scoped worker report normalization"
+
+grep -Fq -- 'duplicate branch ownership' "$UPGRADE_SKILL" \
+  || fail "ralph-upgrade skill must warn about duplicate branch ownership"
+
 grep -Fq -- 'all role configs use `sandbox_mode = "danger-full-access"`' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document all-role full-permission mode"
 
@@ -89,8 +107,8 @@ if payload.get("version") != version:
     raise SystemExit("verify-upgrade-contract: harness-version.json version mismatch")
 if payload.get("tag") != current_tag:
     raise SystemExit("verify-upgrade-contract: harness-version.json tag mismatch")
-if payload.get("upgrade_contract_version") != 5:
-    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 5")
+if payload.get("upgrade_contract_version") != 6:
+    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 6")
 PY
 
 echo "verify-upgrade-contract: ok"

@@ -1,10 +1,13 @@
 {
-  "schema_version": "2.1.0",
+  "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo",
-    "preemption": "failing_out_of_scope_bug"
+    "selection": "fifo_admission_window",
+    "preemption": "failing_out_of_scope_bug",
+    "normal_execution_limit": 2
   },
   "active_spec_id": null,
+  "active_spec_ids": [],
+  "active_interrupt_spec_id": null,
   "resume_spec_id": null,
   "specs": []
 }

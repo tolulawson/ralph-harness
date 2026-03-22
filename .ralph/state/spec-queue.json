@@ -1,8 +1,9 @@
 {
-  "schema_version": "2.1.0",
+  "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo",
-    "preemption": "failing_out_of_scope_bug"
+    "selection": "fifo_admission_window",
+    "preemption": "failing_out_of_scope_bug",
+    "normal_execution_limit": 2
   },
   "active_spec_id": null,
   "resume_spec_id": null,
@@ -47,7 +48,19 @@
         "in_progress": 0,
         "blocked": 0
       },
-      "next_task_id": null
+      "next_task_id": null,
+      "depends_on_spec_ids": [],
+      "admission_status": "done",
+      "admitted_at": null,
+      "worktree_name": "ralph-001-self-bootstrap-harness",
+      "worktree_path": ".ralph/worktrees/001-self-bootstrap-harness",
+      "slot_status": "inactive",
+      "active_task_id": null,
+      "task_status": null,
+      "assigned_role": null,
+      "active_pr_number": null,
+      "active_pr_url": null,
+      "last_dispatch_at": null
     },
     {
       "spec_id": "002",
@@ -89,7 +102,21 @@
         "in_progress": 0,
         "blocked": 0
       },
-      "next_task_id": null
+      "next_task_id": null,
+      "depends_on_spec_ids": [],
+      "admission_status": "done",
+      "admitted_at": null,
+      "worktree_name": "ralph-002-deterministic-orchestration-versioning-and-upgrades",
+      "worktree_path": ".ralph/worktrees/002-deterministic-orchestration-versioning-and-upgrades",
+      "slot_status": "inactive",
+      "active_task_id": null,
+      "task_status": null,
+      "assigned_role": null,
+      "active_pr_number": null,
+      "active_pr_url": null,
+      "last_dispatch_at": null
     }
-  ]
+  ],
+  "active_spec_ids": [],
+  "active_interrupt_spec_id": null
 }

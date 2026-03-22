@@ -50,6 +50,8 @@ for required in \
   '.ralph/context/learning-summary.md' \
   '.ralph/state/workflow-state.json' \
   '.ralph/state/spec-queue.json' \
+  '.ralph/state/orchestrator-lease.json' \
+  '.ralph/state/orchestrator-intents.jsonl' \
   'latest report referenced by `last_report_path`' \
   '.ralph/context/learning-log.jsonl'
 do

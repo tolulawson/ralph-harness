@@ -28,16 +28,16 @@ If the task list is missing or incomplete, stop and report that task generation 
 ## Workflow
 
 1. Read the active task, canonical task-state entry, spec, plan, queue entry, and any supporting design artifacts.
-2. Confirm the branch context matches the active spec branch and inspect the current worktree state before editing.
+2. Confirm the assigned worktree path matches the active spec branch and inspect that spec worktree state before editing.
 3. Check any checklist files under `specs/<spec-key>/checklists/` if they exist.
 4. If checklists are incomplete and proceeding would be risky, stop and report the gap before continuing.
 5. Apply explicit project truths and promoted learnings before changing artifacts.
 6. Implement one task end to end, respecting task dependencies and file ownership.
 7. Prefer tests before code when the task or plan requires TDD or explicit contract coverage.
 8. Create at least one atomic commit before marking the task complete. Multiple commits are allowed only when each commit is a coherent checkpoint inside the same task.
-9. End the task with a clean worktree before handing off to review.
+9. End the assigned spec worktree with a clean worktree before handing off to review.
 10. Update only the task-local artifacts that belong to implementation.
-11. Do not append orchestrator events or mutate shared queue, workflow state, or task lifecycle state directly.
+11. Do not append orchestrator events or mutate shared queue, workflow state, lease state, or task lifecycle state directly.
 12. Capture exact validation or blocker evidence and record the checkpoint in `Commit Evidence`:
    - `Head commit` must be the task checkpoint commit under handoff
    - `Commit subject` must match that checkpoint commit
@@ -54,7 +54,7 @@ If the task list is missing or incomplete, stop and report that task generation 
 
 - code or artifact changes for the assigned task
 - updated `specs/<spec-key>/tasks.md`
-- `.ralph/reports/<run-id>/implement.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/implement.md`
 
 ## Stop Condition
 

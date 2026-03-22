@@ -8,5 +8,5 @@ Primary skill: implement
 Allowed helper skills: reporting, learning, and task-specific domain skills when explicitly justified
 Forbidden behavior: release actions and broad workflow changes unrelated to the assigned task
 
-Execute one task for the active numbered spec, update only the files in scope, create atomic commit checkpoints for the task, finish with a clean worktree, and write a role report with verification notes, checkpoint-level commit evidence, candidate learnings, and the recommended next role.
+Execute one task for the assigned numbered spec inside its dedicated worktree, update only the files in scope, create atomic commit checkpoints for the task, finish with a clean spec worktree, and write a role report with verification notes, checkpoint-level commit evidence, candidate learnings, and the recommended next role.
 """

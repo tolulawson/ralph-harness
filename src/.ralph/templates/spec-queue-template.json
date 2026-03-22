@@ -1,10 +1,15 @@
 {
-  "schema_version": "2.1.0",
+  "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo",
-    "preemption": "failing_out_of_scope_bug"
+    "selection": "fifo_admission_window",
+    "preemption": "failing_out_of_scope_bug",
+    "normal_execution_limit": 2
   },
   "active_spec_id": "{{active_spec_id}}",
+  "active_spec_ids": [
+    "{{active_spec_id}}"
+  ],
+  "active_interrupt_spec_id": null,
   "resume_spec_id": "{{resume_spec_id}}",
   "specs": [
     {
@@ -24,6 +29,9 @@
       "trigger_summary": null,
       "priority_override": null,
       "blocked_reason": null,
+      "depends_on_spec_ids": [],
+      "admission_status": "pending",
+      "admitted_at": null,
       "research_status": "not_started",
       "research_artifact_path": "specs/{{spec_key}}/research.md",
       "research_report_path": null,
@@ -35,8 +43,17 @@
       "tasks_path": "specs/{{spec_key}}/tasks.md",
       "task_state_path": "specs/{{spec_key}}/task-state.json",
       "latest_report_path": ".ralph/reports/{{run_id}}/release.md",
+      "worktree_name": "ralph-{{spec_key}}",
+      "worktree_path": ".ralph/worktrees/{{spec_key}}",
       "branch_name": "codex/{{spec_key}}",
       "base_branch": "{{base_branch}}",
+      "slot_status": "inactive",
+      "active_task_id": null,
+      "task_status": null,
+      "assigned_role": null,
+      "active_pr_number": null,
+      "active_pr_url": null,
+      "last_dispatch_at": null,
       "pr_number": null,
       "pr_url": null,
       "pr_state": null,

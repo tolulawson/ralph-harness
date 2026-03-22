@@ -4,3 +4,4 @@ tasks/lessons.md
 .ralph/logs/events.jsonl
 .ralph/reports/
 .ralph/summaries/
+.ralph/worktrees/

@@ -4,6 +4,41 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.8.0 - 2026-03-21
+
+### Summary
+
+Ralph now supports dependency-aware multi-spec execution with bounded concurrency, per-spec worktree isolation, and a lease-safe control plane that can accept new work while other specs are already in flight.
+
+This release refactors the shipped scheduler around `active_spec_ids`, durable operator intents, and spec-scoped worktrees, then hardens the upgrade path so existing installs can migrate into the new runtime safely without trampling live orchestration, legacy report layouts, or ambiguous queue ownership.
+
+### Highlights
+
+- Added dependency-aware multi-spec scheduler state, bounded normal-spec admission windows, and per-spec worktree metadata across the shipped runtime contract, templates, queue state, and orchestration guidance.
+- Added durable lease and intent coordination files plus the `scripts/orchestrator-coordination.py` helper for lease, intent, and worktree operations.
+- Updated migration and validation to normalize legacy installs into the multi-spec schema, recover stale held leases, enforce unique branch and worktree ownership, and fail fast on ambiguous upgrade states.
+- Normalized legacy worker report pointers into spec-scoped `.ralph/reports/<run-id>/<spec-key>/<role>.md` paths when report ownership is clear.
+- Added contract coverage for multi-spec scheduling plus expanded smoke fixtures for healthy-lease blocking, stale-lease recovery, collision-safe worktree reassignment, and legacy report-path normalization.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.8.0` as the default public install or upgrade reference.
+- Fresh installs inherit the dependency-aware multi-spec scheduler, durable intent intake, per-spec worktree layout, and spec-scoped worker report convention immediately.
+- Upgrades still use the manifest-copy plus migration flow, but migration now stops over healthy live leases, recovers stale coordination state, normalizes safely-derivable legacy worktree and report layouts, and keeps `upgrade_contract_version` at `6`.
+
+### Validation And Release Workflow
+
+- CI and local validation now run the multi-spec contract verifier alongside the existing installation, interruption, atomic-commit, parallel-research, subagent-isolation, and upgrade verifiers.
+- Smoke tests now cover live-lease upgrade blocking, stale-lease recovery, safe worktree collision normalization, ambiguous shared legacy reports, and duplicate branch ownership failure.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Project policy: `src/.ralph/policy/project-policy.md`
+- Runtime migration helper: `scripts/runtime_state_helpers.py`
+- Coordination helper: `scripts/orchestrator-coordination.py`
+- Release asset: `ralph-harness-v0.8.0.tar.gz`
+
 ## v0.7.0 - 2026-03-17
 
 ### Summary

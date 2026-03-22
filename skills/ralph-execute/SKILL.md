@@ -35,7 +35,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 5. `.ralph/state/workflow-state.json`
 6. `.ralph/state/spec-queue.json`
 7. the file at `last_report_path`
-8. active spec artifacts under `specs/<spec-id>-<slug>/`
+8. admitted or active spec artifacts under `specs/<spec-id>-<slug>/`
 9. a recent tail of `.ralph/logs/events.jsonl`
 
 ## Workflow
@@ -44,26 +44,33 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 2. Read the constitution, runtime contract, project policy, workflow state, and spec queue.
 3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
 4. Run a preflight consistency check before selecting the next role:
-   - the runtime must already be on the current interrupt-capable state shape
+   - the runtime must already be on the current multi-spec, lease-capable state shape
    - `.ralph/state/workflow-state.md` must match the canonical JSON projection
    - `specs/INDEX.md` must match the canonical queue projection
    - `tasks.md` and `task-state.json` must agree semantically
-   - the active git branch must match the active spec branch when a spec is active
-   - review, verification, release, and completed-task handoffs must not sit on a dirty worktree
+   - the lease file and durable intents file must exist and parse
+   - admitted specs must have valid worktrees whose branches match the active queue entries
+   - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
    - the latest relevant worker report must include `Commit Evidence` for the checkpoint under handoff before work advances past implementation
 5. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
-6. Read the latest report and active spec artifacts.
+6. Read the latest report and admitted spec artifacts.
 7. Read a recent tail of the event log rather than the full history.
 8. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
 9. Guide Codex to use built-in multi-agent orchestration to:
+   - acquire a single-writer lease before mutating canonical shared state
+   - append durable intents when another healthy lease-holder is already active
+   - honor `depends_on_spec_ids` as hard admission blockers
+   - admit bounded normal specs in FIFO order up to `queue_policy.normal_execution_limit`
+   - ensure admitted specs have dedicated git worktrees
    - allow bounded same-batch `research` workers only before queue-head planning resumes
    - spawn workers with `fork_context = true` to isolate worker context from orchestrator context
    - map analysis-heavy roles to `agent_type = "explorer"` and delivery-heavy roles to `agent_type = "worker"`
-   - spawn exactly one non-research worker role at a time
-   - wait for the worker to finish
+   - spawn at most one non-research worker per admitted spec at a time
+   - wait for completed workers
    - close completed worker threads before mutating shared state
+   - synchronize validated control-plane artifacts back into the canonical checkout
    - create an interrupt spec automatically for any failing out-of-scope bug
-   - pause the current spec and later resume it after the interrupt is released
+   - pause admitted normal specs at role boundaries and later resume them after the interrupt is released
    - validate outputs
    - update shared state
    - continue dispatching until a runtime-contract stop condition occurs
@@ -79,9 +86,9 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - If the harness files are missing, stop and tell the user to use `$ralph-install`.
 - Treat the constitution, runtime contract, policy, workflow state, and spec queue as source of truth.
 - Do not continue execution from stale projections or mixed-version runtime state.
-- Keep all parallelism bounded to same-batch `research`; `plan`, `task-gen`, `plan-check`, `implement`, `review`, `verify`, and `release` remain sequential.
+- Keep all parallelism bounded to same-batch `research` plus the scheduler's admitted-spec execution window.
 - Keep all role configs at full permissions (`danger-full-access`).
-- Do not advance review, verification, or release from a dirty worktree or a report that lacks checkpoint traceability.
+- Do not advance review, verification, or release from a dirty spec worktree or a report that lacks checkpoint traceability.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
 - Do not stop after a single handoff unless the runtime contract says to stop.
 

@@ -7,7 +7,7 @@ multi_agent = true
 
 [agents]
 max_threads = 4
-max_depth = 8
+max_depth = 2
 
 [agents.orchestrator]
 config_file = "agents/orchestrator.toml"

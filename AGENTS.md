@@ -19,11 +19,13 @@ Before doing substantial work, read these files in order:
 3. `.ralph/policy/project-policy.md`
 4. `.ralph/state/workflow-state.json`
 5. `.ralph/state/spec-queue.json`
-6. the report at `last_report_path`
-7. active spec artifacts under `specs/<spec-id>-<slug>/`
-8. `specs/INDEX.md`
-9. `tasks/todo.md`
-10. a recent tail of `.ralph/logs/events.jsonl`
+6. `.ralph/state/orchestrator-lease.json`
+7. a recent tail of `.ralph/state/orchestrator-intents.jsonl`
+8. the report at `last_report_path`
+9. active spec artifacts under `specs/<spec-id>-<slug>/`
+10. `specs/INDEX.md`
+11. `tasks/todo.md`
+12. a recent tail of `.ralph/logs/events.jsonl`
 
 When the task is about improving the shipped harness scaffold, also read:
 
@@ -73,11 +75,13 @@ Before doing substantial work, read these files in order:
 6. `.ralph/context/learning-summary.md`
 7. `.ralph/state/workflow-state.json`
 8. `.ralph/state/spec-queue.json`
-9. the report at `last_report_path`
-10. active spec artifacts under `specs/<spec-id>-<slug>/`
-11. `specs/INDEX.md`
-12. `tasks/todo.md`
-13. a recent tail of `.ralph/logs/events.jsonl`
+9. `.ralph/state/orchestrator-lease.json`
+10. a recent tail of `.ralph/state/orchestrator-intents.jsonl`
+11. the report at `last_report_path`
+12. active spec artifacts under `specs/<spec-id>-<slug>/`
+13. `specs/INDEX.md`
+14. `tasks/todo.md`
+15. a recent tail of `.ralph/logs/events.jsonl`
 
 ## Purpose Of This File
 
@@ -89,6 +93,7 @@ Before doing substantial work, read these files in order:
 - Project truths and promoted learnings live under `.ralph/context/`.
 - Runtime execution state lives in `.ralph/state/workflow-state.json`.
 - The canonical spec queue lives in `.ralph/state/spec-queue.json`.
+- Scheduler coordination lives in `.ralph/state/orchestrator-lease.json` and `.ralph/state/orchestrator-intents.jsonl`.
 
 ## Operating Rule
 

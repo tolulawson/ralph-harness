@@ -35,8 +35,10 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
    - pause the origin task in `task-state.json`
    - pause the origin spec in `.ralph/state/spec-queue.json`
    - add the new interrupt queue entry and interrupt metadata
+   - freeze new normal admissions and mark any admitted normal slots paused at role boundaries
    - update `resume_spec_stack`, `resume_spec_id`, and `interruption_state`
    - update active spec, active task, phase, and branch fields in `.ralph/state/workflow-state.json`
+   - preserve worktree metadata so the interrupted specs can resume safely
 10. Seed the new interrupt spec artifacts and `task-state.json`.
 11. Regenerate `.ralph/state/workflow-state.md` and `specs/INDEX.md` from canonical JSON after the machine state changes.
 12. If the bug belongs to an earlier spec, append an entry to `specs/<origin-spec-key>/amendments.md`.

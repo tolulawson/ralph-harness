@@ -109,9 +109,13 @@ write_atomic_runtime() {
     "$target/specs/001-atomic-commit-demo"
   cat > "$target/.ralph/state/workflow-state.json" <<'EOF'
 {
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "project_name": "atomic-target",
   "active_epoch_id": "E001",
+  "active_spec_ids": [
+    "001"
+  ],
+  "active_interrupt_spec_id": null,
   "active_spec_id": "001",
   "active_spec_key": "001-atomic-commit-demo",
   "active_task_id": "001-T001",
@@ -123,6 +127,17 @@ write_atomic_runtime() {
   "active_pr_number": null,
   "active_pr_url": null,
   "queue_head_spec_id": "001",
+  "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+  "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
+  "lease_owner_token": null,
+  "lease_heartbeat_at": null,
+  "lease_expires_at": null,
+  "scheduler_summary": {
+    "normal_execution_limit": 2,
+    "active_spec_count": 1,
+    "pending_intent_count": 0,
+    "dependency_blocked_count": 0
+  },
   "resume_spec_id": null,
   "resume_spec_stack": [],
   "interruption_state": null,
@@ -138,6 +153,8 @@ write_atomic_runtime() {
       "spec_key": "001-atomic-commit-demo",
       "epoch_id": "E001",
       "status": "awaiting_review",
+      "admission_status": "admitted",
+      "slot_status": "running",
       "branch_name": "codex/001-atomic-commit-demo",
       "pr_number": null
     }
@@ -146,12 +163,17 @@ write_atomic_runtime() {
 EOF
   cat > "$target/.ralph/state/spec-queue.json" <<'EOF'
 {
-  "schema_version": "2.1.0",
+  "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo",
-    "preemption": "failing_out_of_scope_bug"
+    "selection": "fifo_admission_window",
+    "preemption": "failing_out_of_scope_bug",
+    "normal_execution_limit": 2
   },
   "active_spec_id": "001",
+  "active_spec_ids": [
+    "001"
+  ],
+  "active_interrupt_spec_id": null,
   "resume_spec_id": null,
   "specs": [
     {
@@ -171,6 +193,9 @@ EOF
       "trigger_summary": null,
       "priority_override": null,
       "blocked_reason": null,
+      "depends_on_spec_ids": [],
+      "admission_status": "admitted",
+      "admitted_at": "2026-03-08T13:10:00-08:00",
       "research_status": "done",
       "research_artifact_path": "specs/001-atomic-commit-demo/research.md",
       "research_report_path": null,
@@ -182,8 +207,17 @@ EOF
       "tasks_path": "specs/001-atomic-commit-demo/tasks.md",
       "task_state_path": "specs/001-atomic-commit-demo/task-state.json",
       "latest_report_path": ".ralph/reports/atomic-20260308/implement.md",
+      "worktree_name": "canonical-root",
+      "worktree_path": ".",
       "branch_name": "codex/001-atomic-commit-demo",
       "base_branch": "main",
+      "slot_status": "running",
+      "active_task_id": "001-T001",
+      "task_status": "awaiting_review",
+      "assigned_role": "review",
+      "active_pr_number": null,
+      "active_pr_url": null,
+      "last_dispatch_at": "2026-03-08T13:15:00-08:00",
       "pr_number": null,
       "pr_url": null,
       "pr_state": null,
@@ -255,9 +289,11 @@ write_parallel_research_runtime() {
     "$target/specs/002-batch-follow-on"
   cat > "$target/.ralph/state/workflow-state.json" <<'EOF'
 {
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "project_name": "parallel-research-target",
   "active_epoch_id": null,
+  "active_spec_ids": [],
+  "active_interrupt_spec_id": null,
   "active_spec_id": null,
   "active_spec_key": null,
   "active_task_id": null,
@@ -269,6 +305,17 @@ write_parallel_research_runtime() {
   "active_pr_number": null,
   "active_pr_url": null,
   "queue_head_spec_id": "001",
+  "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+  "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
+  "lease_owner_token": null,
+  "lease_heartbeat_at": null,
+  "lease_expires_at": null,
+  "scheduler_summary": {
+    "normal_execution_limit": 2,
+    "active_spec_count": 0,
+    "pending_intent_count": 0,
+    "dependency_blocked_count": 1
+  },
   "resume_spec_id": null,
   "resume_spec_stack": [],
   "interruption_state": null,
@@ -284,6 +331,8 @@ write_parallel_research_runtime() {
       "spec_key": "001-batch-head",
       "epoch_id": "E001",
       "status": "planned",
+      "admission_status": "pending",
+      "slot_status": "inactive",
       "branch_name": "codex/001-batch-head",
       "pr_number": null
     },
@@ -292,6 +341,8 @@ write_parallel_research_runtime() {
       "spec_key": "002-batch-follow-on",
       "epoch_id": "E001",
       "status": "planned",
+      "admission_status": "pending",
+      "slot_status": "inactive",
       "branch_name": "codex/002-batch-follow-on",
       "pr_number": null
     }
@@ -300,12 +351,15 @@ write_parallel_research_runtime() {
 EOF
   cat > "$target/.ralph/state/spec-queue.json" <<'EOF'
 {
-  "schema_version": "2.1.0",
+  "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo",
-    "preemption": "failing_out_of_scope_bug"
+    "selection": "fifo_admission_window",
+    "preemption": "failing_out_of_scope_bug",
+    "normal_execution_limit": 2
   },
   "active_spec_id": null,
+  "active_spec_ids": [],
+  "active_interrupt_spec_id": null,
   "resume_spec_id": null,
   "specs": [
     {
@@ -325,6 +379,9 @@ EOF
       "trigger_summary": "Queued from the same planning batch.",
       "priority_override": null,
       "blocked_reason": null,
+      "depends_on_spec_ids": [],
+      "admission_status": "pending",
+      "admitted_at": null,
       "research_status": "done",
       "research_artifact_path": "specs/001-batch-head/research.md",
       "research_report_path": ".ralph/reports/research-batch-20260308/research-001.md",
@@ -336,8 +393,17 @@ EOF
       "tasks_path": "specs/001-batch-head/tasks.md",
       "task_state_path": "specs/001-batch-head/task-state.json",
       "latest_report_path": ".ralph/reports/research-batch-20260308/orchestrator.md",
+      "worktree_name": "ralph-001-batch-head",
+      "worktree_path": ".ralph/worktrees/001-batch-head",
       "branch_name": "codex/001-batch-head",
       "base_branch": "main",
+      "slot_status": "inactive",
+      "active_task_id": null,
+      "task_status": null,
+      "assigned_role": null,
+      "active_pr_number": null,
+      "active_pr_url": null,
+      "last_dispatch_at": null,
       "pr_number": null,
       "pr_url": null,
       "pr_state": null,
@@ -367,6 +433,11 @@ EOF
       "trigger_summary": "Queued from the same planning batch.",
       "priority_override": null,
       "blocked_reason": null,
+      "depends_on_spec_ids": [
+        "001"
+      ],
+      "admission_status": "pending",
+      "admitted_at": null,
       "research_status": "in_progress",
       "research_artifact_path": "specs/002-batch-follow-on/research.md",
       "research_report_path": ".ralph/reports/research-batch-20260308/research-002.md",
@@ -378,8 +449,17 @@ EOF
       "tasks_path": "specs/002-batch-follow-on/tasks.md",
       "task_state_path": "specs/002-batch-follow-on/task-state.json",
       "latest_report_path": ".ralph/reports/research-batch-20260308/orchestrator.md",
+      "worktree_name": "ralph-002-batch-follow-on",
+      "worktree_path": ".ralph/worktrees/002-batch-follow-on",
       "branch_name": "codex/002-batch-follow-on",
       "base_branch": "main",
+      "slot_status": "inactive",
+      "active_task_id": null,
+      "task_status": null,
+      "assigned_role": null,
+      "active_pr_number": null,
+      "active_pr_url": null,
+      "last_dispatch_at": null,
       "pr_number": null,
       "pr_url": null,
       "pr_state": null,
@@ -511,6 +591,7 @@ write_positive_legacy_runtime() {
     "$target/.ralph/context" \
     "$target/.ralph/state" \
     "$target/.ralph/reports" \
+    "$target/.ralph/reports/release-legacy" \
     "$target/.ralph/logs" \
     "$target/tasks" \
     "$target/specs/001-legacy-spec"
@@ -519,6 +600,13 @@ write_positive_legacy_runtime() {
   printf 'keep-policy\n' > "$target/.ralph/policy/project-policy.md"
   printf 'keep-context\n' > "$target/.ralph/context/project-truths.md"
   printf 'keep-reports\n' > "$target/.ralph/reports/existing.md"
+  cat > "$target/.ralph/reports/release-legacy/release.md" <<'EOF'
+# Release Report
+
+## Objective
+
+Capture the completed handoff for the legacy spec.
+EOF
   printf 'keep-logs\n' > "$target/.ralph/logs/events.jsonl"
   printf 'keep-tasks\n' > "$target/tasks/todo.md"
   cat > "$target/.ralph/state/workflow-state.json" <<'EOF'
@@ -724,6 +812,255 @@ write_conflicting_legacy_runtime() {
   printf 'title = "custom-user-agent"\n' > "$target/agents/custom.toml"
 }
 
+write_lease_file() {
+  local target="$1"
+  local owner_token="$2"
+  local holder_thread="$3"
+  local run_id="$4"
+  local acquired_at="$5"
+  local heartbeat_at="$6"
+  local expires_at="$7"
+  mkdir -p "$target/.ralph/state"
+  python3 - "$target/.ralph/state/orchestrator-lease.json" "$owner_token" "$holder_thread" "$run_id" "$acquired_at" "$heartbeat_at" "$expires_at" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = {
+    "schema_version": "1.0.0",
+    "owner_token": sys.argv[2] or None,
+    "holder_thread": sys.argv[3] or None,
+    "run_id": sys.argv[4] or None,
+    "acquired_at": sys.argv[5] or None,
+    "heartbeat_at": sys.argv[6] or None,
+    "expires_at": sys.argv[7] or None,
+    "status": "held",
+}
+path.write_text(json.dumps(payload, indent=2) + "\n")
+PY
+}
+
+write_worktree_collision_runtime() {
+  local target="$1"
+  write_positive_legacy_runtime "$target"
+  mkdir -p "$target/.ralph/reports/follow-on-legacy"
+  mkdir -p "$target/specs/002-follow-on-spec"
+  cat > "$target/.ralph/reports/follow-on-legacy/release.md" <<'EOF'
+# Follow-on Release Report
+
+## Objective
+
+Capture the follow-on handoff for the second spec.
+EOF
+  cat > "$target/.ralph/state/workflow-state.json" <<'EOF'
+{
+  "schema_version": "3.0.0",
+  "project_name": "collision-target",
+  "active_epoch_id": null,
+  "active_spec_ids": [],
+  "active_interrupt_spec_id": null,
+  "active_spec_id": null,
+  "active_spec_key": null,
+  "active_task_id": null,
+  "current_phase": "complete",
+  "task_status": null,
+  "assigned_role": null,
+  "current_branch": "main",
+  "current_run_id": "collision-upgrade",
+  "active_pr_number": null,
+  "active_pr_url": null,
+  "queue_head_spec_id": null,
+  "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+  "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
+  "lease_owner_token": null,
+  "lease_heartbeat_at": null,
+  "lease_expires_at": null,
+  "scheduler_summary": {
+    "normal_execution_limit": 2,
+    "active_spec_count": 0,
+    "pending_intent_count": 0,
+    "dependency_blocked_count": 0
+  },
+  "resume_spec_id": null,
+  "resume_spec_stack": [],
+  "interruption_state": null,
+  "last_event_id": "evt-0001",
+  "last_report_path": ".ralph/reports/release-legacy/release.md",
+  "last_verified_at": null,
+  "blocked_reason": null,
+  "failure_count": 0,
+  "next_action": "Queue complete. No remaining specs.",
+  "queue_snapshot": []
+}
+EOF
+  cat > "$target/.ralph/state/spec-queue.json" <<'EOF'
+{
+  "schema_version": "3.0.0",
+  "queue_policy": {
+    "selection": "fifo_admission_window",
+    "preemption": "failing_out_of_scope_bug",
+    "normal_execution_limit": 2
+  },
+  "active_spec_id": null,
+  "active_spec_ids": [],
+  "active_interrupt_spec_id": null,
+  "resume_spec_id": null,
+  "specs": [
+    {
+      "spec_id": "001",
+      "spec_slug": "legacy-spec",
+      "spec_key": "001-legacy-spec",
+      "title": "Legacy completed spec",
+      "epoch_id": "E001",
+      "created_at": "2026-03-01T10:00:00-08:00",
+      "last_worked_at": "2026-03-01T11:00:00-08:00",
+      "status": "done",
+      "kind": "normal",
+      "origin_spec_key": null,
+      "origin_task_id": null,
+      "triggered_by_role": null,
+      "trigger_report_path": null,
+      "trigger_summary": null,
+      "priority_override": null,
+      "blocked_reason": null,
+      "depends_on_spec_ids": [],
+      "admission_status": "done",
+      "admitted_at": null,
+      "research_status": "not_started",
+      "research_artifact_path": "specs/001-legacy-spec/research.md",
+      "research_report_path": null,
+      "research_updated_at": null,
+      "planning_batch_id": null,
+      "prd_path": "tasks/prd-legacy.md",
+      "spec_path": "specs/001-legacy-spec/spec.md",
+      "plan_path": "specs/001-legacy-spec/plan.md",
+      "tasks_path": "specs/001-legacy-spec/tasks.md",
+      "task_state_path": "specs/001-legacy-spec/task-state.json",
+      "latest_report_path": ".ralph/reports/release-legacy/release.md",
+      "worktree_name": "canonical-root",
+      "worktree_path": ".",
+      "branch_name": "codex/001-legacy-spec",
+      "base_branch": "main",
+      "slot_status": "inactive",
+      "active_task_id": null,
+      "task_status": null,
+      "assigned_role": null,
+      "active_pr_number": 12,
+      "active_pr_url": "https://example.test/pull/12",
+      "last_dispatch_at": null,
+      "pr_number": 12,
+      "pr_url": "https://example.test/pull/12",
+      "pr_state": "merged",
+      "merge_commit": "abc123",
+      "task_summary": {
+        "total": 2,
+        "done": 2,
+        "in_progress": 0,
+        "blocked": 0
+      },
+      "next_task_id": null
+    },
+    {
+      "spec_id": "002",
+      "spec_slug": "follow-on-spec",
+      "spec_key": "002-follow-on-spec",
+      "title": "Follow-on completed spec",
+      "epoch_id": "E002",
+      "created_at": "2026-03-02T10:00:00-08:00",
+      "last_worked_at": "2026-03-02T11:00:00-08:00",
+      "status": "done",
+      "kind": "normal",
+      "origin_spec_key": null,
+      "origin_task_id": null,
+      "triggered_by_role": null,
+      "trigger_report_path": null,
+      "trigger_summary": null,
+      "priority_override": null,
+      "blocked_reason": null,
+      "depends_on_spec_ids": [],
+      "admission_status": "done",
+      "admitted_at": null,
+      "research_status": "not_started",
+      "research_artifact_path": "specs/002-follow-on-spec/research.md",
+      "research_report_path": null,
+      "research_updated_at": null,
+      "planning_batch_id": null,
+      "prd_path": "tasks/prd-legacy.md",
+      "spec_path": "specs/002-follow-on-spec/spec.md",
+      "plan_path": "specs/002-follow-on-spec/plan.md",
+      "tasks_path": "specs/002-follow-on-spec/tasks.md",
+      "task_state_path": "specs/002-follow-on-spec/task-state.json",
+      "latest_report_path": ".ralph/reports/follow-on-legacy/release.md",
+      "worktree_name": "canonical-root",
+      "worktree_path": ".",
+      "branch_name": "codex/002-follow-on-spec",
+      "base_branch": "main",
+      "slot_status": "inactive",
+      "active_task_id": null,
+      "task_status": null,
+      "assigned_role": null,
+      "active_pr_number": null,
+      "active_pr_url": null,
+      "last_dispatch_at": null,
+      "pr_number": null,
+      "pr_url": null,
+      "pr_state": null,
+      "merge_commit": null,
+      "task_summary": {
+        "total": 1,
+        "done": 1,
+        "in_progress": 0,
+        "blocked": 0
+      },
+      "next_task_id": null
+    }
+  ]
+}
+EOF
+  cat > "$target/specs/002-follow-on-spec/spec.md" <<'EOF'
+# Follow-on Spec
+EOF
+  cat > "$target/specs/002-follow-on-spec/plan.md" <<'EOF'
+# Follow-on Plan
+EOF
+  cat > "$target/specs/002-follow-on-spec/tasks.md" <<'EOF'
+# Tasks: 002-follow-on-spec
+
+- [x] 002-T001 Release the follow-on flow
+EOF
+}
+
+write_branch_collision_runtime() {
+  local target="$1"
+  write_worktree_collision_runtime "$target"
+  python3 - "$target" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]) / ".ralph/state/spec-queue.json"
+queue = json.loads(path.read_text())
+queue["specs"][1]["branch_name"] = "codex/001-legacy-spec"
+path.write_text(json.dumps(queue, indent=2) + "\n")
+PY
+}
+
+write_shared_report_collision_runtime() {
+  local target="$1"
+  write_worktree_collision_runtime "$target"
+  python3 - "$target" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]) / ".ralph/state/spec-queue.json"
+queue = json.loads(path.read_text())
+queue["specs"][1]["latest_report_path"] = ".ralph/reports/release-legacy/release.md"
+path.write_text(json.dumps(queue, indent=2) + "\n")
+PY
+}
+
 INSTALL_TARGET="$TMP_DIR/install-target"
 mkdir -p "$INSTALL_TARGET"
 printf 'Project loader before install.\n' > "$INSTALL_TARGET/AGENTS.md"
@@ -805,12 +1142,106 @@ import json
 import sys
 from pathlib import Path
 
+root = Path(sys.argv[1])
+workflow = json.loads((root / ".ralph/state/workflow-state.json").read_text())
 queue = json.loads((Path(sys.argv[1]) / ".ralph/state/spec-queue.json").read_text())
 spec = queue["specs"][0]
 assert spec["research_status"] == "not_started"
 assert spec["research_artifact_path"] == "specs/001-legacy-spec/research.md"
 assert spec["planning_batch_id"] is None
+assert workflow["last_report_path"] == ".ralph/reports/release-legacy/001-legacy-spec/release.md"
+assert spec["latest_report_path"] == ".ralph/reports/release-legacy/001-legacy-spec/release.md"
+assert (root / workflow["last_report_path"]).exists()
+task_state = json.loads((root / "specs/001-legacy-spec/task-state.json").read_text())
+assert task_state["tasks"][0]["last_report_path"] == ".ralph/reports/release-legacy/001-legacy-spec/release.md"
 PY
+
+HEALTHY_LEASE_TARGET="$TMP_DIR/healthy-lease-target"
+write_positive_legacy_runtime "$HEALTHY_LEASE_TARGET"
+copy_manifest_paths src/upgrade-manifest.txt "$HEALTHY_LEASE_TARGET"
+update_agents_file "$HEALTHY_LEASE_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+write_lease_file \
+  "$HEALTHY_LEASE_TARGET" \
+  "lease-owner-1" \
+  "thread-1" \
+  "run-healthy" \
+  "2026-03-08T12:00:00-08:00" \
+  "2026-03-08T12:01:00-08:00" \
+  "2099-03-08T12:03:00-08:00"
+if python3 scripts/migrate-installed-runtime.py --repo "$HEALTHY_LEASE_TARGET"; then
+  echo "smoke-test-install-upgrade: healthy held lease should have blocked upgrade" >&2
+  exit 1
+fi
+
+STALE_LEASE_TARGET="$TMP_DIR/stale-lease-target"
+write_positive_legacy_runtime "$STALE_LEASE_TARGET"
+copy_manifest_paths src/upgrade-manifest.txt "$STALE_LEASE_TARGET"
+update_agents_file "$STALE_LEASE_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+write_lease_file \
+  "$STALE_LEASE_TARGET" \
+  "lease-owner-stale" \
+  "thread-stale" \
+  "run-stale" \
+  "2026-03-08T12:00:00-08:00" \
+  "2026-03-08T12:01:00-08:00" \
+  "2026-03-08T12:02:00-08:00"
+python3 scripts/migrate-installed-runtime.py --repo "$STALE_LEASE_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$STALE_LEASE_TARGET"
+python3 - <<'PY' "$STALE_LEASE_TARGET"
+import json
+import sys
+from pathlib import Path
+
+lease = json.loads((Path(sys.argv[1]) / ".ralph/state/orchestrator-lease.json").read_text())
+assert lease["status"] == "idle"
+assert lease["owner_token"] is None
+assert lease["heartbeat_at"] is None
+assert lease["expires_at"] is None
+PY
+
+WORKTREE_COLLISION_TARGET="$TMP_DIR/worktree-collision-target"
+write_worktree_collision_runtime "$WORKTREE_COLLISION_TARGET"
+copy_manifest_paths src/upgrade-manifest.txt "$WORKTREE_COLLISION_TARGET"
+update_agents_file "$WORKTREE_COLLISION_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+python3 scripts/migrate-installed-runtime.py --repo "$WORKTREE_COLLISION_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$WORKTREE_COLLISION_TARGET"
+python3 - <<'PY' "$WORKTREE_COLLISION_TARGET"
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+queue = json.loads((root / ".ralph/state/spec-queue.json").read_text())
+names = [spec["worktree_name"] for spec in queue["specs"]]
+paths = [spec["worktree_path"] for spec in queue["specs"]]
+assert len(names) == len(set(names))
+assert len(paths) == len(set(paths))
+assert all(path.startswith(".ralph/worktrees/") for path in paths)
+reports = [spec["latest_report_path"] for spec in queue["specs"]]
+assert reports == [
+    ".ralph/reports/release-legacy/001-legacy-spec/release.md",
+    ".ralph/reports/follow-on-legacy/002-follow-on-spec/release.md",
+]
+assert all((root / report).exists() for report in reports)
+PY
+
+SHARED_REPORT_COLLISION_TARGET="$TMP_DIR/shared-report-collision-target"
+write_shared_report_collision_runtime "$SHARED_REPORT_COLLISION_TARGET"
+copy_manifest_paths src/upgrade-manifest.txt "$SHARED_REPORT_COLLISION_TARGET"
+update_agents_file "$SHARED_REPORT_COLLISION_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+if python3 scripts/migrate-installed-runtime.py --repo "$SHARED_REPORT_COLLISION_TARGET"; then
+  echo "smoke-test-install-upgrade: ambiguous shared legacy report ownership should have failed" >&2
+  exit 1
+fi
+
+BRANCH_COLLISION_TARGET="$TMP_DIR/branch-collision-target"
+write_branch_collision_runtime "$BRANCH_COLLISION_TARGET"
+copy_manifest_paths src/upgrade-manifest.txt "$BRANCH_COLLISION_TARGET"
+update_agents_file "$BRANCH_COLLISION_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+if python3 scripts/migrate-installed-runtime.py --repo "$BRANCH_COLLISION_TARGET"; then
+  echo "smoke-test-install-upgrade: duplicate branch assignment should have failed" >&2
+  exit 1
+fi
 
 CUSTOM_CONFIG_TARGET="$TMP_DIR/custom-config-target"
 mkdir -p "$CUSTOM_CONFIG_TARGET"

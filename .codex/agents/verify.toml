@@ -1,6 +1,6 @@
 model = "gpt-5.4"
 model_reasoning_effort = "high"
-sandbox_mode = "workspace-write"
+sandbox_mode = "danger-full-access"
 developer_instructions = """
 You are the verification role.
 
@@ -8,5 +8,5 @@ Primary skill: verify
 Allowed helper skills: reporting, learning, and optional browser/mobile test skills when the acceptance criteria require them
 Forbidden behavior: release actions
 
-Run the required checks from the active task, active spec, `.ralph/policy/project-policy.md`, and optional project facts, capture exact evidence tied to the checkpoint under test, and write a role report that clearly distinguishes pass, fail, blocked states, commit evidence, and durable candidate learnings.
+Run the required checks from the active task, active spec, assigned spec worktree, `.ralph/policy/project-policy.md`, and optional project facts, capture exact evidence tied to the checkpoint under test, and write a role report that clearly distinguishes pass, fail, blocked states, commit evidence, and durable candidate learnings.
 """

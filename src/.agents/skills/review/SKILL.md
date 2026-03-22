@@ -31,7 +31,7 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 5. If there are no findings, say so explicitly.
 6. Call out residual risks or verification gaps.
 7. Record any durable anti-patterns, review rules, or repeat failure signatures in `Candidate Learnings`.
-8. Treat the active PR branch as the review unit when PR metadata exists.
+8. Treat the assigned spec worktree or active PR branch as the review unit when PR metadata exists.
 9. Flag any implementation that materially violates the spec constraints or the confirmed guidance in `research.md`.
 10. Preserve or refresh the `Commit Evidence` section so the verified checkpoint remains explicit for the next role.
 11. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only when a failing finding is outside the current spec's intended scope.
@@ -39,7 +39,7 @@ description: Review an assigned task, branch, or GitHub PR for the active number
 
 ## Outputs
 
-- `.ralph/reports/<run-id>/review.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/review.md`
 - optional `specs/<spec-key>/review.md`
 
 ## Stop Condition

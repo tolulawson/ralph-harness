@@ -2,6 +2,7 @@
 
 - Project: `replace-me`
 - Active epoch: `null`
+- Active specs: `[]`
 - Active spec: `null`
 - Active task: `null`
 - Phase: `bootstrap`
@@ -12,6 +13,13 @@
 - Active PR number: `null`
 - Active PR URL: `null`
 - Queue head spec: `null`
+- Active interrupt spec: `null`
+- Lease path: `.ralph/state/orchestrator-lease.json`
+- Intents path: `.ralph/state/orchestrator-intents.jsonl`
+- Lease owner token: `null`
+- Lease heartbeat: `null`
+- Lease expires: `null`
+- Scheduler summary: `{'normal_execution_limit': 2, 'active_spec_count': 0, 'pending_intent_count': 0, 'dependency_blocked_count': 0}`
 - Resume spec id: `null`
 - Resume stack depth: `0`
 - Current interrupt spec: `null`

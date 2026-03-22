@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "project_name": "ralph-harness",
   "active_epoch_id": null,
   "active_spec_id": null,
@@ -27,6 +27,8 @@
       "spec_key": "001-self-bootstrap-harness",
       "epoch_id": "E001",
       "status": "done",
+      "admission_status": "done",
+      "slot_status": "inactive",
       "branch_name": "codex/001-self-bootstrap-harness",
       "pr_number": null
     },
@@ -35,9 +37,24 @@
       "spec_key": "002-deterministic-orchestration-versioning-and-upgrades",
       "epoch_id": "E002",
       "status": "done",
+      "admission_status": "done",
+      "slot_status": "inactive",
       "branch_name": "codex/002-deterministic-orchestration-versioning-and-upgrades",
       "pr_number": null
     }
   ],
-  "resume_spec_stack": []
+  "resume_spec_stack": [],
+  "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+  "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
+  "lease_owner_token": null,
+  "lease_heartbeat_at": null,
+  "lease_expires_at": null,
+  "active_spec_ids": [],
+  "active_interrupt_spec_id": null,
+  "scheduler_summary": {
+    "normal_execution_limit": 2,
+    "active_spec_count": 0,
+    "pending_intent_count": 0,
+    "dependency_blocked_count": 0
+  }
 }

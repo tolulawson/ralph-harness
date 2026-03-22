@@ -10,7 +10,7 @@ Ralph is for teams and solo builders who want:
 
 - long-running LLM work that survives restarts and context loss
 - project work to move through PRD, spec, plan, task, review, verify, and release stages
-- one active implementation task at a time instead of uncontrolled execution swarms
+- bounded concurrent spec execution instead of uncontrolled execution swarms
 - a harness that can be installed into real repositories and upgraded safely later
 
 What you get:
@@ -20,7 +20,7 @@ What you get:
 - a role-based control plane in `.codex/` and `.agents/skills/`
 - canonical workflow and queue state on disk
 - numbered specs, plans, tasks, reports, and logs that survive restarts
-- bounded parallel `research` during planning, with sequential execution afterward
+- bounded parallel `research`, hard spec dependencies, durable intent intake, and per-spec worktree execution
 
 ## Human Installation Instructions
 
@@ -110,7 +110,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.7.0` as the default public reference right now
+- use `v0.8.0` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
@@ -134,38 +134,43 @@ The source-of-truth split in this repository is:
 
 ## Architectural Overview
 
-Ralph keeps the orchestrator in charge of shared state. Normal execution stays sequential. The only bounded parallelism is spec-local `research` for specs produced or refreshed in the same planning batch.
+Ralph keeps the orchestrator in charge of shared state. Normal specs enter a FIFO admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns lease coordination, projections, logs, and queue state. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec.
 Worker runs are forked from the orchestrator context so noisy role-specific reasoning stays isolated, and only validated outputs are promoted back into shared runtime artifacts.
 
 ```mermaid
 flowchart TD
     A["Project idea"] --> B["PRD"]
     B --> C["Numbered specs"]
-    C --> D["Spec-local research (bounded parallel only within one planning batch)"]
-    D --> E["Plan"]
-    E --> F["Task generation"]
-    F --> G["Plan check"]
-    G --> H["Implement one task"]
-    H --> I["Review"]
-    I --> J["Verify"]
-    J --> K["Release"]
-    K --> L["Advance queue"]
+    C --> D["Scheduler queue with depends_on_spec_ids"]
+    D --> E["Spec-local research (bounded parallel only within one planning batch)"]
+    E --> F["Plan"]
+    F --> G["Task generation"]
+    G --> H["Lease + durable intents"]
+    H --> I["Admit bounded normal specs"]
+    I --> J["Per-spec git worktrees"]
+    J --> K["Implement / Review / Verify / Release"]
+    K --> L["Synchronize canonical state"]
+    L --> M["Advance queue"]
     G -- "plan issues" --> E
     G -- "task issues" --> F
-    I -- "review failed" --> H
-    J -- "verification failed" --> H
-    H -- "out-of-scope failing bug" --> M["Interrupt spec"]
-    M --> N["Pause current work and push resume_spec_stack"]
-    N --> H
+    K -- "review failed" --> J
+    K -- "verification failed" --> J
+    K -- "out-of-scope failing bug" --> N["Interrupt spec"]
+    N --> O["Pause admitted normal specs and push resume_spec_stack"]
+    O --> J
 ```
 
 In practice, that means:
 
 - specs are the durable execution unit
+- `depends_on_spec_ids` are hard admission blockers
 - `task-state.json` is the canonical task lifecycle record
-- the orchestrator chooses the queue head and next task
+- the orchestrator chooses the queue head, admitted spec window, and next task
+- `.ralph/state/orchestrator-lease.json` elects a temporary single-writer leader
+- `.ralph/state/orchestrator-intents.jsonl` records cross-thread requests durably
+- admitted specs run in dedicated git worktrees under `.ralph/worktrees/`
 - orchestrator-spawned workers run with forked context semantics (`fork_context = true`)
-- implementation, review, verification, and release run one worker at a time
+- implementation, review, verification, and release run at most one worker per admitted spec
 - all role configs run with `sandbox_mode = "danger-full-access"`
 - if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
 - `plan-check` can route work back to `plan` or `task-gen`
@@ -234,4 +239,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.7.0`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.0`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

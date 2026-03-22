@@ -87,6 +87,7 @@ scripts/render-release-notes.sh "v$(tr -d '[:space:]' < VERSION)" >/dev/null
 scripts/verify-installation-contract.sh
 scripts/verify-atomic-commit-contract.sh
 scripts/verify-interruption-contract.sh
+scripts/verify-multi-spec-contract.sh
 scripts/verify-parallel-research-contract.sh
 scripts/verify-subagent-isolation-contract.sh
 scripts/verify-upgrade-contract.sh

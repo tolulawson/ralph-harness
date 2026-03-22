@@ -1,9 +1,9 @@
 ---
 name: plan
-description: Convert a project PRD or numbered feature specification into an epoch-aware implementation plan, seed or refresh the FIFO spec queue, and create the planning artifacts needed for execution.
+description: Convert a project PRD or numbered feature specification into a dependency-aware implementation plan, seed or refresh the scheduler queue, and create the planning artifacts needed for execution.
 ---
 
-# Queue-Aware Plan
+# Scheduler-Aware Plan
 
 ## Use When
 
@@ -32,22 +32,28 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - `.ralph/state/spec-queue.json`
    - `specs/INDEX.md`
    - `specs/<spec-key>/` directories for seeded specs
-4. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
-5. For the active spec, require `research.md` when the queue entry says `research_status = done`.
-6. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
-7. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, and rollout or migration considerations.
+4. Seed or refresh scheduler metadata for each spec:
+   - `depends_on_spec_ids`
+   - `admission_status`
+   - default worktree metadata
+   - compatibility mirrors only when needed
+5. Reject dependency cycles or missing dependency targets instead of guessing.
+6. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
+7. For the active spec, require `research.md` when the queue entry says `research_status = done`.
+8. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
+9. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, worktree rules, and rollout or migration considerations.
 8. Add:
    - `Research Inputs`
    - `Implementation Guardrails`
    - `Goal-Backward Verification` with observable truths, required artifacts, and critical links
-9. Create supporting artifacts only when needed:
+10. Create supporting artifacts only when needed:
    - `research.md`
    - `data-model.md`
    - `contracts/`
    - `quickstart.md`
-10. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established.
-11. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
-12. Write the role report and recommend the next role.
+11. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established.
+12. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
+13. Write the role report and recommend the next role.
 
 ## Outputs
 

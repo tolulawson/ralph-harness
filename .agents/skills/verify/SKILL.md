@@ -29,14 +29,14 @@ description: Run the required checks for the active numbered spec, capture exact
 3. Verify not only commands but also the observable truths, required artifacts, and critical links called out in the plan.
 4. Record exact pass, fail, or blocked evidence and tie the result to the checkpoint listed in `Commit Evidence`.
 5. Capture durable command truths or failure signatures in `Candidate Learnings` when they are project-relevant.
-6. Treat the active PR branch as the verification unit when PR metadata exists.
+6. Treat the assigned spec worktree or active PR branch as the verification unit when PR metadata exists.
 7. Preserve or refresh the `Commit Evidence` section so the release role can trace the verified checkpoint cleanly.
 8. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only for failing out-of-scope bugs that should preempt the normal queue.
 9. Write a verification report.
 
 ## Outputs
 
-- `.ralph/reports/<run-id>/verify.md`
+- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/verify.md`
 - optional `specs/<spec-key>/verification.md`
 
 ## Stop Condition

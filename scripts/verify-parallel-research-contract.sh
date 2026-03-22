@@ -22,8 +22,8 @@ done
 grep -Fq -- 'bounded parallel `research`' src/.ralph/runtime-contract.md \
   || fail "runtime contract must document bounded parallel research"
 
-grep -Fq -- 'Exactly one non-research worker role may be active at a time for normal execution.' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must forbid non-research parallelism"
+grep -Fq -- 'At most one non-research worker role may be active per admitted spec' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must enforce one non-research worker per admitted spec"
 
 grep -Fq -- 'planning batch' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must scope research parallelism to the same planning batch"

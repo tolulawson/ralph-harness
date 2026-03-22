@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "intent_id": "{{intent_id}}",
+  "created_at": "{{created_at}}",
+  "requested_by": "{{requested_by}}",
+  "type": "{{type}}",
+  "status": "pending",
+  "target_spec_id": null,
+  "spec_payload": null,
+  "dependency_hints": [],
+  "priority_note": null,
+  "admission_note": null
+}
