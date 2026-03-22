@@ -44,6 +44,7 @@ done < "$GENERATED_MANIFEST"
 for required in \
   '.ralph/constitution.md' \
   '.ralph/runtime-contract.md' \
+  '.ralph/policy/runtime-overrides.md' \
   '.ralph/policy/project-policy.md' \
   '.ralph/context/project-truths.md' \
   '.ralph/context/project-facts.json' \
@@ -67,6 +68,9 @@ done
 
 grep -Fq -- 'the report at `last_report_path`' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing last_report_path read-order entry"
+
+grep -Fq -- '.ralph/policy/runtime-overrides.md' "$SRC_AGENTS" \
+  || fail "src/AGENTS.md missing runtime-overrides read-order entry"
 
 grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block start marker"

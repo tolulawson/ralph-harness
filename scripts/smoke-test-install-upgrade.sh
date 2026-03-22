@@ -1085,6 +1085,11 @@ python3 scripts/check-installed-runtime-state.py --repo "$INSTALL_TARGET"
   exit 1
 }
 
+[[ -f "$INSTALL_TARGET/.ralph/policy/runtime-overrides.md" ]] || {
+  echo "smoke-test-install-upgrade: missing runtime-overrides after install" >&2
+  exit 1
+}
+
 [[ -f "$INSTALL_TARGET/.ralph/harness-version.json" ]] || {
   echo "smoke-test-install-upgrade: missing harness-version after install" >&2
   exit 1
@@ -1100,8 +1105,38 @@ grep -Fq "$MANAGED_END" "$INSTALL_TARGET/AGENTS.md" || {
   exit 1
 }
 
+python3 scripts/check-upgrade-surface.py --repo "$INSTALL_TARGET"
+
+OVERLAY_TARGET="$TMP_DIR/overlay-target"
+mkdir -p "$OVERLAY_TARGET"
+copy_manifest_paths src/install-manifest.txt "$OVERLAY_TARGET"
+create_generated_runtime "$OVERLAY_TARGET"
+update_agents_file "$OVERLAY_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+printf 'keep-runtime-overrides\n' > "$OVERLAY_TARGET/.ralph/policy/runtime-overrides.md"
+python3 scripts/check-upgrade-surface.py --repo "$OVERLAY_TARGET"
+copy_manifest_paths src/upgrade-manifest.txt "$OVERLAY_TARGET"
+update_agents_file "$OVERLAY_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+python3 scripts/migrate-installed-runtime.py --repo "$OVERLAY_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$OVERLAY_TARGET"
+grep -Fq 'keep-runtime-overrides' "$OVERLAY_TARGET/.ralph/policy/runtime-overrides.md" || {
+  echo "smoke-test-install-upgrade: runtime overrides changed during upgrade" >&2
+  exit 1
+}
+
+DRIFTED_RUNTIME_TARGET="$TMP_DIR/drifted-runtime-target"
+mkdir -p "$DRIFTED_RUNTIME_TARGET"
+copy_manifest_paths src/install-manifest.txt "$DRIFTED_RUNTIME_TARGET"
+create_generated_runtime "$DRIFTED_RUNTIME_TARGET"
+update_agents_file "$DRIFTED_RUNTIME_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+printf '\n## Local Drift\n\n- keep custom runtime edits here.\n' >> "$DRIFTED_RUNTIME_TARGET/.ralph/runtime-contract.md"
+if python3 scripts/check-upgrade-surface.py --repo "$DRIFTED_RUNTIME_TARGET"; then
+  echo "smoke-test-install-upgrade: direct runtime-contract edits should have blocked upgrade preflight" >&2
+  exit 1
+fi
+
 LEGACY_TARGET="$TMP_DIR/legacy-target"
 write_positive_legacy_runtime "$LEGACY_TARGET"
+python3 scripts/check-upgrade-surface.py --repo "$LEGACY_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$LEGACY_TARGET"
 update_agents_file "$LEGACY_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
 python3 scripts/migrate-installed-runtime.py --repo "$LEGACY_TARGET"
@@ -1124,6 +1159,11 @@ grep -Fq 'keep-policy' "$LEGACY_TARGET/.ralph/policy/project-policy.md" || {
 
 grep -Fq 'keep-context' "$LEGACY_TARGET/.ralph/context/project-truths.md" || {
   echo "smoke-test-install-upgrade: context changed during upgrade" >&2
+  exit 1
+}
+
+[[ -f "$LEGACY_TARGET/.ralph/policy/runtime-overrides.md" ]] || {
+  echo "smoke-test-install-upgrade: runtime-overrides missing after legacy upgrade" >&2
   exit 1
 }
 

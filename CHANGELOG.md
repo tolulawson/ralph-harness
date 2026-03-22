@@ -4,6 +4,43 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.8.2 - 2026-03-21
+
+### Summary
+
+Ralph now has a preserved project-owned runtime override surface and an upgrade preflight that blocks direct edits to the scaffold-owned base runtime contract before those edits can be lost.
+
+This patch keeps `.ralph/runtime-contract.md` upgrade-managed while introducing `.ralph/policy/runtime-overrides.md` as the supported place for project-specific runtime additions. It also hardens upgrade safety by recording the installed base-contract fingerprint and requiring preflight review when the base contract has drifted.
+
+### Highlights
+
+- Added the preserved runtime override surface at `.ralph/policy/runtime-overrides.md` to the shipped scaffold and dogfood runtime.
+- Updated loaders, constitutions, runtime doctrine, project policy, public skills, and shipped orchestrator guidance so runtime overrides are part of the default read order.
+- Added `scripts/check-upgrade-surface.py` plus baseline-hash tracking in `.ralph/harness-version.json` to block upgrades when `.ralph/runtime-contract.md` was edited directly.
+- Taught migration to create the runtime-overrides file when missing and bumped `upgrade_contract_version` to `7`.
+- Expanded smoke coverage to prove runtime overrides survive upgrade and direct base-contract drift is caught before manifest overwrite.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.8.2` as the default public install or upgrade reference.
+- Fresh installs now include `.ralph/policy/runtime-overrides.md` and record the scaffold runtime-contract baseline hash in `.ralph/harness-version.json`.
+- Upgrades must run the new `scripts/check-upgrade-surface.py` preflight before refreshing scaffold-owned files.
+- Existing installs that placed project-specific runtime changes directly in `.ralph/runtime-contract.md` must move those additions into `.ralph/policy/runtime-overrides.md` before upgrading.
+
+### Validation And Release Workflow
+
+- Local and CI validation now include `python3 scripts/check-upgrade-surface.py --repo .` alongside the existing contract suite.
+- Smoke tests now cover both runtime-override preservation and blocked upgrade preflight for direct base runtime-contract edits.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Runtime overrides surface: `src/.ralph/policy/runtime-overrides.md`
+- Upgrade guide: `UPGRADING.md`
+- Upgrade preflight: `scripts/check-upgrade-surface.py`
+- Runtime migration helper: `scripts/runtime_state_helpers.py`
+- Release asset: `ralph-harness-v0.8.2.tar.gz`
+
 ## v0.8.1 - 2026-03-21
 
 ### Summary

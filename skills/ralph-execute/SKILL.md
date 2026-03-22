@@ -22,6 +22,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - `AGENTS.md`
 - `.ralph/constitution.md`
 - `.ralph/runtime-contract.md`
+- `.ralph/policy/runtime-overrides.md`
 - `.ralph/policy/project-policy.md`
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
@@ -31,17 +32,18 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 1. `AGENTS.md`
 2. `.ralph/constitution.md`
 3. `.ralph/runtime-contract.md`
-4. `.ralph/policy/project-policy.md`
-5. `.ralph/state/workflow-state.json`
-6. `.ralph/state/spec-queue.json`
-7. the file at `last_report_path`
-8. admitted or active spec artifacts under `specs/<spec-id>-<slug>/`
-9. a recent tail of `.ralph/logs/events.jsonl`
+4. `.ralph/policy/runtime-overrides.md`
+5. `.ralph/policy/project-policy.md`
+6. `.ralph/state/workflow-state.json`
+7. `.ralph/state/spec-queue.json`
+8. the file at `last_report_path`
+9. admitted or active spec artifacts under `specs/<spec-id>-<slug>/`
+10. a recent tail of `.ralph/logs/events.jsonl`
 
 ## Workflow
 
 1. Verify the Ralph harness exists in the current repository.
-2. Read the constitution, runtime contract, project policy, workflow state, and spec queue.
+2. Read the constitution, runtime contract, runtime overrides, project policy, workflow state, and spec queue.
 3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
 4. Run a preflight consistency check before selecting the next role:
    - the runtime must already be on the current multi-spec, lease-capable state shape

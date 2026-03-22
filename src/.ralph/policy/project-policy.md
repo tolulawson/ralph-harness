@@ -7,12 +7,13 @@
 - Orchestrator-spawned workers must run with forked context semantics to isolate worker context from orchestrator context.
 - All role configs use `sandbox_mode = "danger-full-access"`.
 - Codex loader: `AGENTS.md`
-- Harness doctrine: `.ralph/constitution.md` plus `.ralph/runtime-contract.md`
+- Harness doctrine: `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `.ralph/policy/runtime-overrides.md`
 - Control plane: repo files plus `.codex/config.toml`
 - Repo-local skills: `.agents/skills/*`
 - External custom tool server: not required for v1
 - Shared-state coordination uses a single-writer lease in `.ralph/state/orchestrator-lease.json`.
 - Cross-thread scheduler requests use durable intent intake in `.ralph/state/orchestrator-intents.jsonl`.
+- Project-specific runtime additions belong in `.ralph/policy/runtime-overrides.md`, not as direct edits to `.ralph/runtime-contract.md`.
 
 ## Queue Policy
 

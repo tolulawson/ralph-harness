@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -20,14 +21,17 @@ CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
 CURRENT_QUEUE_SELECTION = "fifo_admission_window"
 CURRENT_NORMAL_EXECUTION_LIMIT = 2
-CURRENT_UPGRADE_CONTRACT_VERSION = 6
+CURRENT_UPGRADE_CONTRACT_VERSION = 7
 CURRENT_LEASE_SCHEMA_VERSION = "1.0.0"
 DEFAULT_LEASE_PATH = ".ralph/state/orchestrator-lease.json"
 DEFAULT_INTENTS_PATH = ".ralph/state/orchestrator-intents.jsonl"
 DEFAULT_WORKTREE_ROOT = ".ralph/worktrees"
+DEFAULT_RUNTIME_OVERRIDES_PATH = ".ralph/policy/runtime-overrides.md"
 LEASE_LOCK_SUFFIX = ".lock"
 LEASE_TTL_SECONDS = 90
 SCAFFOLD_ROOT = Path(__file__).resolve().parents[1]
+SCAFFOLD_RUNTIME_CONTRACT_PATH = SCAFFOLD_ROOT / "src/.ralph/runtime-contract.md"
+SCAFFOLD_RUNTIME_OVERRIDES_PATH = SCAFFOLD_ROOT / "src/.ralph/policy/runtime-overrides.md"
 MANAGED_AGENT_NAMES = (
     "orchestrator",
     "prd",
@@ -270,6 +274,14 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 def write_jsonl_records(path: Path, records: list[dict[str, Any]]) -> None:
     rendered = "".join(json.dumps(record, sort_keys=True) + "\n" for record in records)
     path.write_text(rendered)
+
+
+def sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def default_worktree_name(spec_key: str) -> str:
@@ -572,6 +584,60 @@ def run_git(repo_root: Path, *args: str) -> str:
         text=True,
     )
     return completed.stdout.strip()
+
+
+def ensure_runtime_overrides_file(repo_root: Path) -> Path:
+    target_path = repo_root / DEFAULT_RUNTIME_OVERRIDES_PATH
+    if target_path.exists():
+        return target_path
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_text(SCAFFOLD_RUNTIME_OVERRIDES_PATH.read_text())
+    return target_path
+
+
+def canonical_runtime_contract_hash_for_ref(ref: str) -> str | None:
+    if not ref:
+        return None
+    try:
+        content = run_git(SCAFFOLD_ROOT, "show", f"{ref}:src/.ralph/runtime-contract.md")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    return sha256_text(content)
+
+
+def expected_runtime_contract_baseline_hash(repo_root: Path) -> str | None:
+    harness_version_path = repo_root / ".ralph/harness-version.json"
+    if not harness_version_path.exists():
+        return None
+    harness_version = load_json(harness_version_path)
+    baseline_hash = harness_version.get("runtime_contract_baseline_sha256")
+    if isinstance(baseline_hash, str) and baseline_hash:
+        return baseline_hash
+    for candidate_ref in (harness_version.get("resolved_commit"), harness_version.get("tag")):
+        if isinstance(candidate_ref, str):
+            resolved = canonical_runtime_contract_hash_for_ref(candidate_ref)
+            if resolved:
+                return resolved
+    return None
+
+
+def validate_upgrade_preflight(repo_root: Path) -> list[str]:
+    issues: list[str] = []
+    runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
+    if not runtime_contract_path.exists():
+        return issues
+    expected_hash = expected_runtime_contract_baseline_hash(repo_root)
+    if expected_hash is None:
+        issues.append(
+            "cannot determine the previously installed canonical .ralph/runtime-contract.md; restore the canonical base or move project-specific runtime rules into `.ralph/policy/runtime-overrides.md` before upgrading"
+        )
+        return issues
+    actual_hash = sha256_file(runtime_contract_path)
+    if actual_hash != expected_hash:
+        issues.append(
+            ".ralph/runtime-contract.md differs from its recorded canonical baseline; move project-specific runtime changes into `.ralph/policy/runtime-overrides.md` before upgrading"
+        )
+    return issues
 
 
 def is_git_worktree(repo_root: Path) -> bool:
@@ -1295,6 +1361,7 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
 def migrate_repo_state(repo_root: Path) -> None:
     merge_installed_codex_config(repo_root)
     migrate_legacy_agent_configs(repo_root)
+    ensure_runtime_overrides_file(repo_root)
 
     workflow_path = repo_root / ".ralph/state/workflow-state.json"
     queue_path = repo_root / ".ralph/state/spec-queue.json"
@@ -1383,6 +1450,8 @@ def migrate_repo_state(repo_root: Path) -> None:
     if harness_version_path.exists():
         harness_version = load_json(harness_version_path)
         harness_version["upgrade_contract_version"] = CURRENT_UPGRADE_CONTRACT_VERSION
+        harness_version["runtime_contract_baseline_sha256"] = sha256_file(repo_root / ".ralph/runtime-contract.md")
+        harness_version["runtime_overrides_path"] = DEFAULT_RUNTIME_OVERRIDES_PATH
         write_json(harness_version_path, harness_version)
 
     write_json(queue_path, queue)
@@ -1471,9 +1540,12 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     intents_path = repo_root / DEFAULT_INTENTS_PATH
     runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
     orchestrator_skill_path = repo_root / ".agents/skills/orchestrator/SKILL.md"
+    runtime_overrides_path = repo_root / DEFAULT_RUNTIME_OVERRIDES_PATH
     for path in (workflow_json_path, queue_json_path, workflow_md_path, spec_index_path, lease_path, intents_path):
         if not path.exists():
             issues.append(f"missing required runtime file: {path.relative_to(repo_root)}")
+    if not runtime_overrides_path.exists():
+        issues.append(f"missing required runtime file: {runtime_overrides_path.relative_to(repo_root)}")
 
     if runtime_contract_path.exists():
         runtime_contract_text = runtime_contract_path.read_text()
@@ -1508,6 +1580,17 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             issues.append(
                 ".ralph/harness-version.json upgrade_contract_version does not match the current migration-aware contract"
             )
+        if harness_version.get("runtime_overrides_path") != DEFAULT_RUNTIME_OVERRIDES_PATH:
+            issues.append(".ralph/harness-version.json runtime_overrides_path does not match the canonical overrides path")
+        expected_baseline_hash = harness_version.get("runtime_contract_baseline_sha256")
+        if not isinstance(expected_baseline_hash, str) or not expected_baseline_hash:
+            issues.append(".ralph/harness-version.json missing runtime_contract_baseline_sha256")
+        elif (repo_root / ".ralph/runtime-contract.md").exists():
+            actual_runtime_contract_hash = sha256_file(repo_root / ".ralph/runtime-contract.md")
+            if actual_runtime_contract_hash != expected_baseline_hash:
+                issues.append(
+                    ".ralph/runtime-contract.md differs from its recorded canonical baseline; move project-specific runtime changes into `.ralph/policy/runtime-overrides.md`"
+                )
 
     for key in WORKFLOW_REQUIRED_KEYS:
         if key not in workflow:

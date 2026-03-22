@@ -14,13 +14,14 @@ Interpret the harness in this order:
 
 1. this constitution
 2. `.ralph/runtime-contract.md`
-3. `.ralph/policy/project-policy.md`
-4. `.ralph/context/project-truths.md`
-5. `.ralph/context/project-facts.json`
-6. `.ralph/context/learning-summary.md`
-7. `.ralph/state/workflow-state.json`
-8. `.ralph/state/spec-queue.json`
-9. active spec artifacts and latest role reports
+3. `.ralph/policy/runtime-overrides.md`
+4. `.ralph/policy/project-policy.md`
+5. `.ralph/context/project-truths.md`
+6. `.ralph/context/project-facts.json`
+7. `.ralph/context/learning-summary.md`
+8. `.ralph/state/workflow-state.json`
+9. `.ralph/state/spec-queue.json`
+10. active spec artifacts and latest role reports
 
 `AGENTS.md` is only the Codex entrypoint that tells Codex where to read the real operating doctrine.
 
@@ -35,6 +36,8 @@ The public source skills used to install, plan, execute, or upgrade the harness 
 - Project-specific PRDs, specs, tasks, reports, and event history belong to the target repository runtime, not to the scaffold source.
 - Automatic upgrades overwrite only the scaffold-owned paths listed in `src/upgrade-manifest.txt` from the source repository.
 - Project-owned runtime files remain outside the automatic upgrade surface unless a named migration step explicitly targets them.
+- `.ralph/runtime-contract.md` is scaffold-owned and should remain the canonical base contract from the installed Ralph version.
+- Project-specific runtime rules belong in `.ralph/policy/runtime-overrides.md`, which is preserved across upgrade.
 
 ## Knowledge Layer
 
@@ -66,6 +69,7 @@ Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 - `.ralph/state/workflow-state.md` is a human-readable companion file and must agree with the JSON state.
 - `specs/<spec-id>-<slug>/task-state.json` is the canonical machine-readable task lifecycle registry for a spec when it exists.
 - `specs/<spec-id>-<slug>/research.md` is the canonical spec-local research artifact when research has been completed for that spec.
+- `.ralph/policy/runtime-overrides.md` is the preserved project-owned extension surface for runtime-specific additions.
 - `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, and `.ralph/context/learning-summary.md` are part of the default harness context.
 - `.ralph/context/learning-log.jsonl` is the append-only learning ledger and should be tailed selectively rather than loaded in full.
 - `specs/INDEX.md` is a human-readable projection of the spec queue.
@@ -80,21 +84,22 @@ Use this order whenever a fresh Codex run resumes work:
 
 1. `.ralph/constitution.md`
 2. `.ralph/runtime-contract.md`
-3. `.ralph/policy/project-policy.md`
-4. `.ralph/context/project-truths.md`
-5. `.ralph/context/project-facts.json`
-6. `.ralph/context/learning-summary.md`
-7. `.ralph/state/workflow-state.json`
-8. `.ralph/state/spec-queue.json`
-9. `.ralph/reports/<current-run-id>/` or `last_report_path`
-10. active spec files in `specs/<spec-id>-<slug>/`
-11. `specs/<spec-id>-<slug>/task-state.json` when present
-12. `specs/INDEX.md`
-13. active PRD files in `tasks/`
-14. `tasks/todo.md`
-15. recent events from `.ralph/logs/events.jsonl`
-16. recent learning entries from `.ralph/context/learning-log.jsonl` only when needed
-17. older logs only if the recent context is insufficient
+3. `.ralph/policy/runtime-overrides.md`
+4. `.ralph/policy/project-policy.md`
+5. `.ralph/context/project-truths.md`
+6. `.ralph/context/project-facts.json`
+7. `.ralph/context/learning-summary.md`
+8. `.ralph/state/workflow-state.json`
+9. `.ralph/state/spec-queue.json`
+10. `.ralph/reports/<current-run-id>/` or `last_report_path`
+11. active spec files in `specs/<spec-id>-<slug>/`
+12. `specs/<spec-id>-<slug>/task-state.json` when present
+13. `specs/INDEX.md`
+14. active PRD files in `tasks/`
+15. `tasks/todo.md`
+16. recent events from `.ralph/logs/events.jsonl`
+17. recent learning entries from `.ralph/context/learning-log.jsonl` only when needed
+18. older logs only if the recent context is insufficient
 
 ## Canonical Phases
 

@@ -4,7 +4,7 @@ Ralph turns Codex from a one-shot coding assistant into a repo-resident engineer
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.8.1`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, accept new user requests through a durable intent inbox while work is already running, and coordinate concurrent threads through a single-writer lease.
+As of `v0.8.2`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, accept new user requests through a durable intent inbox while work is already running, and coordinate concurrent threads through a single-writer lease.
 
 ## Why People Use Ralph
 
@@ -19,6 +19,7 @@ What you get:
 
 - a thin loader in `AGENTS.md` that tells Codex where truth lives
 - a project constitution and runtime contract under `.ralph/`
+- a preserved runtime-override surface for project-specific rules without forking the base contract
 - a role-based control plane in `.codex/` and `.agents/skills/`
 - canonical workflow and queue state on disk
 - numbered specs, plans, tasks, reports, and logs that survive restarts
@@ -113,7 +114,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.8.1` as the default public reference right now
+- use `v0.8.2` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
@@ -175,6 +176,7 @@ In practice, that means:
 - `.ralph/state/orchestrator-intents.jsonl` records cross-thread requests durably
 - admitted specs run in dedicated git worktrees under `.ralph/worktrees/`
 - worker reports live at `.ralph/reports/<run-id>/<spec-key>/<role>.md`, while the orchestrator report stays at `.ralph/reports/<run-id>/orchestrator.md`
+- project-specific runtime additions belong in `.ralph/policy/runtime-overrides.md`, while `.ralph/runtime-contract.md` stays scaffold-owned
 - orchestrator-spawned workers run with forked context semantics (`fork_context = true`)
 - implementation, review, verification, and release run at most one worker per admitted spec
 - all role configs run with `sandbox_mode = "danger-full-access"`
@@ -197,13 +199,16 @@ That means you can ask Ralph to start another spec while other work is already i
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.8.1`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.8.2`, the shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
+- runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
 - recovers stale held leases back to `idle`
 - normalizes safely-derivable legacy worktree assignments into unique per-spec worktrees
 - normalizes legacy worker report pointers into spec-scoped report paths when ownership is clear
 - fails loudly instead of guessing when branch ownership, worktree ownership, task lifecycle, or legacy report ownership is ambiguous
+
+For project-specific runtime rules, Ralph treats `.ralph/policy/runtime-overrides.md` as the preserved extension surface. The base `.ralph/runtime-contract.md` remains upgrade-managed, and direct edits there are treated as scaffold drift.
 
 An installed Ralph repo gets:
 
@@ -268,4 +273,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.2`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

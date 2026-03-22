@@ -4,19 +4,22 @@ This file is the generic installed-runtime doctrine for the Ralph harness.
 
 It defines how an installed target repository should orchestrate worker roles, own shared runtime state, coordinate concurrent user threads, and stop safely while draining a dependency-aware multi-spec queue.
 
+This base runtime contract is scaffold-owned. Project-specific runtime extensions belong in `.ralph/policy/runtime-overrides.md` rather than direct edits to this file.
+
 ## Runtime Priority
 
 Interpret an installed Ralph harness in this order:
 
 1. `.ralph/constitution.md`
 2. this runtime contract
-3. `.ralph/policy/project-policy.md`
-4. `.ralph/context/project-truths.md`
-5. `.ralph/context/project-facts.json`
-6. `.ralph/context/learning-summary.md`
-7. `.ralph/state/workflow-state.json`
-8. `.ralph/state/spec-queue.json`
-9. active spec artifacts and latest role reports
+3. `.ralph/policy/runtime-overrides.md`
+4. `.ralph/policy/project-policy.md`
+5. `.ralph/context/project-truths.md`
+6. `.ralph/context/project-facts.json`
+7. `.ralph/context/learning-summary.md`
+8. `.ralph/state/workflow-state.json`
+9. `.ralph/state/spec-queue.json`
+10. active spec artifacts and latest role reports
 
 `AGENTS.md` is only the Codex loader that points Codex to these files.
 
@@ -39,28 +42,30 @@ Interpret an installed Ralph harness in this order:
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
 - Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
 - No role besides the orchestrator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
+- Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
 
 ## Core Loop
 
 1. read `.ralph/state/workflow-state.json`
-2. read `.ralph/policy/project-policy.md`
-3. read `.ralph/context/project-truths.md`
-4. read `.ralph/context/project-facts.json`
-5. read `.ralph/context/learning-summary.md`
-6. read `.ralph/state/spec-queue.json`
-7. read `.ralph/state/orchestrator-lease.json`
-8. tail only the recent window of `.ralph/state/orchestrator-intents.jsonl`
-9. attempt to acquire or renew the single-writer lease before mutating canonical shared state
-10. if another healthy lease-holder exists, stop after recording or acknowledging the caller's durable intent
-11. re-read workflow, queue, lease, and intent state after the lease is held
-12. materialize new-spec or scheduling intents into numbered spec queue entries without bypassing hard dependencies
-13. determine the admission window:
+2. read `.ralph/policy/runtime-overrides.md`
+3. read `.ralph/policy/project-policy.md`
+4. read `.ralph/context/project-truths.md`
+5. read `.ralph/context/project-facts.json`
+6. read `.ralph/context/learning-summary.md`
+7. read `.ralph/state/spec-queue.json`
+8. read `.ralph/state/orchestrator-lease.json`
+9. tail only the recent window of `.ralph/state/orchestrator-intents.jsonl`
+10. attempt to acquire or renew the single-writer lease before mutating canonical shared state
+11. if another healthy lease-holder exists, stop after recording or acknowledging the caller's durable intent
+12. re-read workflow, queue, lease, and intent state after the lease is held
+13. materialize new-spec or scheduling intents into numbered spec queue entries without bypassing hard dependencies
+14. determine the admission window:
    - active interrupt spec
    - oldest ready interrupt spec by `created_at`
    - else oldest normal specs whose dependencies are satisfied, in FIFO order, up to `queue_policy.normal_execution_limit`
-14. ensure every admitted spec has a dedicated git worktree and branch
-15. load only the admitted spec artifacts, `task-state.json`, and the latest relevant reports
-16. choose the next task for each admitted spec in this order:
+15. ensure every admitted spec has a dedicated git worktree and branch
+16. load only the admitted spec artifacts, `task-state.json`, and the latest relevant reports
+17. choose the next task for each admitted spec in this order:
    - first `in_progress`
    - else first `paused`
    - else first `ready`
@@ -68,20 +73,20 @@ Interpret an installed Ralph harness in this order:
    - else first `verification_failed`
    - else first `plan_check_failed`
    - else advance the spec toward PR, merge, or completion
-17. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
-18. if that batch contains specs with valid `spec.md` files and `research_status` needing work, spawn bounded parallel `research` workers only for those specs with `fork_context = true` and `agent_type = "explorer"`
-19. wait for the research batch to finish, close the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
-20. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, and next action
-21. spawn bounded non-research workers only for admitted specs that do not already have a worker in flight
-22. assign each worker a single spec, a single worktree path, a single report path, `fork_context = true`, and the role-appropriate `agent_type`
-23. wait for completed workers, close their worker threads, and validate outputs from the assigned spec worktrees
-24. synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before updating shared state
-25. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
-26. write the orchestrator report
-27. append one orchestrator-owned event
-28. update shared state and projections
-29. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in FIFO order
-30. continue dispatching until a stop condition occurs or the lease must be yielded
+18. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
+19. if that batch contains specs with valid `spec.md` files and `research_status` needing work, spawn bounded parallel `research` workers only for those specs with `fork_context = true` and `agent_type = "explorer"`
+20. wait for the research batch to finish, close the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
+21. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, and next action
+22. spawn bounded non-research workers only for admitted specs that do not already have a worker in flight
+23. assign each worker a single spec, a single worktree path, a single report path, `fork_context = true`, and the role-appropriate `agent_type`
+24. wait for completed workers, close their worker threads, and validate outputs from the assigned spec worktrees
+25. synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before updating shared state
+26. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
+27. write the orchestrator report
+28. append one orchestrator-owned event
+29. update shared state and projections
+30. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in FIFO order
+31. continue dispatching until a stop condition occurs or the lease must be yielded
 
 ## Stop Conditions
 

@@ -7,13 +7,15 @@
 ## Constitutional Priority
 
 1. `.ralph/constitution.md`
-2. `.ralph/policy/project-policy.md`
-3. `.ralph/context/project-truths.md`
-4. `.ralph/context/project-facts.json`
-5. `.ralph/context/learning-summary.md`
-6. `.ralph/state/workflow-state.json`
-7. `.ralph/state/spec-queue.json`
-8. active spec artifacts and latest role reports
+2. `.ralph/runtime-contract.md`
+3. `.ralph/policy/runtime-overrides.md`
+4. `.ralph/policy/project-policy.md`
+5. `.ralph/context/project-truths.md`
+6. `.ralph/context/project-facts.json`
+7. `.ralph/context/learning-summary.md`
+8. `.ralph/state/workflow-state.json`
+9. `.ralph/state/spec-queue.json`
+10. active spec artifacts and latest role reports
 
 ## Knowledge Layer
 

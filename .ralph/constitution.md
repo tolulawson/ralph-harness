@@ -22,10 +22,11 @@ Interpret the source repository in this order:
 
 1. this constitution
 2. `.ralph/runtime-contract.md`
-3. `.ralph/policy/project-policy.md`
-4. `.ralph/state/workflow-state.json`
-5. `.ralph/state/spec-queue.json`
-6. active spec artifacts and latest role reports
+3. `.ralph/policy/runtime-overrides.md`
+4. `.ralph/policy/project-policy.md`
+5. `.ralph/state/workflow-state.json`
+6. `.ralph/state/spec-queue.json`
+7. active spec artifacts and latest role reports
 
 `AGENTS.md` is only the Codex entrypoint that tells Codex where to read the real operating doctrine.
 
@@ -82,17 +83,18 @@ Use this order whenever a fresh Codex run resumes work in this source repository
 
 1. `.ralph/constitution.md`
 2. `.ralph/runtime-contract.md`
-3. `.ralph/policy/project-policy.md`
-4. `.ralph/state/workflow-state.json`
-5. `.ralph/state/spec-queue.json`
-6. `.ralph/reports/<current-run-id>/` or `last_report_path`
-7. active spec files in `specs/<spec-id>-<slug>/`
-8. `specs/<spec-id>-<slug>/task-state.json` when present
-9. `specs/INDEX.md`
-10. active PRD files in `tasks/`
-11. `tasks/todo.md`
-12. recent events from `.ralph/logs/events.jsonl`
-13. older logs only if the recent context is insufficient
+3. `.ralph/policy/runtime-overrides.md`
+4. `.ralph/policy/project-policy.md`
+5. `.ralph/state/workflow-state.json`
+6. `.ralph/state/spec-queue.json`
+7. `.ralph/reports/<current-run-id>/` or `last_report_path`
+8. active spec files in `specs/<spec-id>-<slug>/`
+9. `specs/<spec-id>-<slug>/task-state.json` when present
+10. `specs/INDEX.md`
+11. active PRD files in `tasks/`
+12. `tasks/todo.md`
+13. recent events from `.ralph/logs/events.jsonl`
+14. older logs only if the recent context is insufficient
 
 ## Canonical Phases
 

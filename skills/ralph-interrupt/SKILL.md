@@ -20,7 +20,7 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 ## Workflow
 
 1. Verify the Ralph harness exists in the current repository.
-2. Read the constitution, runtime contract, project policy, workflow state, and spec queue.
+2. Read the constitution, runtime contract, runtime overrides, project policy, workflow state, and spec queue.
 3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as canonical. Treat `workflow-state.md` and `specs/INDEX.md` as projections that must be regenerated from machine state.
 4. Run a preflight consistency check before seeding any interrupt:
    - current runtime shape must already be interrupt-capable
