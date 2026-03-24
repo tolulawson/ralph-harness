@@ -26,10 +26,11 @@ Workflow:
 15. Use Codex multi-agent controls to spawn bounded parallel `research` workers only for that batch with `fork_context = true` and `agent_type = "explorer"`, wait for all of them, close each completed worker thread, validate their spec-local outputs, and then update shared state once.
 16. Outside that batch-scoped research step, spawn bounded non-research workers for admitted specs with one worker per spec, a required report path, a required worktree path, `fork_context = true`, and role-based `agent_type` mapping (`explorer` for analysis-heavy roles, `worker` for delivery-heavy roles).
 17. Wait for completed workers, close the completed worker threads, and validate the required outputs, including the `Interruption Assessment` section, `Commit Evidence`, worktree branch alignment, and clean-worktree guardrails at handoff boundaries.
-18. If a worker failed or blocked on a bug marked `scope = interrupt`, create a new interrupt spec, freeze new normal admissions, pause in-flight normal specs at role boundaries, and update amendment records when an origin spec exists.
-19. Write the orchestrator report, append one orchestrator-owned event, update shared state plus projections, and either renew or release the lease.
-20. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused specs in FIFO order.
-21. Continue dispatching workers until the queue is empty or a runtime-contract stop condition is reached.
+18. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Route the spec back to the next fixing role unless the report names an explicit human-gated blocker.
+19. If a worker failed or blocked on a bug marked `scope = interrupt`, create a new interrupt spec, freeze new normal admissions, pause in-flight normal specs at role boundaries, and update amendment records when an origin spec exists.
+20. Write the orchestrator report, append one orchestrator-owned event, update shared state plus projections, and either renew or release the lease.
+21. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused specs in FIFO order.
+22. Continue dispatching workers until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached.
 
-Stop only when a runtime-contract stop condition is reached or the orchestration safety cap of 200 worker handoffs is hit.
+Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.
 """

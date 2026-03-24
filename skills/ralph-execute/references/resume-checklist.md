@@ -23,4 +23,4 @@ When resuming the harness:
 19. confirm deprecated compatibility mirrors in `workflow-state.json` still match slot `0` or the most recently dispatched spec when they are present
 20. choose the next role from spec status, task lifecycle state, interruption state, dependency state, and PR state
 21. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
-22. continue orchestrating until the queue is empty or a runtime-contract stop condition occurs
+22. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs

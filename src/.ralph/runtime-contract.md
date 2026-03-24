@@ -42,6 +42,7 @@ Interpret an installed Ralph harness in this order:
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
 - Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
 - Handoffs past implementation must include `Quality Gate` evidence in the latest relevant worker report.
+- Review, verification, and release failures are remediation signals, not stop conditions.
 - No role besides the orchestrator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
 - Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
 
@@ -82,25 +83,23 @@ Interpret an installed Ralph harness in this order:
 23. assign each worker a single spec, a single worktree path, a single report path, `fork_context = true`, and the role-appropriate `agent_type`
 24. wait for completed workers, close their worker threads, and validate outputs from the assigned spec worktrees, including `Quality Gate`, `Commit Evidence`, and clean-worktree handoff requirements
 25. synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before updating shared state
-26. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
-27. write the orchestrator report
-28. append one orchestrator-owned event
-29. update shared state and projections
-30. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in FIFO order
-31. continue dispatching until a stop condition occurs or the lease must be yielded
+26. if review, verification, or release reports a fixable failure without an explicit human-gated blocker, update the task lifecycle, route the spec back to the next remediation role, and keep draining the queue
+27. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
+28. write the orchestrator report
+29. append one orchestrator-owned event
+30. update shared state and projections
+31. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in FIFO order
+32. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
 
 ## Stop Conditions
 
 The orchestrator may stop only when one of these is true:
 
 - the queue is empty
-- every admitted spec is blocked
-- review failed
-- verification failed
-- release failed
+- every admitted spec is blocked on a human-gated issue
 - a credential, approval, or external human decision is required
 - another healthy lease-holder should take over
-- the orchestration safety cap is reached
+- the orchestration safety cap is reached and a human should decide whether to resume with a fresh run
 
 The default orchestration safety cap is `200` role handoffs in one invocation.
 

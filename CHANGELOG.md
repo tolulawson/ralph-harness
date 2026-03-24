@@ -4,6 +4,42 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.8.4 - 2026-03-24
+
+### Summary
+
+Ralph no longer treats failed review, verification, or release results as terminal stop boundaries. Those states now stay inside the orchestrator remediation loop until the queue completes, lease ownership changes, or a genuinely human-gated blocker is reached.
+
+This patch tightens the shipped runtime contract, orchestrator prompts, public execute entrypoint, and validation suite so the harness keeps resolving fixable issues instead of surfacing a premature stop notice.
+
+### Highlights
+
+- Removed `review failed`, `verification failed`, and `release failed` from the scaffold stop-condition list and reclassified them as remediation signals.
+- Updated shipped orchestrator guidance and agent instructions so failed quality gates route back to the next fixing role unless an explicit human blocker is present.
+- Tightened public `ralph-execute` guidance so stop summaries are reserved for queue completion, lease transfer, safety-cap review, or other human-gated boundaries.
+- Added `scripts/verify-human-stop-boundaries.sh` and wired it into the main validation suite to prevent regressions.
+- Synced the source repo's dogfood control-plane mirrors and runtime baseline hashes with the new stop-boundary contract.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.8.4` as the default public install or upgrade reference.
+- Fresh installs now inherit the corrected stop-boundary behavior by default.
+- Existing installs can upgrade normally to pick up the remediation-loop fix; no schema bump or `upgrade_contract_version` change is required.
+
+### Validation And Release Workflow
+
+- Verified locally with `bash scripts/verify-human-stop-boundaries.sh`.
+- Verified the full contract suite and smoke fixtures with `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Orchestrator skill: `src/.agents/skills/orchestrator/SKILL.md`
+- Orchestrator agent config: `src/.codex/agents/orchestrator.toml`
+- Public execute entrypoint: `skills/ralph-execute/SKILL.md`
+- Runtime validation helper: `scripts/runtime_state_helpers.py`
+- Release asset: `ralph-harness-v0.8.4.tar.gz`
+
 ## v0.8.3 - 2026-03-24
 
 ### Summary

@@ -1,11 +1,11 @@
 ---
 name: ralph-execute
-description: Resume an already-installed Ralph harness in the current repository by reading the constitution, runtime contract, policy, workflow state, spec queue, latest report, and recent events, then draining the queue until a documented stop condition occurs.
+description: Resume an already-installed Ralph harness in the current repository by reading the constitution, runtime contract, policy, workflow state, spec queue, latest report, and recent events, then draining the queue until it is complete or a human-gated stop condition occurs.
 ---
 
 # Ralph Execute
 
-Resume and advance an already-installed Ralph harness in the current repository until the queue is empty or a documented stop condition occurs.
+Resume and advance an already-installed Ralph harness in the current repository until the queue is empty, lease ownership must transfer, or a documented human-gated stop condition occurs.
 
 This skill does not install the harness. It assumes the current repository already contains the Ralph harness scaffold.
 
@@ -76,7 +76,8 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - pause admitted normal specs at role boundaries and later resume them after the interrupt is released
    - validate outputs
    - update shared state
-   - continue dispatching until a runtime-contract stop condition occurs
+   - treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops
+   - continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs
 10. Stop with a concise summary of:
    - what moved
    - what artifacts changed
@@ -94,8 +95,9 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Do not advance review, verification, or release from a report that lacks `Quality Gate` evidence.
 - Do not advance review, verification, or release from a dirty spec worktree or a report that lacks checkpoint traceability.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
-- Do not stop after a single handoff unless the runtime contract says to stop.
+- Do not stop after a single handoff unless the runtime contract reaches queue completion, lease transfer, or a human-gated boundary.
+- Do not stop merely because review, verification, or release failed; keep routing those failures back through orchestrator-managed remediation unless the report names a human blocker.
 
 ## Completion
 
-Stop only when the queue is empty or a documented runtime-contract stop condition occurs. Do not loop indefinitely past the orchestration safety cap.
+Stop only when the queue is empty, lease ownership must transfer, or a documented human-gated runtime-contract stop condition occurs. Do not loop indefinitely past the orchestration safety cap; treat that cap as a human review boundary rather than an automatic workflow failure.

@@ -80,19 +80,20 @@ description: Coordinate the Codex-native Ralph harness loop by managing the depe
    - `worker`: `prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`
 25. Pass each worker a single spec, a single worktree path, and a single report path.
 26. Wait for completed workers, close that worker thread, and validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Commit Evidence` plus a clean worktree.
-27. Synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before mutating shared state.
-28. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
-29. Append candidate learnings from worker reports to `.ralph/context/learning-log.jsonl`.
-30. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
-31. Write `.ralph/reports/<run-id>/orchestrator.md`.
-32. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
-33. Update `.ralph/state/workflow-state.json`.
-34. Update `.ralph/state/spec-queue.json`.
-35. Update `.ralph/state/orchestrator-lease.json` heartbeat or release state as needed.
-36. Regenerate `.ralph/state/workflow-state.md`.
-37. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
-38. After an interrupt spec is released, pop `resume_spec_stack`, thaw normal admissions, restore paused specs and tasks, and continue dispatching.
-39. Continue dispatching until the queue is empty or a runtime-contract stop condition occurs.
+27. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Requeue the spec for the next fixing role unless the report names an explicit human-gated blocker.
+28. Synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before mutating shared state.
+29. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
+30. Append candidate learnings from worker reports to `.ralph/context/learning-log.jsonl`.
+31. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
+32. Write `.ralph/reports/<run-id>/orchestrator.md`.
+33. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
+34. Update `.ralph/state/workflow-state.json`.
+35. Update `.ralph/state/spec-queue.json`.
+36. Update `.ralph/state/orchestrator-lease.json` heartbeat or release state as needed.
+37. Regenerate `.ralph/state/workflow-state.md`.
+38. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
+39. After an interrupt spec is released, pop `resume_spec_stack`, thaw normal admissions, restore paused specs and tasks, and continue dispatching.
+40. Continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated stop condition occurs.
 
 ## Outputs
 
@@ -108,4 +109,4 @@ description: Coordinate the Codex-native Ralph harness loop by managing the depe
 
 ## Stop Condition
 
-Stop only when a runtime-contract stop condition is reached or the orchestration safety cap of 200 worker handoffs is hit.
+Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.

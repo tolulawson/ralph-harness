@@ -86,6 +86,7 @@ PY
 scripts/render-release-notes.sh "v$(tr -d '[:space:]' < VERSION)" >/dev/null
 scripts/verify-installation-contract.sh
 scripts/verify-atomic-commit-contract.sh
+scripts/verify-human-stop-boundaries.sh
 scripts/verify-interruption-contract.sh
 scripts/verify-multi-spec-contract.sh
 scripts/verify-parallel-research-contract.sh

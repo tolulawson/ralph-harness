@@ -77,6 +77,7 @@ RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     'agent_type = "explorer"',
     'agent_type = "worker"',
     "Child roles must not spawn nested workers.",
+    "Review, verification, and release failures are remediation signals, not stop conditions.",
     "single-writer lease",
     "orchestrator-intents.jsonl",
     "git worktree",
@@ -85,6 +86,7 @@ ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
     "`fork_context = true`",
     "`agent_type` mapping",
     "close that worker thread",
+    "Do not stop merely because review, verification, or release failed.",
     "durable intent",
     "worktree",
 )

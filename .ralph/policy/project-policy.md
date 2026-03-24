@@ -97,6 +97,7 @@
 - The parent orchestrator should use `agent_type = "explorer"` for analysis-heavy roles and `agent_type = "worker"` for delivery-heavy roles.
 - Child roles must not spawn nested workers.
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
+- `review_failed`, `verification_failed`, and `release_failed` must route back through orchestrator-managed remediation unless the report names an explicit human-gated blocker.
 - Workers must not update shared workflow state, queue state, lease state, state Markdown, or orchestrator event logs directly.
 - Workers execute from their assigned spec worktree and may write spec-local artifacts there, but canonical control-plane updates remain orchestrator-mediated.
 - Review and verification should treat the assigned spec branch or PR as the unit under inspection.
