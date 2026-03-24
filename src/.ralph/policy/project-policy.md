@@ -37,6 +37,7 @@
 - Admitted specs must execute in dedicated git worktrees under `.ralph/worktrees/`
 - The canonical checkout is reserved for scheduler state, projections, logs, lease state, and durable inbox processing
 - Atomic commits required before task handoff: yes
+- Quality Gate evidence required before review handoff: yes
 - Clean worktree required before review, verification, or release: yes
 - Base branch: `main`
 - Direct-to-main: disabled by default
@@ -99,5 +100,6 @@
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - Workers must not update shared workflow state, queue state, lease state, state Markdown, or orchestrator event logs directly.
 - Workers execute from their assigned spec worktree and may write spec-local artifacts there, but canonical control-plane updates remain orchestrator-mediated.
+- Handoffs past implementation must preserve `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) in the latest relevant report.
 - Review and verification should treat the assigned spec branch or PR as the unit under inspection.
-- Review should treat missing commit evidence, dirty handoffs, or obviously mixed-scope task commits as findings.
+- Review should treat missing or failed `Quality Gate`, missing commit evidence, dirty handoffs, or obviously mixed-scope task commits as findings.

@@ -41,6 +41,7 @@ Interpret an installed Ralph harness in this order:
 - All role configs run with `sandbox_mode = "danger-full-access"` for maximum execution latitude.
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
 - Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
+- Handoffs past implementation must include `Quality Gate` evidence in the latest relevant worker report.
 - No role besides the orchestrator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
 - Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
 
@@ -79,7 +80,7 @@ Interpret an installed Ralph harness in this order:
 21. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, and next action
 22. spawn bounded non-research workers only for admitted specs that do not already have a worker in flight
 23. assign each worker a single spec, a single worktree path, a single report path, `fork_context = true`, and the role-appropriate `agent_type`
-24. wait for completed workers, close their worker threads, and validate outputs from the assigned spec worktrees
+24. wait for completed workers, close their worker threads, and validate outputs from the assigned spec worktrees, including `Quality Gate`, `Commit Evidence`, and clean-worktree handoff requirements
 25. synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before updating shared state
 26. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
 27. write the orchestrator report

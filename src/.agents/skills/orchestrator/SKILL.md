@@ -79,7 +79,7 @@ description: Coordinate the Codex-native Ralph harness loop by managing the depe
    - `explorer`: `plan_check`, `review`, and optionally `research` when analysis depth is the primary concern
    - `worker`: `prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`
 25. Pass each worker a single spec, a single worktree path, and a single report path.
-26. Wait for completed workers, close that worker thread, and validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Commit Evidence` plus a clean worktree.
+26. Wait for completed workers, close that worker thread, and validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Quality Gate`, `Commit Evidence`, and a clean worktree.
 27. Synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before mutating shared state.
 28. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
 29. Append candidate learnings from worker reports to `.ralph/context/learning-log.jsonl`.

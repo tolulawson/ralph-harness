@@ -18,7 +18,7 @@ When resuming the harness:
 14. treat `workflow-state.json`, `spec-queue.json`, `orchestrator-lease.json`, and `task-state.json` as canonical machine state
 15. verify `workflow-state.md` and `specs/INDEX.md` still match their canonical JSON projections
 16. verify admitted spec worktrees still match their queue branches
-17. confirm review, verification, and release handoffs are on clean spec worktrees and the latest relevant worker report includes `Commit Evidence`
+17. confirm review, verification, and release handoffs are on clean spec worktrees and the latest relevant worker report includes `Quality Gate` plus `Commit Evidence`
 18. check `active_spec_ids`, `active_interrupt_spec_id`, `resume_spec_stack`, `interruption_state`, durable intents, and lease health before selecting the next spec
 19. confirm deprecated compatibility mirrors in `workflow-state.json` still match slot `0` or the most recently dispatched spec when they are present
 20. choose the next role from spec status, task lifecycle state, interruption state, dependency state, and PR state

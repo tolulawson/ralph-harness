@@ -4,6 +4,43 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.8.3 - 2026-03-24
+
+### Summary
+
+Ralph now enforces a pre-review quality boundary for implementation handoffs, combining a conditional React Effects audit with an always-on lightweight deslopify pass.
+
+This patch adds two shipped helper skills (`react-effects-without-effects` and `deslopify-lite`), requires explicit `Quality Gate` evidence in role reports, and blocks progression past implementation when that evidence is missing or failed.
+
+### Highlights
+
+- Added shipped helper skill `src/.agents/skills/react-effects-without-effects/` with a decision table for replacing unnecessary `useEffect` logic.
+- Added shipped helper skill `src/.agents/skills/deslopify-lite/` for a focused anti-slop sweep (type strictness, SRP, fail-fast, DRY, dead code/workarounds).
+- Updated implement role policy so React audits are mandatory when React scope changes, and deslopify-lite is mandatory for every implementation handoff.
+- Added a required `Quality Gate` section to the shipped role report template with `React Effects Audit` and `Deslopify Lite` status fields.
+- Hardened review, orchestrator, and execute preflight contracts so missing or failed quality-gate evidence is treated as a blocking finding.
+- Expanded contract verification to assert new quality-gate wiring and helper-skill presence.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.8.3` as the default public install or upgrade reference.
+- Fresh installs now include both new helper skills and the `Quality Gate` report contract.
+- Existing installs can upgrade normally to pick up the new boundary enforcement and report schema expectations.
+
+### Validation And Release Workflow
+
+- Verified locally with `bash scripts/verify-atomic-commit-contract.sh`.
+- Verified full contract suite and smoke fixtures with `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Implement role guidance: `src/.agents/skills/implement/SKILL.md`
+- Review role guidance: `src/.agents/skills/review/SKILL.md`
+- Orchestrator guidance: `src/.agents/skills/orchestrator/SKILL.md`
+- Report template: `src/.ralph/templates/role-report-template.md`
+- Execute preflight: `skills/ralph-execute/SKILL.md`
+- Release asset: `ralph-harness-v0.8.3.tar.gz`
+
 ## v0.8.2 - 2026-03-21
 
 ### Summary

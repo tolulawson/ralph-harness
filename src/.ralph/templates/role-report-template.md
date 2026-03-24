@@ -16,6 +16,14 @@
 
 - {{verification_1}}
 
+## Quality Gate
+
+- React Effects Audit: `{{react_effects_audit}}`
+- React files checked: {{react_files_checked}}
+- React audit notes: {{react_audit_notes}}
+- Deslopify Lite: `{{deslopify_lite_status}}`
+- Deslopify notes: {{deslopify_lite_notes}}
+
 ## Commit Evidence
 
 - Head commit: `{{head_commit_sha}}`

@@ -4,7 +4,7 @@ Ralph turns Codex from a one-shot coding assistant into a repo-resident engineer
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.8.2`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, accept new user requests through a durable intent inbox while work is already running, and coordinate concurrent threads through a single-writer lease.
+As of `v0.8.3`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, accept new user requests through a durable intent inbox while work is already running, and coordinate concurrent threads through a single-writer lease.
 
 ## Why People Use Ralph
 
@@ -114,7 +114,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.8.2` as the default public reference right now
+- use `v0.8.3` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
@@ -199,7 +199,7 @@ That means you can ask Ralph to start another spec while other work is already i
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.8.2`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.8.3`, the shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
 - runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
@@ -273,4 +273,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.2`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.3`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

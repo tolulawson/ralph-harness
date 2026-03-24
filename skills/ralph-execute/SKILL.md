@@ -53,6 +53,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - the lease file and durable intents file must exist and parse
    - admitted specs must have valid worktrees whose branches match the active queue entries
    - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
+   - the latest relevant worker report must include `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) before work advances past implementation
    - the latest relevant worker report must include `Commit Evidence` for the checkpoint under handoff before work advances past implementation
 5. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
 6. Read the latest report and admitted spec artifacts.
@@ -90,6 +91,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Do not continue execution from stale projections or mixed-version runtime state.
 - Keep all parallelism bounded to same-batch `research` plus the scheduler's admitted-spec execution window.
 - Keep all role configs at full permissions (`danger-full-access`).
+- Do not advance review, verification, or release from a report that lacks `Quality Gate` evidence.
 - Do not advance review, verification, or release from a dirty spec worktree or a report that lacks checkpoint traceability.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
 - Do not stop after a single handoff unless the runtime contract says to stop.
