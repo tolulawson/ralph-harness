@@ -1,0 +1,253 @@
+{
+  "schema_version": "1.0.0",
+  "loaders": {
+    "managed_block_start": "<!-- RALPH-HARNESS:START -->",
+    "managed_block_end": "<!-- RALPH-HARNESS:END -->",
+    "read_order": [
+      ".ralph/constitution.md",
+      ".ralph/runtime-contract.md",
+      ".ralph/policy/runtime-overrides.md",
+      ".ralph/policy/project-policy.md",
+      ".ralph/context/project-truths.md",
+      ".ralph/context/project-facts.json",
+      ".ralph/context/learning-summary.md",
+      ".ralph/state/workflow-state.json",
+      ".ralph/state/spec-queue.json",
+      ".ralph/state/orchestrator-lease.json",
+      ".ralph/state/worker-claims.json",
+      "recent tail of .ralph/state/orchestrator-intents.jsonl",
+      "report at last_report_path",
+      "active or admitted spec artifacts under specs/<spec-id>-<slug>/",
+      "specs/INDEX.md",
+      "tasks/todo.md",
+      "recent tail of .ralph/logs/events.jsonl"
+    ]
+  },
+  "roles": [
+    {
+      "id": "orchestrator",
+      "skill": "orchestrator",
+      "purpose": "Coordinate the scheduler, lease, claims, worktrees, reports, and shared-state synchronization.",
+      "classification": "orchestrator",
+      "allowed_writes": [
+        ".ralph/state/workflow-state.json",
+        ".ralph/state/spec-queue.json",
+        ".ralph/state/orchestrator-lease.json",
+        ".ralph/state/worker-claims.json",
+        ".ralph/state/orchestrator-intents.jsonl",
+        ".ralph/state/workflow-state.md",
+        ".ralph/logs/events.jsonl",
+        "specs/INDEX.md",
+        ".ralph/context/learning-log.jsonl",
+        ".ralph/context/learning-summary.md",
+        ".ralph/context/project-truths.md",
+        ".ralph/context/project-facts.json"
+      ],
+      "helper_skills": [
+        "reporting",
+        "state-sync",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": true
+    },
+    {
+      "id": "prd",
+      "skill": "prd",
+      "purpose": "Create or update the project PRD.",
+      "classification": "delivery",
+      "allowed_writes": [
+        "tasks/prd-*.md",
+        ".ralph/reports/<run-id>/<spec-key>/prd.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": true
+    },
+    {
+      "id": "specify",
+      "skill": "specify",
+      "purpose": "Write a numbered feature spec.",
+      "classification": "delivery",
+      "allowed_writes": [
+        "specs/<spec-key>/spec.md",
+        ".ralph/reports/<run-id>/<spec-key>/specify.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": true
+    },
+    {
+      "id": "research",
+      "skill": "research",
+      "purpose": "Produce spec-local research artifacts.",
+      "classification": "analysis",
+      "allowed_writes": [
+        "specs/<spec-key>/research.md",
+        ".ralph/reports/<run-id>/<spec-key>/research.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": true
+    },
+    {
+      "id": "plan",
+      "skill": "plan",
+      "purpose": "Produce the implementation plan for a numbered spec.",
+      "classification": "delivery",
+      "allowed_writes": [
+        "specs/<spec-key>/plan.md",
+        ".ralph/reports/<run-id>/<spec-key>/plan.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": true
+    },
+    {
+      "id": "task_gen",
+      "skill": "task-gen",
+      "purpose": "Generate dependency-ordered tasks and task-state for a numbered spec.",
+      "classification": "delivery",
+      "allowed_writes": [
+        "specs/<spec-key>/tasks.md",
+        "specs/<spec-key>/task-state.json",
+        ".ralph/reports/<run-id>/<spec-key>/task-gen.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": true
+    },
+    {
+      "id": "plan_check",
+      "skill": "plan-check",
+      "purpose": "Review spec, plan, research, and tasks for readiness.",
+      "classification": "analysis",
+      "allowed_writes": [
+        ".ralph/reports/<run-id>/<spec-key>/plan-check.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": true
+    },
+    {
+      "id": "implement",
+      "skill": "implement",
+      "purpose": "Execute one assigned task in the spec worktree.",
+      "classification": "delivery",
+      "allowed_writes": [
+        "product files in assigned worktree",
+        "spec-local implementation artifacts",
+        ".ralph/reports/<run-id>/<spec-key>/implement.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning",
+        "react-effects-without-effects",
+        "deslopify-lite"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": false
+    },
+    {
+      "id": "review",
+      "skill": "review",
+      "purpose": "Review assigned implementation or PR scope.",
+      "classification": "analysis",
+      "allowed_writes": [
+        ".ralph/reports/<run-id>/<spec-key>/review.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": false
+    },
+    {
+      "id": "verify",
+      "skill": "verify",
+      "purpose": "Run verification commands and record exact evidence.",
+      "classification": "delivery",
+      "allowed_writes": [
+        ".ralph/reports/<run-id>/<spec-key>/verify.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": false
+    },
+    {
+      "id": "release",
+      "skill": "release",
+      "purpose": "Finalize PR or merge outcomes and hand off release state.",
+      "classification": "delivery",
+      "allowed_writes": [
+        ".ralph/reports/<run-id>/<spec-key>/release.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": false
+    }
+  ],
+  "entrypoints": [
+    {
+      "id": "ralph-install",
+      "doc_path": "INSTALLATION.md",
+      "purpose": "Install Ralph into a repository.",
+      "scope": "public"
+    },
+    {
+      "id": "ralph-upgrade",
+      "doc_path": "UPGRADING.md",
+      "purpose": "Upgrade an installed Ralph runtime.",
+      "scope": "public"
+    },
+    {
+      "id": "ralph-prd",
+      "doc_path": "skills/ralph-prd/SKILL.md",
+      "purpose": "Create or update the project PRD.",
+      "scope": "public"
+    },
+    {
+      "id": "ralph-plan",
+      "doc_path": "skills/ralph-plan/SKILL.md",
+      "purpose": "Produce numbered specs, plans, and tasks.",
+      "scope": "public"
+    },
+    {
+      "id": "ralph-execute",
+      "doc_path": "skills/ralph-execute/SKILL.md",
+      "purpose": "Resume the Ralph runtime from disk.",
+      "scope": "public"
+    },
+    {
+      "id": "ralph-interrupt",
+      "doc_path": "skills/ralph-interrupt/SKILL.md",
+      "purpose": "Create an interrupt spec for an out-of-scope bug.",
+      "scope": "public"
+    }
+  ]
+}

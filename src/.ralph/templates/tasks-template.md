@@ -8,7 +8,7 @@
 - Kind: `{{kind}}`
 - Origin spec: `{{origin_spec_key}}`
 - Queue behavior: `{{queue_behavior}}`
-- Branch: `codex/{{spec_key}}`
+- Branch: `ralph/{{spec_key}}`
 - PR number: `{{pr_number}}`
 
 ## Phase 1

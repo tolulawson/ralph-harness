@@ -2,7 +2,7 @@
 
 Source of truth for an installed harness:
 
-1. `AGENTS.md` as the Codex loader
+1. `AGENTS.md` or `CLAUDE.md` as the Ralph loader surface
 2. `.ralph/constitution.md` as the project-specific mission layer
 3. `.ralph/runtime-contract.md` as the generic installed-runtime doctrine
 4. `.ralph/policy/runtime-overrides.md` as the preserved project-owned runtime extension layer

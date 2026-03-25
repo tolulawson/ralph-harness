@@ -8,7 +8,7 @@
 - Kind: `{{kind}}`
 - Origin spec: `{{origin_spec_key}}`
 - Trigger source: `{{triggered_by_role}}`
-- Branch: `codex/{{spec_key}}`
+- Branch: `ralph/{{spec_key}}`
 - PR number: `{{pr_number}}`
 
 ## Summary

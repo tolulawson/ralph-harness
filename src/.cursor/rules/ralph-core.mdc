@@ -1,0 +1,12 @@
+---
+description: Core Ralph runtime guidance for Cursor.
+alwaysApply: true
+---
+
+# Ralph Core
+
+- Read the managed Ralph loader block in `AGENTS.md` before doing substantial work.
+- Treat `.ralph/` as the canonical runtime doctrine and state surface.
+- Use `.ralph/state/worker-claims.json` as the shared worker-claims registry for cross-runtime execution.
+- Use `.cursor/rules/` only as Cursor-native wrappers around the shared Ralph contract, not as a divergent workflow definition.
+- When a task references a Ralph role or entrypoint, route back to `.agents/skills/` and the public `skills/ralph-*` docs.

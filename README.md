@@ -1,10 +1,10 @@
 # Ralph Harness
 
-Ralph turns Codex from a one-shot coding assistant into a repo-resident engineering loop with durable state, explicit planning, structured handoffs, and resumable execution.
+Ralph turns a coding agent into a repo-resident engineering loop with durable state, explicit planning, structured handoffs, and resumable execution.
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.8.4`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, accept new user requests through a durable intent inbox while work is already running, and coordinate concurrent threads through a single-writer lease.
+As of `v0.9.0`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a single-writer lease, and let different supported runtimes claim different admitted spec slots through a shared worker-claims file.
 
 ## Why People Use Ralph
 
@@ -17,10 +17,10 @@ Ralph is for teams and solo builders who want:
 
 What you get:
 
-- a thin loader in `AGENTS.md` that tells Codex where truth lives
+- thin loader blocks in `AGENTS.md` and `CLAUDE.md` that point every supported agent at the same Ralph truth
 - a project constitution and runtime contract under `.ralph/`
 - a preserved runtime-override surface for project-specific rules without forking the base contract
-- a role-based control plane in `.codex/` and `.agents/skills/`
+- role and adapter packs in `.codex/`, `.claude/`, `.cursor/`, and `.agents/skills/`
 - canonical workflow and queue state on disk
 - numbered specs, plans, tasks, reports, and logs that survive restarts
 - bounded parallel `research`, hard spec dependencies, durable intent intake, and per-spec worktree execution
@@ -114,16 +114,17 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.8.4` as the default public reference right now
+- use `v0.9.0` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
+- install and upgrade all supported runtime adapter packs together rather than selecting one agent up front
 - do not upgrade over a healthy live orchestrator lease
 - expect legacy installs to migrate into spec-scoped worker reports and per-spec worktree metadata
 
 ## For LLMs
 
-When Codex or another LLM installs or upgrades Ralph, the important rules are:
+When an LLM installs or upgrades Ralph, the important rules are:
 
 - use `src/` as the installable scaffold source
 - never copy the repo-root dogfood runtime into target repositories
@@ -131,6 +132,7 @@ When Codex or another LLM installs or upgrades Ralph, the important rules are:
 - use `src/upgrade-manifest.txt` for upgrades
 - treat `skills/` as the public entry surface
 - preserve user-owned config in installed `.codex/config.toml` during upgrade while still applying Ralph-managed entries
+- install or refresh `AGENTS.md`, `CLAUDE.md`, `.codex/`, `.claude/`, and `.cursor/` together so any supported runtime can pick up the repo without a separate install step
 
 The source-of-truth split in this repository is:
 
@@ -140,8 +142,7 @@ The source-of-truth split in this repository is:
 
 ## Architectural Overview
 
-Ralph keeps the orchestrator in charge of shared state. Normal specs enter a FIFO admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns lease coordination, projections, logs, and queue state. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec.
-Worker runs are forked from the orchestrator context so noisy role-specific reasoning stays isolated, and only validated outputs are promoted back into shared runtime artifacts.
+Ralph keeps the orchestrator in charge of shared state. Normal specs enter a FIFO admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns lease coordination, projections, logs, queue state, and reconciliation. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec. Supported runtimes may use native subagents when available, but correctness comes from the lease plus worker-claims contract, not from any one tool's delegation primitive.
 
 ```mermaid
 flowchart TD
@@ -153,7 +154,7 @@ flowchart TD
     F --> G["Task generation"]
     G --> H["Lease + durable intents"]
     H --> I["Admit bounded normal specs"]
-    I --> J["Per-spec git worktrees"]
+    I --> J["Worker claims + per-spec git worktrees"]
     J --> K["Implement / Review / Verify / Release"]
     K --> L["Synchronize canonical state"]
     L --> M["Advance queue"]
@@ -173,11 +174,12 @@ In practice, that means:
 - `task-state.json` is the canonical task lifecycle record
 - the orchestrator chooses the queue head, admitted spec window, and next task
 - `.ralph/state/orchestrator-lease.json` elects a temporary single-writer leader
+- `.ralph/state/worker-claims.json` lets Codex, Claude, or Cursor claim different admitted slots safely
 - `.ralph/state/orchestrator-intents.jsonl` records cross-thread requests durably
 - admitted specs run in dedicated git worktrees under `.ralph/worktrees/`
 - worker reports live at `.ralph/reports/<run-id>/<spec-key>/<role>.md`, while the orchestrator report stays at `.ralph/reports/<run-id>/orchestrator.md`
 - project-specific runtime additions belong in `.ralph/policy/runtime-overrides.md`, while `.ralph/runtime-contract.md` stays scaffold-owned
-- orchestrator-spawned workers run with forked context semantics (`fork_context = true`)
+- supported runtimes may use native subagents, but a plain runtime session may also execute a claimed slot directly
 - implementation, review, verification, and release run at most one worker per admitted spec
 - all role configs run with `sandbox_mode = "danger-full-access"`
 - if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
@@ -199,7 +201,7 @@ That means you can ask Ralph to start another spec while other work is already i
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.8.4`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.9.0`, the shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
 - runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
@@ -215,8 +217,13 @@ An installed Ralph repo gets:
 - `.ralph/constitution.md`
 - `.ralph/runtime-contract.md`
 - `.ralph/policy/project-policy.md`
+- `AGENTS.md`
+- `CLAUDE.md`
 - `.codex/config.toml`
 - `.codex/agents/*.toml`
+- `.claude/agents/*.md`
+- `.claude/commands/*.md`
+- `.cursor/rules/*.mdc`
 - `.agents/skills/`
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
@@ -241,7 +248,9 @@ src/generated-runtime-manifest.txt
 For contributors to the harness itself:
 
 ```text
-src/.codex/                  Shipped control plane
+src/.codex/                  Shipped Codex adapter pack
+src/.claude/                 Shipped Claude Code adapter pack
+src/.cursor/                 Shipped Cursor adapter pack
 src/.agents/skills/          Shipped runtime role skills
 src/.ralph/                  Shipped doctrine, policy, templates, and seed state
 
@@ -273,4 +282,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.8.4`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.9.0`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

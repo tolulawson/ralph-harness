@@ -1,6 +1,6 @@
-# Codex Loader For Ralph Harness Source Repo
+# Ralph Harness Loader Source Repo
 
-This repository is the source repository for the Codex-native Ralph harness.
+This repository is the source repository for the Ralph multi-agent runtime.
 
 Its ground truth is fixed:
 
@@ -36,7 +36,7 @@ When the task is about improving the shipped harness scaffold, also read:
 
 ## Purpose Of This File
 
-`AGENTS.md` is the Codex-facing loader. It is intentionally thin.
+`AGENTS.md` is a loader surface. It is intentionally thin.
 
 - The durable harness doctrine lives in `.ralph/constitution.md`.
 - The generic dogfood runtime doctrine lives in `.ralph/runtime-contract.md`.
@@ -56,10 +56,10 @@ Do not treat conversational memory as the source of truth when the harness files
 
 The root `AGENTS.md` and root `.ralph/constitution.md` describe this source repository itself. The copies shipped from `src/` are generic installed-harness documents and may differ from the root source-repo documents.
 
-If this repository is installed into a project that already has its own `AGENTS.md`, keep that file and append a short Ralph harness section that points Codex to the files listed above.
+If this repository is installed into a project that already has its own loader files, keep those files and append or replace only the managed Ralph section that points the active coding agent to the files listed above.
 
 <!-- RALPH-HARNESS:START -->
-# Codex Loader For Ralph Harness
+# Ralph Harness Loader
 
 This file is part of the generic Ralph harness scaffold that gets installed into a target repository.
 
@@ -88,7 +88,7 @@ Before doing substantial work, read these files in order:
 
 ## Purpose Of This File
 
-`AGENTS.md` is the Codex-facing loader. It is intentionally thin.
+`AGENTS.md` is a loader surface. It is intentionally thin.
 
 - The project-specific Ralph mission lives in `.ralph/constitution.md`.
 - The generic installed-runtime doctrine lives in `.ralph/runtime-contract.md`.

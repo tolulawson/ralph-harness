@@ -13,6 +13,7 @@ INSTALLATION_MD="INSTALLATION.md"
 INSTALL_MANIFEST="src/install-manifest.txt"
 GENERATED_MANIFEST="src/generated-runtime-manifest.txt"
 SRC_AGENTS="src/AGENTS.md"
+SRC_CLAUDE="src/CLAUDE.md"
 INSTALL_SKILL="skills/ralph-install/SKILL.md"
 VERSION_FILE="VERSION"
 
@@ -20,6 +21,7 @@ VERSION_FILE="VERSION"
 [[ -f "$INSTALL_MANIFEST" ]] || fail "missing $INSTALL_MANIFEST"
 [[ -f "$GENERATED_MANIFEST" ]] || fail "missing $GENERATED_MANIFEST"
 [[ -f "$SRC_AGENTS" ]] || fail "missing $SRC_AGENTS"
+[[ -f "$SRC_CLAUDE" ]] || fail "missing $SRC_CLAUDE"
 [[ -f "$INSTALL_SKILL" ]] || fail "missing $INSTALL_SKILL"
 [[ -f "$VERSION_FILE" ]] || fail "missing $VERSION_FILE"
 
@@ -52,6 +54,7 @@ for required in \
   '.ralph/state/workflow-state.json' \
   '.ralph/state/spec-queue.json' \
   '.ralph/state/orchestrator-lease.json' \
+  '.ralph/state/worker-claims.json' \
   '.ralph/state/orchestrator-intents.jsonl' \
   'latest report referenced by `last_report_path`' \
   '.ralph/context/learning-log.jsonl'
@@ -60,23 +63,38 @@ do
 done
 
 for required in \
-  '`fork_context = true`' \
-  'all role configs use `sandbox_mode = "danger-full-access"`'
+  '.codex/agents/' \
+  '.claude/agents/' \
+  '.claude/commands/' \
+  '.cursor/rules/' \
+  'worker-claims'
 do
-  grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing subagent isolation requirement: $required"
+  grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing multi-runtime requirement: $required"
 done
 
-grep -Fq -- 'the report at `last_report_path`' "$SRC_AGENTS" \
+grep -Fq -- 'last_report_path' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing last_report_path read-order entry"
 
 grep -Fq -- '.ralph/policy/runtime-overrides.md' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing runtime-overrides read-order entry"
+
+grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_AGENTS" \
+  || fail "src/AGENTS.md missing worker-claims read-order entry"
+
+grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_CLAUDE" \
+  || fail "src/CLAUDE.md missing worker-claims read-order entry"
 
 grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block start marker"
 
 grep -Fq -- '<!-- RALPH-HARNESS:END -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block end marker"
+
+grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_CLAUDE" \
+  || fail "src/CLAUDE.md missing managed block start marker"
+
+grep -Fq -- '<!-- RALPH-HARNESS:END -->' "$SRC_CLAUDE" \
+  || fail "src/CLAUDE.md missing managed block end marker"
 
 grep -Fq -- '`INSTALLATION.md` is the canonical install source of truth' "$INSTALL_SKILL" \
   || fail "ralph-install skill must defer to INSTALLATION.md"

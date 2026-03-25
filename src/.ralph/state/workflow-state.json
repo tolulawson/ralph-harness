@@ -1,5 +1,5 @@
 {
-  "schema_version": "3.0.0",
+  "schema_version": "4.0.0",
   "project_name": "replace-me",
   "active_epoch_id": null,
   "active_spec_ids": [],
@@ -16,6 +16,7 @@
   "active_pr_url": null,
   "queue_head_spec_id": null,
   "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+  "worker_claims_path": ".ralph/state/worker-claims.json",
   "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
   "lease_owner_token": null,
   "lease_heartbeat_at": null,
@@ -23,6 +24,7 @@
   "scheduler_summary": {
     "normal_execution_limit": 2,
     "active_spec_count": 0,
+    "active_claim_count": 0,
     "pending_intent_count": 0,
     "dependency_blocked_count": 0
   },

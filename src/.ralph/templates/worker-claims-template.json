@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "claims": [
+    {
+      "claim_id": "{{claim_id}}",
+      "spec_id": "{{spec_id}}",
+      "spec_key": "{{spec_key}}",
+      "task_id": "{{task_id}}",
+      "role": "{{role}}",
+      "runtime": "{{runtime}}",
+      "session_id": "{{session_id}}",
+      "thread_id": "{{thread_id}}",
+      "holder": "{{holder}}",
+      "execution_mode": "{{execution_mode}}",
+      "worktree_path": "{{worktree_path}}",
+      "status": "{{status}}",
+      "claimed_at": "{{claimed_at}}",
+      "heartbeat_at": "{{heartbeat_at}}",
+      "expires_at": "{{expires_at}}"
+    }
+  ]
+}

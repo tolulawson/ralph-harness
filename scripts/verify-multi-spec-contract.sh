@@ -29,6 +29,9 @@ grep -Fq -- 'depends_on_spec_ids' src/.ralph/runtime-contract.md \
 grep -Fq -- 'orchestrator-lease.json' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention the orchestrator lease file"
 
+grep -Fq -- 'worker-claims.json' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must mention the worker claims file"
+
 grep -Fq -- 'orchestrator-intents.jsonl' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention the durable intents file"
 
@@ -62,11 +65,11 @@ queue = json.loads(Path("src/.ralph/state/spec-queue.json").read_text())
 lease = json.loads(Path("src/.ralph/state/orchestrator-lease.json").read_text())
 queue_template = json.loads(Path("src/.ralph/templates/spec-queue-template.json").read_text())
 
-for key in ("active_spec_ids", "active_interrupt_spec_id", "orchestrator_lease_path", "orchestrator_intents_path", "scheduler_summary"):
+for key in ("active_spec_ids", "active_interrupt_spec_id", "orchestrator_lease_path", "worker_claims_path", "orchestrator_intents_path", "scheduler_summary"):
     if key not in workflow:
         raise SystemExit(f"verify-multi-spec-contract: workflow-state missing {key}")
 
-for key in ("active_spec_ids", "active_interrupt_spec_id"):
+for key in ("active_spec_ids", "active_interrupt_spec_id", "worker_claims_path"):
     if key not in queue:
         raise SystemExit(f"verify-multi-spec-contract: spec-queue missing {key}")
 

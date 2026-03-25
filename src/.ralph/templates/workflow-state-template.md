@@ -15,6 +15,7 @@
 - Queue head spec: `{{queue_head_spec_id}}`
 - Active interrupt spec: `{{active_interrupt_spec_id}}`
 - Lease path: `{{orchestrator_lease_path}}`
+- Worker claims path: `{{worker_claims_path}}`
 - Intents path: `{{orchestrator_intents_path}}`
 - Lease owner token: `{{lease_owner_token}}`
 - Lease heartbeat: `{{lease_heartbeat_at}}`

@@ -2,7 +2,7 @@
 
 ## Branch
 
-`codex/{{spec_key}}`
+`ralph/{{spec_key}}`
 
 ## Pull Request
 

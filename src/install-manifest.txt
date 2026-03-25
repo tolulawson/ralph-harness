@@ -1,7 +1,11 @@
 # Installable scaffold paths copied from src/ into a target repository
 AGENTS.md
+CLAUDE.md
 .codex/config.toml
 .codex/agents/
+.claude/agents/
+.claude/commands/
+.cursor/rules/
 .agents/skills/
 .ralph/constitution.md
 .ralph/runtime-contract.md

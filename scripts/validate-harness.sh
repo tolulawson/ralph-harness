@@ -84,6 +84,7 @@ for path in [root / "README.md", root / "INSTALLATION.md", root / "UPGRADING.md"
 PY
 
 scripts/render-release-notes.sh "v$(tr -d '[:space:]' < VERSION)" >/dev/null
+python3 scripts/generate-runtime-adapters.py --check
 scripts/verify-installation-contract.sh
 scripts/verify-atomic-commit-contract.sh
 scripts/verify-human-stop-boundaries.sh

@@ -2,7 +2,7 @@
 
 ## Mission
 
-This repository is the source repository and reference implementation for a Codex-native Ralph harness that runs a durable queue-driven workflow.
+This repository is the source repository and reference implementation for a Ralph multi-agent runtime that runs a durable queue-driven workflow.
 
 The harness doctrine is split deliberately:
 
@@ -28,7 +28,7 @@ Interpret the source repository in this order:
 6. `.ralph/state/spec-queue.json`
 7. active spec artifacts and latest role reports
 
-`AGENTS.md` is only the Codex entrypoint that tells Codex where to read the real operating doctrine.
+`AGENTS.md` and `CLAUDE.md` are loader surfaces only. They tell the active coding agent where to read the real operating doctrine.
 
 In this source repository, scaffold behavior is edited in `src/` first. The repository root is the workshop and dogfood runtime for building and validating that scaffold.
 
@@ -79,7 +79,7 @@ Only neutral seed state and installable contracts belong in `src/.ralph/state/` 
 
 ## Resume Order
 
-Use this order whenever a fresh Codex run resumes work in this source repository:
+Use this order whenever a fresh coding-agent run resumes work in this source repository:
 
 1. `.ralph/constitution.md`
 2. `.ralph/runtime-contract.md`

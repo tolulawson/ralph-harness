@@ -1,6 +1,6 @@
 ---
 name: ralph-execute
-description: Resume an already-installed Ralph harness in the current repository by reading the constitution, runtime contract, policy, workflow state, spec queue, latest report, and recent events, then draining the queue until it is complete or a human-gated stop condition occurs.
+description: Resume an already-installed Ralph harness in the current repository by reading the constitution, runtime contract, policy, workflow state, spec queue, worker claims, latest report, and recent events, then draining the queue until it is complete or a human-gated stop condition occurs.
 ---
 
 # Ralph Execute
@@ -15,42 +15,44 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 
 - The current repository already has the Ralph harness installed.
 - You want an explicit named way to resume the harness.
-- You want Codex to read the current queue state and advance the next orchestrator step or role handoff.
+- You want the active coding agent to read the current queue state and advance the next orchestrator step or role handoff.
 
 ## Required Inputs
 
-- `AGENTS.md`
+- `AGENTS.md` or `CLAUDE.md`
 - `.ralph/constitution.md`
 - `.ralph/runtime-contract.md`
 - `.ralph/policy/runtime-overrides.md`
 - `.ralph/policy/project-policy.md`
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
+- `.ralph/state/worker-claims.json`
 
 ## Runtime Read Order
 
-1. `AGENTS.md`
+1. `AGENTS.md` or `CLAUDE.md`
 2. `.ralph/constitution.md`
 3. `.ralph/runtime-contract.md`
 4. `.ralph/policy/runtime-overrides.md`
 5. `.ralph/policy/project-policy.md`
 6. `.ralph/state/workflow-state.json`
 7. `.ralph/state/spec-queue.json`
-8. the file at `last_report_path`
-9. admitted or active spec artifacts under `specs/<spec-id>-<slug>/`
-10. a recent tail of `.ralph/logs/events.jsonl`
+8. `.ralph/state/worker-claims.json`
+9. the file at `last_report_path`
+10. admitted or active spec artifacts under `specs/<spec-id>-<slug>/`
+11. a recent tail of `.ralph/logs/events.jsonl`
 
 ## Workflow
 
 1. Verify the Ralph harness exists in the current repository.
-2. Read the constitution, runtime contract, runtime overrides, project policy, workflow state, and spec queue.
+2. Read the constitution, runtime contract, runtime overrides, project policy, workflow state, spec queue, and worker claims.
 3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
 4. Run a preflight consistency check before selecting the next role:
    - the runtime must already be on the current multi-spec, lease-capable state shape
    - `.ralph/state/workflow-state.md` must match the canonical JSON projection
    - `specs/INDEX.md` must match the canonical queue projection
    - `tasks.md` and `task-state.json` must agree semantically
-   - the lease file and durable intents file must exist and parse
+   - the lease file, worker claims file, and durable intents file must exist and parse
    - admitted specs must have valid worktrees whose branches match the active queue entries
    - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
    - the latest relevant worker report must include `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) before work advances past implementation
@@ -59,18 +61,18 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 6. Read the latest report and admitted spec artifacts.
 7. Read a recent tail of the event log rather than the full history.
 8. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
-9. Guide Codex to use built-in multi-agent orchestration to:
+9. Guide the active runtime to use Ralph's lease-plus-claims execution model to:
    - acquire a single-writer lease before mutating canonical shared state
    - append durable intents when another healthy lease-holder is already active
    - honor `depends_on_spec_ids` as hard admission blockers
    - admit bounded normal specs in FIFO order up to `queue_policy.normal_execution_limit`
    - ensure admitted specs have dedicated git worktrees
    - allow bounded same-batch `research` workers only before queue-head planning resumes
-   - spawn workers with `fork_context = true` to isolate worker context from orchestrator context
-   - map analysis-heavy roles to `agent_type = "explorer"` and delivery-heavy roles to `agent_type = "worker"`
+   - either dispatch native subagents when the current runtime supports them or expose admitted slots for claim in `.ralph/state/worker-claims.json`
+   - preserve the canonical analysis-heavy and delivery-heavy role classification
    - spawn at most one non-research worker per admitted spec at a time
-   - wait for completed workers
-   - close completed worker threads before mutating shared state
+   - wait for completed workers or released claims
+   - close completed worker threads before mutating shared state when native subagents were used
    - synchronize validated control-plane artifacts back into the canonical checkout
    - create an interrupt spec automatically for any failing out-of-scope bug
    - pause admitted normal specs at role boundaries and later resume them after the interrupt is released

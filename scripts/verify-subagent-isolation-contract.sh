@@ -12,35 +12,43 @@ fail() {
 for path in \
   src/.ralph/runtime-contract.md \
   src/.agents/skills/orchestrator/SKILL.md \
+  src/.ralph/state/worker-claims.json \
+  src/CLAUDE.md \
+  src/.claude/agents/orchestrator.md \
+  src/.claude/commands/ralph-execute.md \
+  src/.cursor/rules/ralph-core.mdc \
   src/.codex/config.toml \
   src/.codex/agents/orchestrator.toml
 do
   [[ -f "$path" ]] || fail "missing required file $path"
 done
 
-grep -Fq -- 'forked context semantics (`fork_context = true`)' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must require forked worker context"
+grep -Fq -- '.ralph/state/worker-claims.json' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must require the worker claims registry"
 
-grep -Fq -- 'agent_type = "explorer"' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must define explorer mapping"
+grep -Fq -- 'native runtime subagents' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must describe native runtime subagents"
 
-grep -Fq -- 'agent_type = "worker"' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must define worker mapping"
-
-grep -Fq -- 'Child roles must not spawn nested workers.' src/.ralph/runtime-contract.md \
+grep -Fq -- 'Child roles must not spawn nested workers' src/.ralph/runtime-contract.md \
   || fail "runtime contract must forbid nested worker fan-out"
 
-grep -Fq -- 'sandbox_mode = "danger-full-access"' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must document orchestrator full-permission mode"
+grep -Fq -- '.ralph/state/worker-claims.json' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must mention the worker claims registry"
 
-grep -Fq -- '`fork_context = true`' src/.agents/skills/orchestrator/SKILL.md \
-  || fail "orchestrator skill must document forked spawn policy"
+grep -Fq -- 'native subagents' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must mention native subagents"
 
-grep -Fq -- '`agent_type` mapping' src/.agents/skills/orchestrator/SKILL.md \
-  || fail "orchestrator skill must document role-to-agent mapping"
+grep -Fq -- '.ralph/state/worker-claims.json' src/CLAUDE.md \
+  || fail "CLAUDE.md must include worker-claims in the read order"
 
 grep -Fq -- 'close that worker thread' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must close worker threads after wait"
+
+grep -Fq -- '.ralph/state/worker-claims.json' src/.claude/agents/orchestrator.md \
+  || fail "Claude orchestrator agent must include worker claims in canonical inputs"
+
+grep -Fq -- 'worker-claims' src/.cursor/rules/ralph-core.mdc \
+  || fail "Cursor core rule must mention the shared Ralph claim contract"
 
 python3 - <<'PY'
 from pathlib import Path

@@ -8,26 +8,26 @@ This guide explains how to upgrade an already-installed Ralph harness in a targe
 
 The upgrade-safe scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.8.4`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.9.0`
 
 The canonical upgrade overwrite contract is:
 
-- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.8.4/src/upgrade-manifest.txt)
+- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.9.0/src/upgrade-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.8.4/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.9.0/VERSION)
 
 The installed harness metadata file is:
 
-- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.8.4/src/.ralph/harness-version.json)
+- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.9.0/src/.ralph/harness-version.json)
 
 The upgrade authority order is:
 
-1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.8.4/UPGRADING.md)
-2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.8.4/src/upgrade-manifest.txt)
-3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.8.4/VERSION)
-4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.8.4/src/.ralph/harness-version.json)
+1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.9.0/UPGRADING.md)
+2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.9.0/src/upgrade-manifest.txt)
+3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.9.0/VERSION)
+4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.9.0/src/.ralph/harness-version.json)
 
 ## Goal
 
@@ -45,13 +45,13 @@ After upgrade, the target repository should:
 - carry current live-state files for workflow, queue, lease, durable intents, projections, worktree coordination, and per-spec task lifecycle
 - normalize legacy worker report pointers from root-level `.ralph/reports/<run-id>/<role>.md` paths into spec-scoped `.ralph/reports/<run-id>/<spec-key>/<role>.md` paths when ownership is unambiguous
 - record the installed Ralph version tag, resolved commit, and migration-aware upgrade contract in `.ralph/harness-version.json`
-- preserve or refresh the managed Ralph block in `AGENTS.md`
+- preserve or refresh the managed Ralph blocks in `AGENTS.md` and `CLAUDE.md`
 
 An upgrade must not run over a healthy live orchestrator lease. If `.ralph/state/orchestrator-lease.json` still shows an active non-expired holder, stop and retry after the live run releases or times out. Expired or malformed held leases are treated as stale and should be recovered to `idle` during migration before shared-state rewrite continues.
 
 ## Default Reference
 
-Use the latest stable semver tag by default. The current stable example in this guide is `v0.8.4`.
+Use the latest stable semver tag by default. The current stable example in this guide is `v0.9.0`.
 
 If exact reproducibility matters more than readability, pin to a specific commit SHA instead and still record the human-facing tag when known.
 
@@ -65,22 +65,22 @@ Other public `ralph-*` skills such as `ralph-interrupt` are outside the upgrade 
 
 ## Upgrade Modes
 
-### Option 1: Ask Codex to upgrade the harness
+### Option 1: Ask your coding agent to upgrade the harness
 
-From inside the target repository, ask Codex to upgrade from a tagged release:
+From inside the target repository, ask your coding agent to upgrade from a tagged release:
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the source repository.
-Upgrade this repository's installed Ralph harness to tag v0.8.4 using UPGRADING.md as the authoritative guide.
+Upgrade this repository's installed Ralph harness to tag v0.9.0 using UPGRADING.md as the authoritative guide.
 Run the upgrade preflight first so direct edits to the installed .ralph/runtime-contract.md are detected before any scaffold-owned files are overwritten.
 If the preflight reports drift in .ralph/runtime-contract.md, move those project-specific runtime rules into .ralph/policy/runtime-overrides.md before continuing.
 Only overwrite the scaffold-owned paths listed in src/upgrade-manifest.txt.
 Preserve project-owned files under .ralph/policy/, .ralph/context/, .ralph/reports/, and .ralph/logs/, and preserve spec prose unless a named migration step below says otherwise.
-Refresh the managed Ralph block inside AGENTS.md instead of replacing the whole file.
-Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, lease state, durable intents, task-state, projection files, worktree metadata, and .codex/config.toml are upgraded together.
+Refresh the managed Ralph blocks inside AGENTS.md and CLAUDE.md instead of replacing the whole files.
+Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, lease state, worker claims, durable intents, task-state, projection files, worktree metadata, and the runtime adapter packs are upgraded together.
 If .ralph/state/orchestrator-lease.json still shows a healthy held lease, stop instead of upgrading over live orchestration.
 If migration cannot infer historic task lifecycle safely, stop and report the ambiguous spec instead of guessing.
-Update .ralph/harness-version.json so it records version 0.8.4, tag v0.8.4, the source repo, the resolved commit used for this upgrade, upgrade_contract_version 7, the scaffold runtime-contract baseline hash, and the canonical runtime-overrides path.
+Update .ralph/harness-version.json so it records version 0.9.0, tag v0.9.0, the source repo, the resolved commit used for this upgrade, upgrade_contract_version 8, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed runtime adapters, and the preserved branch prefix.
 Run the upgrade verification checklist from UPGRADING.md before finishing.
 ```
 
@@ -90,7 +90,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.8.4
+SOURCE_REF=v0.9.0
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 
@@ -117,7 +117,11 @@ Then refresh the managed Ralph block in `AGENTS.md`, update `.ralph/harness-vers
 Upgrade only the paths listed in `src/upgrade-manifest.txt`:
 
 - `AGENTS.md` only for the managed Ralph block between `<!-- RALPH-HARNESS:START -->` and `<!-- RALPH-HARNESS:END -->`
+- `CLAUDE.md` only for the managed Ralph block between `<!-- RALPH-HARNESS:START -->` and `<!-- RALPH-HARNESS:END -->`
 - `.codex/agents/`
+- `.claude/agents/`
+- `.claude/commands/`
+- `.cursor/rules/`
 - `.agents/skills/`
 - `.ralph/runtime-contract.md`
 - `.ralph/templates/`
@@ -141,6 +145,7 @@ The migration phase may update only Ralph-owned live state and projections, plus
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
 - `.ralph/state/orchestrator-lease.json`
+- `.ralph/state/worker-claims.json`
 - `.ralph/state/orchestrator-intents.jsonl`
 - `.ralph/state/workflow-state.md`
 - `specs/INDEX.md`
@@ -169,7 +174,7 @@ The Ralph-owned section in an installed `AGENTS.md` must live between these mark
 <!-- RALPH-HARNESS:END -->
 ```
 
-If the target repository already has an `AGENTS.md`, preserve its non-Ralph content and replace only the managed block.
+If the target repository already has an `AGENTS.md` or `CLAUDE.md`, preserve non-Ralph content and replace only the managed Ralph block.
 
 If no managed block exists yet, append one at the end of the file.
 
@@ -183,6 +188,7 @@ Older installs or partial upgrades may be missing one or more of:
 - `.codex/agents/*.toml`
 - legacy repo-root `agents/*.toml`
 - `.ralph/state/orchestrator-lease.json`
+- `.ralph/state/worker-claims.json`
 - `.ralph/state/orchestrator-intents.jsonl`
 - `resume_spec_stack` or `interruption_state` in workflow state
 - interrupt metadata and `task_state_path` in queue entries
@@ -211,7 +217,7 @@ The migration phase must:
 - create or normalize `.ralph/state/orchestrator-lease.json` and `.ralph/state/orchestrator-intents.jsonl`
 - stop immediately when `.ralph/state/orchestrator-lease.json` still shows a healthy non-expired holder for another live run
 - recover stale held lease state back to `idle` when the lease is expired, malformed, or otherwise no longer healthy
-- enforce the subagent isolation contract in runtime files, including `fork_context = true` worker delegation semantics
+- enforce the lease-plus-claims execution contract in runtime files, including the cross-runtime worker-claim registry
 - backfill default worktree metadata, create `.ralph/worktrees/`, and reassign safely-derivable duplicate worktree names or paths onto unique `.ralph/worktrees/<spec-key>` slots
 - stop with a repair error when multiple specs already claim the same branch name or when worktree collisions are not safely derivable
 - normalize legacy spec-owned worker report pointers into spec-scoped report paths by copying the historic report file into `.ralph/reports/<run-id>/<spec-key>/<role>.md` when ownership is clear
@@ -261,7 +267,7 @@ The runtime is not truthful again until:
 
 After copying the upgrade surface and running migration, update:
 
-- the managed Ralph block in `AGENTS.md`
+- the managed Ralph blocks in `AGENTS.md` and `CLAUDE.md`
 - `.ralph/harness-version.json`
 
 Set at minimum:
@@ -273,8 +279,10 @@ Set at minimum:
 - `upgrade_contract_version`
 - `runtime_contract_baseline_sha256`
 - `runtime_overrides_path`
+- `runtime_adapters`
+- `branch_prefix`
 
-For the current migration-aware contract, `upgrade_contract_version` must equal `7`.
+For the current migration-aware contract, `upgrade_contract_version` must equal `8`.
 
 ## Verification After Upgrade
 
@@ -283,21 +291,26 @@ At the end of the upgrade, verify:
 - every path listed in `src/upgrade-manifest.txt` exists in the target repo
 - `.codex/config.toml` exists, parses, and enables Codex multi-agent
 - `.codex/agents/*.toml` exist and parse
+- `.claude/agents/` exists
+- `.claude/commands/` exists
+- `.cursor/rules/` exists
 - `.ralph/runtime-contract.md` exists
 - `.ralph/policy/runtime-overrides.md` exists and preserves project-specific runtime additions
 - `.ralph/harness-version.json` exists, parses, and records the selected tag plus resolved commit
-- `.ralph/harness-version.json` records `upgrade_contract_version` `7`
+- `.ralph/harness-version.json` records `upgrade_contract_version` `8`
 - `.ralph/harness-version.json` records the current `.ralph/runtime-contract.md` baseline hash and the canonical runtime-overrides path
+- `.ralph/harness-version.json` records the installed runtime adapters and the preserved branch prefix
 - `python3 scripts/check-installed-runtime-state.py --repo /path/to/target-repo` passes
 - `.codex/config.toml` preserves user-owned settings while containing the current Ralph-managed feature flag and role mappings
 - `.codex/config.toml` enforces `agents.max_depth <= 2`
 - `.codex/agents/*.toml` all use `sandbox_mode = "danger-full-access"`
-- runtime contract and orchestrator skill both enforce forked delegation (`fork_context = true`) and role-based `agent_type` mapping
+- `.ralph/state/worker-claims.json` exists, parses, and carries the shared claim registry
+- runtime contract and orchestrator skill both enforce the lease-plus-claims execution model
 - queue entries now carry research metadata, and existing task-state files are normalized to the current schema
 - `.ralph/state/orchestrator-lease.json` is not left in a stale held state
 - no two specs claim the same `branch_name`, `worktree_name`, or `worktree_path`
 - legacy worker reports have been normalized into spec-scoped report paths when the upgrade could attribute them safely
-- the managed Ralph block exists in `AGENTS.md`
+- the managed Ralph blocks exist in `AGENTS.md` and `CLAUDE.md`
 - project-owned files under `.ralph/policy/`, `.ralph/context/`, `.ralph/reports/`, and `.ralph/logs/` were preserved unless a named migration step intentionally changed them
 - install and upgrade contracts still agree with the current tagged release
 

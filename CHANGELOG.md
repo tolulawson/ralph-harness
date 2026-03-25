@@ -4,6 +4,42 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.9.0 - 2026-03-25
+
+### Summary
+
+Ralph is now scaffolded as an agent-agnostic multi-runtime harness instead of a Codex-only control plane.
+
+This release keeps the shared Ralph doctrine and queue semantics under `.ralph/`, adds first-class Claude Code and Cursor adapter packs alongside the existing Codex pack, and introduces a worker-claims registry so different supported runtimes can claim different admitted spec slots safely while one orchestrator still owns shared-state reconciliation.
+
+### Highlights
+
+- Rewrote the shipped runtime contract, project policy, public docs, and loaders around a runtime-neutral lease-plus-claims execution model.
+- Added a canonical agent registry at `src/.ralph/agent-registry.json` plus generated adapter packs for `AGENTS.md`, `CLAUDE.md`, `.claude/agents/`, `.claude/commands/`, and `.cursor/rules/`.
+- Added `.ralph/state/worker-claims.json` and the corresponding template and migration logic for cross-runtime slot claiming.
+- Switched new scaffold branch defaults from `codex/<spec-key>` to `ralph/<spec-key>` while preserving legacy branch prefixes during upgrade.
+- Extended install and upgrade manifests so all supported adapter packs ship together by default.
+- Added claim operations to `scripts/orchestrator-coordination.py` and generalized validation to cover the generated runtime adapters.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.9.0` as the default public install or upgrade reference.
+- Fresh installs now include synchronized `AGENTS.md` and `CLAUDE.md` loader blocks, the Codex adapter pack, the Claude adapter pack, the Cursor adapter pack, and the shared worker-claims state file.
+- Upgrades now migrate installed repos to `upgrade_contract_version` `8`, preserve the effective branch prefix in `.ralph/harness-version.json`, and add the new multi-runtime adapter metadata.
+
+### Validation And Release Workflow
+
+- Verified locally with `python3 scripts/generate-runtime-adapters.py --check`.
+- Verified the updated contract suite and smoke fixtures with `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Agent registry: `src/.ralph/agent-registry.json`
+- Worker claims state: `src/.ralph/state/worker-claims.json`
+- Runtime coordination helper: `scripts/orchestrator-coordination.py`
+- Release asset: `ralph-harness-v0.9.0.tar.gz`
+
 ## v0.8.4 - 2026-03-24
 
 ### Summary

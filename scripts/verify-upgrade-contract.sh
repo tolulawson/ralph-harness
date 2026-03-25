@@ -16,6 +16,7 @@ HARNESS_VERSION_JSON="src/.ralph/harness-version.json"
 RUNTIME_OVERRIDES_MD="src/.ralph/policy/runtime-overrides.md"
 UPGRADE_SKILL="skills/ralph-upgrade/SKILL.md"
 SRC_AGENTS="src/AGENTS.md"
+SRC_CLAUDE="src/CLAUDE.md"
 MIGRATION_SCRIPT="scripts/migrate-installed-runtime.py"
 CHECK_SCRIPT="scripts/check-installed-runtime-state.py"
 PREFLIGHT_SCRIPT="scripts/check-upgrade-surface.py"
@@ -27,6 +28,7 @@ PREFLIGHT_SCRIPT="scripts/check-upgrade-surface.py"
 [[ -f "$RUNTIME_OVERRIDES_MD" ]] || fail "missing $RUNTIME_OVERRIDES_MD"
 [[ -f "$UPGRADE_SKILL" ]] || fail "missing $UPGRADE_SKILL"
 [[ -f "$SRC_AGENTS" ]] || fail "missing $SRC_AGENTS"
+[[ -f "$SRC_CLAUDE" ]] || fail "missing $SRC_CLAUDE"
 [[ -f "$MIGRATION_SCRIPT" ]] || fail "missing $MIGRATION_SCRIPT"
 [[ -f "$CHECK_SCRIPT" ]] || fail "missing $CHECK_SCRIPT"
 [[ -f "$PREFLIGHT_SCRIPT" ]] || fail "missing $PREFLIGHT_SCRIPT"
@@ -51,14 +53,17 @@ grep -Fq -- 'scripts/migrate-installed-runtime.py' "$UPGRADING_MD" \
 grep -Fq -- 'scripts/check-upgrade-surface.py' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the upgrade preflight script"
 
-grep -Fq -- 'merge the installed `.codex/config.toml` with the scaffold config' "$UPGRADING_MD" \
-  || fail "UPGRADING.md must document the config merge behavior"
+grep -Fq -- '.ralph/state/worker-claims.json' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the worker claims file"
+
+grep -Fq -- '.claude/agents/' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the Claude adapter pack"
+
+grep -Fq -- '.cursor/rules/' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the Cursor adapter pack"
 
 grep -Fq -- 'upgrade_contract_version' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document upgrade_contract_version"
-
-grep -Fq -- '`fork_context = true`' "$UPGRADING_MD" \
-  || fail "UPGRADING.md must document forked worker-context isolation"
 
 grep -Fq -- 'orchestrator-lease.json' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the lease file"
@@ -96,11 +101,17 @@ grep -Fq -- '.ralph/runtime-contract.md' "$SRC_AGENTS" \
 grep -Fq -- '.ralph/policy/runtime-overrides.md' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing runtime-overrides read-order entry"
 
+grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_AGENTS" \
+  || fail "src/AGENTS.md missing worker-claims read-order entry"
+
 grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block start marker"
 
 grep -Fq -- '<!-- RALPH-HARNESS:END -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block end marker"
+
+grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_CLAUDE" \
+  || fail "src/CLAUDE.md missing worker-claims read-order entry"
 
 grep -Fq -- '`UPGRADING.md` is the canonical upgrade source of truth' "$UPGRADE_SKILL" \
   || fail "ralph-upgrade skill must defer to UPGRADING.md"
@@ -125,12 +136,16 @@ if payload.get("version") != version:
     raise SystemExit("verify-upgrade-contract: harness-version.json version mismatch")
 if payload.get("tag") != current_tag:
     raise SystemExit("verify-upgrade-contract: harness-version.json tag mismatch")
-if payload.get("upgrade_contract_version") != 7:
-    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 7")
+if payload.get("upgrade_contract_version") != 8:
+    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 8")
 if payload.get("runtime_contract_baseline_sha256") != runtime_contract_hash:
     raise SystemExit("verify-upgrade-contract: runtime_contract_baseline_sha256 must match src/.ralph/runtime-contract.md")
 if payload.get("runtime_overrides_path") != ".ralph/policy/runtime-overrides.md":
     raise SystemExit("verify-upgrade-contract: runtime_overrides_path must match the canonical overlay path")
+if payload.get("runtime_adapters") != ["codex", "claude", "cursor"]:
+    raise SystemExit("verify-upgrade-contract: runtime_adapters must equal ['codex', 'claude', 'cursor']")
+if payload.get("branch_prefix") != "ralph":
+    raise SystemExit("verify-upgrade-contract: branch_prefix must equal 'ralph'")
 PY
 
 echo "verify-upgrade-contract: ok"

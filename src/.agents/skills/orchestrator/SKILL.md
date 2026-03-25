@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Coordinate the Codex-native Ralph harness loop by managing the dependency-aware scheduler, durable intent intake, lease ownership, per-spec worktrees, bounded research fan-out, and canonical shared-state synchronization until a stop condition occurs.
+description: Coordinate the Ralph multi-agent runtime by managing the dependency-aware scheduler, durable intent intake, lease ownership, worker claims, per-spec worktrees, bounded research fan-out, and canonical shared-state synchronization until a stop condition occurs.
 ---
 
 # Orchestrator
@@ -24,6 +24,7 @@ description: Coordinate the Codex-native Ralph harness loop by managing the depe
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
 - `.ralph/state/orchestrator-lease.json`
+- `.ralph/state/worker-claims.json`
 - recent lines from `.ralph/state/orchestrator-intents.jsonl`
 - latest relevant reports from admitted specs
 - admitted spec artifacts in `specs/<spec-id>-<slug>/`
@@ -41,10 +42,10 @@ description: Coordinate the Codex-native Ralph harness loop by managing the depe
 5. Read project truths, project facts, and promoted learning summary.
 6. Read the canonical workflow state.
 7. Read the canonical spec queue.
-8. Read the canonical lease state and recent durable intent window.
+8. Read the canonical lease state, worker claims state, and recent durable intent window.
 9. Attempt to acquire or renew the single-writer lease before mutating canonical shared state.
 10. If another healthy lease-holder already owns the scheduler, record any caller request as a durable intent and stop without mutating shared state.
-11. Re-read workflow, queue, lease, and intent state after the lease is held.
+11. Re-read workflow, queue, lease, claims, and intent state after the lease is held.
 12. Tail the recent event window instead of loading the full event log.
 13. Read only the recent learning log window when diagnosing or promoting learnings.
 14. Materialize durable intents in FIFO order:
@@ -68,18 +69,15 @@ description: Coordinate the Codex-native Ralph harness loop by managing the depe
    - else first `plan_check_failed`
    - else advance the spec toward PR, merge, or completion
 19. After a PRD-to-spec pass creates or refreshes a planning batch, identify only the specs from that batch whose `spec.md` exists and whose `research_status` still needs work.
-20. Spawn research workers for that batch with:
-   - `fork_context = true`
-   - `agent_type = "explorer"`
-   - bounded fan-out only for same-batch `research`
-21. Join the research batch with `wait`, close each completed research worker, validate each `research.md`, and then update shared queue metadata once.
+20. For same-batch `research`, either dispatch bounded native subagents when the active runtime supports them or expose those slots for claim in `.ralph/state/worker-claims.json`.
+21. Join the research batch, close each completed research worker or released claim, validate each `research.md`, and then update shared queue metadata once.
 22. Outside that batch-scoped research step, decide the next role for each admitted spec from lifecycle state, dependency status, PR state, interruption state, and next action.
-23. Preserve the role-based `agent_type` mapping for every worker dispatch.
-24. Spawn bounded non-research workers only for admitted specs that do not already have a worker in flight:
-   - `explorer`: `plan_check`, `review`, and optionally `research` when analysis depth is the primary concern
-   - `worker`: `prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`
-25. Pass each worker a single spec, a single worktree path, and a single report path.
-26. Wait for completed workers, close that worker thread, and validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Quality Gate`, `Commit Evidence`, and a clean worktree.
+23. Preserve the canonical role classification for every dispatch:
+   - analysis-heavy: `plan_check`, `review`, and optionally `research`
+   - delivery-heavy: `prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`
+24. Spawn bounded non-research workers only for admitted specs that do not already have a healthy worker claim in flight.
+25. Pass each worker or current session claim holder a single spec, a single worktree path, a single report path, and one execution mode.
+26. Wait for completed workers or released claims, close that worker thread when one exists, and validate that the worker wrote only the required role-local artifacts, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Quality Gate`, `Commit Evidence`, and a clean worktree.
 27. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Requeue the spec for the next fixing role unless the report names an explicit human-gated blocker.
 28. Synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before mutating shared state.
 29. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
@@ -100,6 +98,7 @@ description: Coordinate the Codex-native Ralph harness loop by managing the depe
 - updated workflow state JSON
 - updated spec queue JSON
 - updated lease state JSON
+- updated worker claims JSON
 - updated durable intent status when intents are drained
 - updated workflow state Markdown
 - updated spec register when needed

@@ -10,11 +10,12 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 MANAGED_START='<!-- RALPH-HARNESS:START -->'
 MANAGED_END='<!-- RALPH-HARNESS:END -->'
 
-render_managed_block() {
-  cat src/AGENTS.md
+render_loader_block() {
+  local source_path="$1"
+  cat "$source_path"
 }
 
-update_agents_file() {
+update_loader_file() {
   local target="$1"
   local block_file="$2"
   python3 - "$target" "$block_file" <<'PY'
@@ -46,12 +47,21 @@ target.write_text(new_text.rstrip() + "\n")
 PY
 }
 
+sync_loader_files() {
+  local target="$1"
+  update_loader_file "$target/AGENTS.md" "$TMP_DIR/managed-agents-block.md"
+  update_loader_file "$target/CLAUDE.md" "$TMP_DIR/managed-claude-block.md"
+}
+
 copy_manifest_paths() {
   local manifest="$1"
   local target="$2"
   while IFS= read -r path; do
     [[ -z "$path" || "$path" == \#* ]] && continue
     if [[ "$path" == "AGENTS.md" && -f "$target/AGENTS.md" ]]; then
+      continue
+    fi
+    if [[ "$path" == "CLAUDE.md" && -f "$target/CLAUDE.md" ]]; then
       continue
     fi
     mkdir -p "$target/$(dirname "$path")"
@@ -88,6 +98,40 @@ from runtime_state_helpers import render_spec_index_markdown, render_workflow_st
 repo = Path(sys.argv[1])
 workflow = json.loads((repo / ".ralph/state/workflow-state.json").read_text())
 queue = json.loads((repo / ".ralph/state/spec-queue.json").read_text())
+(repo / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
+(repo / "specs/INDEX.md").write_text(render_spec_index_markdown(queue))
+PY
+}
+
+normalize_current_runtime_fixture() {
+  local target="$1"
+  python3 - "$target" <<'PY'
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path.cwd() / "scripts"))
+
+from runtime_state_helpers import (
+    ensure_worker_claims_file,
+    load_json,
+    normalize_queue,
+    normalize_workflow,
+    render_spec_index_markdown,
+    render_workflow_state_markdown,
+    write_json,
+)
+
+repo = Path(sys.argv[1])
+workflow_path = repo / ".ralph/state/workflow-state.json"
+queue_path = repo / ".ralph/state/spec-queue.json"
+
+workflow = load_json(workflow_path)
+queue = load_json(queue_path)
+queue = normalize_queue(queue, workflow)
+workflow = normalize_workflow(workflow, queue)
+ensure_worker_claims_file(repo, workflow)
+write_json(queue_path, queue)
+write_json(workflow_path, workflow)
 (repo / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
 (repo / "specs/INDEX.md").write_text(render_spec_index_markdown(queue))
 PY
@@ -1064,14 +1108,26 @@ PY
 INSTALL_TARGET="$TMP_DIR/install-target"
 mkdir -p "$INSTALL_TARGET"
 printf 'Project loader before install.\n' > "$INSTALL_TARGET/AGENTS.md"
+printf 'Claude loader before install.\n' > "$INSTALL_TARGET/CLAUDE.md"
 copy_manifest_paths src/install-manifest.txt "$INSTALL_TARGET"
 create_generated_runtime "$INSTALL_TARGET"
-render_managed_block > "$TMP_DIR/managed-block.md"
-update_agents_file "$INSTALL_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+render_loader_block src/AGENTS.md > "$TMP_DIR/managed-agents-block.md"
+render_loader_block src/CLAUDE.md > "$TMP_DIR/managed-claude-block.md"
+sync_loader_files "$INSTALL_TARGET"
 python3 scripts/check-installed-runtime-state.py --repo "$INSTALL_TARGET"
 
 [[ -d "$INSTALL_TARGET/.codex/agents" ]] || {
   echo "smoke-test-install-upgrade: missing .codex/agents after install" >&2
+  exit 1
+}
+
+[[ -d "$INSTALL_TARGET/.claude/agents" ]] || {
+  echo "smoke-test-install-upgrade: missing .claude/agents after install" >&2
+  exit 1
+}
+
+[[ -d "$INSTALL_TARGET/.cursor/rules" ]] || {
+  echo "smoke-test-install-upgrade: missing .cursor/rules after install" >&2
   exit 1
 }
 
@@ -1105,17 +1161,37 @@ grep -Fq "$MANAGED_END" "$INSTALL_TARGET/AGENTS.md" || {
   exit 1
 }
 
+grep -Fq "$MANAGED_START" "$INSTALL_TARGET/CLAUDE.md" || {
+  echo "smoke-test-install-upgrade: CLAUDE.md missing managed block start" >&2
+  exit 1
+}
+
+grep -Fq "$MANAGED_END" "$INSTALL_TARGET/CLAUDE.md" || {
+  echo "smoke-test-install-upgrade: CLAUDE.md missing managed block end" >&2
+  exit 1
+}
+
+grep -Fq 'Project loader before install.' "$INSTALL_TARGET/AGENTS.md" || {
+  echo "smoke-test-install-upgrade: AGENTS.md non-Ralph content was not preserved during install" >&2
+  exit 1
+}
+
+grep -Fq 'Claude loader before install.' "$INSTALL_TARGET/CLAUDE.md" || {
+  echo "smoke-test-install-upgrade: CLAUDE.md non-Ralph content was not preserved during install" >&2
+  exit 1
+}
+
 python3 scripts/check-upgrade-surface.py --repo "$INSTALL_TARGET"
 
 OVERLAY_TARGET="$TMP_DIR/overlay-target"
 mkdir -p "$OVERLAY_TARGET"
 copy_manifest_paths src/install-manifest.txt "$OVERLAY_TARGET"
 create_generated_runtime "$OVERLAY_TARGET"
-update_agents_file "$OVERLAY_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$OVERLAY_TARGET"
 printf 'keep-runtime-overrides\n' > "$OVERLAY_TARGET/.ralph/policy/runtime-overrides.md"
 python3 scripts/check-upgrade-surface.py --repo "$OVERLAY_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$OVERLAY_TARGET"
-update_agents_file "$OVERLAY_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$OVERLAY_TARGET"
 python3 scripts/migrate-installed-runtime.py --repo "$OVERLAY_TARGET"
 python3 scripts/check-installed-runtime-state.py --repo "$OVERLAY_TARGET"
 grep -Fq 'keep-runtime-overrides' "$OVERLAY_TARGET/.ralph/policy/runtime-overrides.md" || {
@@ -1127,7 +1203,7 @@ DRIFTED_RUNTIME_TARGET="$TMP_DIR/drifted-runtime-target"
 mkdir -p "$DRIFTED_RUNTIME_TARGET"
 copy_manifest_paths src/install-manifest.txt "$DRIFTED_RUNTIME_TARGET"
 create_generated_runtime "$DRIFTED_RUNTIME_TARGET"
-update_agents_file "$DRIFTED_RUNTIME_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$DRIFTED_RUNTIME_TARGET"
 printf '\n## Local Drift\n\n- keep custom runtime edits here.\n' >> "$DRIFTED_RUNTIME_TARGET/.ralph/runtime-contract.md"
 if python3 scripts/check-upgrade-surface.py --repo "$DRIFTED_RUNTIME_TARGET"; then
   echo "smoke-test-install-upgrade: direct runtime-contract edits should have blocked upgrade preflight" >&2
@@ -1138,7 +1214,7 @@ LEGACY_TARGET="$TMP_DIR/legacy-target"
 write_positive_legacy_runtime "$LEGACY_TARGET"
 python3 scripts/check-upgrade-surface.py --repo "$LEGACY_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$LEGACY_TARGET"
-update_agents_file "$LEGACY_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$LEGACY_TARGET"
 python3 scripts/migrate-installed-runtime.py --repo "$LEGACY_TARGET"
 python3 scripts/check-installed-runtime-state.py --repo "$LEGACY_TARGET"
 
@@ -1199,7 +1275,7 @@ PY
 HEALTHY_LEASE_TARGET="$TMP_DIR/healthy-lease-target"
 write_positive_legacy_runtime "$HEALTHY_LEASE_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$HEALTHY_LEASE_TARGET"
-update_agents_file "$HEALTHY_LEASE_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$HEALTHY_LEASE_TARGET"
 write_lease_file \
   "$HEALTHY_LEASE_TARGET" \
   "lease-owner-1" \
@@ -1216,7 +1292,7 @@ fi
 STALE_LEASE_TARGET="$TMP_DIR/stale-lease-target"
 write_positive_legacy_runtime "$STALE_LEASE_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$STALE_LEASE_TARGET"
-update_agents_file "$STALE_LEASE_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$STALE_LEASE_TARGET"
 write_lease_file \
   "$STALE_LEASE_TARGET" \
   "lease-owner-stale" \
@@ -1242,7 +1318,7 @@ PY
 WORKTREE_COLLISION_TARGET="$TMP_DIR/worktree-collision-target"
 write_worktree_collision_runtime "$WORKTREE_COLLISION_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$WORKTREE_COLLISION_TARGET"
-update_agents_file "$WORKTREE_COLLISION_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$WORKTREE_COLLISION_TARGET"
 python3 scripts/migrate-installed-runtime.py --repo "$WORKTREE_COLLISION_TARGET"
 python3 scripts/check-installed-runtime-state.py --repo "$WORKTREE_COLLISION_TARGET"
 python3 - <<'PY' "$WORKTREE_COLLISION_TARGET"
@@ -1268,7 +1344,7 @@ PY
 SHARED_REPORT_COLLISION_TARGET="$TMP_DIR/shared-report-collision-target"
 write_shared_report_collision_runtime "$SHARED_REPORT_COLLISION_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$SHARED_REPORT_COLLISION_TARGET"
-update_agents_file "$SHARED_REPORT_COLLISION_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$SHARED_REPORT_COLLISION_TARGET"
 if python3 scripts/migrate-installed-runtime.py --repo "$SHARED_REPORT_COLLISION_TARGET"; then
   echo "smoke-test-install-upgrade: ambiguous shared legacy report ownership should have failed" >&2
   exit 1
@@ -1277,7 +1353,7 @@ fi
 BRANCH_COLLISION_TARGET="$TMP_DIR/branch-collision-target"
 write_branch_collision_runtime "$BRANCH_COLLISION_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$BRANCH_COLLISION_TARGET"
-update_agents_file "$BRANCH_COLLISION_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$BRANCH_COLLISION_TARGET"
 if python3 scripts/migrate-installed-runtime.py --repo "$BRANCH_COLLISION_TARGET"; then
   echo "smoke-test-install-upgrade: duplicate branch assignment should have failed" >&2
   exit 1
@@ -1287,7 +1363,7 @@ CUSTOM_CONFIG_TARGET="$TMP_DIR/custom-config-target"
 mkdir -p "$CUSTOM_CONFIG_TARGET"
 copy_manifest_paths src/install-manifest.txt "$CUSTOM_CONFIG_TARGET"
 create_generated_runtime "$CUSTOM_CONFIG_TARGET"
-update_agents_file "$CUSTOM_CONFIG_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$CUSTOM_CONFIG_TARGET"
 cat > "$CUSTOM_CONFIG_TARGET/.codex/config.toml" <<'EOF'
 model = "gpt-5.4"
 model_reasoning_effort = "high"
@@ -1384,7 +1460,7 @@ PY
 AMBIGUOUS_TARGET="$TMP_DIR/ambiguous-target"
 write_ambiguous_legacy_runtime "$AMBIGUOUS_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$AMBIGUOUS_TARGET"
-update_agents_file "$AMBIGUOUS_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$AMBIGUOUS_TARGET"
 
 if python3 scripts/migrate-installed-runtime.py --repo "$AMBIGUOUS_TARGET"; then
   echo "smoke-test-install-upgrade: ambiguous migration should have failed" >&2
@@ -1399,7 +1475,7 @@ fi
 CONFLICT_TARGET="$TMP_DIR/conflict-target"
 write_conflicting_legacy_runtime "$CONFLICT_TARGET"
 copy_manifest_paths src/upgrade-manifest.txt "$CONFLICT_TARGET"
-update_agents_file "$CONFLICT_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$CONFLICT_TARGET"
 
 if python3 scripts/migrate-installed-runtime.py --repo "$CONFLICT_TARGET"; then
   echo "smoke-test-install-upgrade: conflicting legacy agent layout should have failed" >&2
@@ -1410,10 +1486,11 @@ ATOMIC_PASS_TARGET="$TMP_DIR/atomic-pass-target"
 mkdir -p "$ATOMIC_PASS_TARGET"
 copy_manifest_paths src/install-manifest.txt "$ATOMIC_PASS_TARGET"
 create_generated_runtime "$ATOMIC_PASS_TARGET"
-update_agents_file "$ATOMIC_PASS_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$ATOMIC_PASS_TARGET"
 init_git_repo "$ATOMIC_PASS_TARGET"
 git -C "$ATOMIC_PASS_TARGET" checkout -q -b codex/001-atomic-commit-demo
 write_atomic_runtime "$ATOMIC_PASS_TARGET"
+normalize_current_runtime_fixture "$ATOMIC_PASS_TARGET"
 git -C "$ATOMIC_PASS_TARGET" add .
 git -C "$ATOMIC_PASS_TARGET" commit -q -m "feat: implement 001-T001"
 ATOMIC_PASS_SHA="$(git -C "$ATOMIC_PASS_TARGET" rev-parse --short HEAD)"
@@ -1426,8 +1503,9 @@ PARALLEL_RESEARCH_TARGET="$TMP_DIR/parallel-research-target"
 mkdir -p "$PARALLEL_RESEARCH_TARGET"
 copy_manifest_paths src/install-manifest.txt "$PARALLEL_RESEARCH_TARGET"
 create_generated_runtime "$PARALLEL_RESEARCH_TARGET"
-update_agents_file "$PARALLEL_RESEARCH_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$PARALLEL_RESEARCH_TARGET"
 write_parallel_research_runtime "$PARALLEL_RESEARCH_TARGET"
+normalize_current_runtime_fixture "$PARALLEL_RESEARCH_TARGET"
 python3 scripts/check-installed-runtime-state.py --repo "$PARALLEL_RESEARCH_TARGET"
 python3 - <<'PY' "$PARALLEL_RESEARCH_TARGET"
 import json
@@ -1446,10 +1524,11 @@ ATOMIC_MULTI_TARGET="$TMP_DIR/atomic-multi-target"
 mkdir -p "$ATOMIC_MULTI_TARGET"
 copy_manifest_paths src/install-manifest.txt "$ATOMIC_MULTI_TARGET"
 create_generated_runtime "$ATOMIC_MULTI_TARGET"
-update_agents_file "$ATOMIC_MULTI_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$ATOMIC_MULTI_TARGET"
 init_git_repo "$ATOMIC_MULTI_TARGET"
 git -C "$ATOMIC_MULTI_TARGET" checkout -q -b codex/001-atomic-commit-demo
 write_atomic_runtime "$ATOMIC_MULTI_TARGET"
+normalize_current_runtime_fixture "$ATOMIC_MULTI_TARGET"
 git -C "$ATOMIC_MULTI_TARGET" add .
 git -C "$ATOMIC_MULTI_TARGET" commit -q -m "feat: implement core of 001-T001"
 printf '\nSecond checkpoint for the same task.\n' >> "$ATOMIC_MULTI_TARGET/specs/001-atomic-commit-demo/spec.md"
@@ -1474,10 +1553,11 @@ ATOMIC_MISSING_REPORT_TARGET="$TMP_DIR/atomic-missing-report-target"
 mkdir -p "$ATOMIC_MISSING_REPORT_TARGET"
 copy_manifest_paths src/install-manifest.txt "$ATOMIC_MISSING_REPORT_TARGET"
 create_generated_runtime "$ATOMIC_MISSING_REPORT_TARGET"
-update_agents_file "$ATOMIC_MISSING_REPORT_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$ATOMIC_MISSING_REPORT_TARGET"
 init_git_repo "$ATOMIC_MISSING_REPORT_TARGET"
 git -C "$ATOMIC_MISSING_REPORT_TARGET" checkout -q -b codex/001-atomic-commit-demo
 write_atomic_runtime "$ATOMIC_MISSING_REPORT_TARGET"
+normalize_current_runtime_fixture "$ATOMIC_MISSING_REPORT_TARGET"
 git -C "$ATOMIC_MISSING_REPORT_TARGET" add .
 git -C "$ATOMIC_MISSING_REPORT_TARGET" commit -q -m "feat: implement 001-T001"
 cat > "$ATOMIC_MISSING_REPORT_TARGET/.ralph/reports/atomic-20260308/implement.md" <<'EOF'
@@ -1498,9 +1578,10 @@ ATOMIC_BRANCH_MISMATCH_TARGET="$TMP_DIR/atomic-branch-mismatch-target"
 mkdir -p "$ATOMIC_BRANCH_MISMATCH_TARGET"
 copy_manifest_paths src/install-manifest.txt "$ATOMIC_BRANCH_MISMATCH_TARGET"
 create_generated_runtime "$ATOMIC_BRANCH_MISMATCH_TARGET"
-update_agents_file "$ATOMIC_BRANCH_MISMATCH_TARGET/AGENTS.md" "$TMP_DIR/managed-block.md"
+sync_loader_files "$ATOMIC_BRANCH_MISMATCH_TARGET"
 init_git_repo "$ATOMIC_BRANCH_MISMATCH_TARGET"
 write_atomic_runtime "$ATOMIC_BRANCH_MISMATCH_TARGET"
+normalize_current_runtime_fixture "$ATOMIC_BRANCH_MISMATCH_TARGET"
 git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" add .
 git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" commit -q -m "feat: implement 001-T001 on the wrong branch"
 ATOMIC_BRANCH_SHA="$(git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" rev-parse --short HEAD)"

@@ -2,16 +2,17 @@
 
 ## Runtime
 
-- Runtime: Codex-native multi-agent harness
-- Official Codex multi-agent support is required.
-- Orchestrator-spawned workers must run with forked context semantics to isolate worker context from orchestrator context.
-- All role configs use `sandbox_mode = "danger-full-access"`.
-- Codex loader: `AGENTS.md`
+- Runtime: Ralph multi-agent runtime
+- Supported first-class runtime adapters: Codex, Claude Code, and Cursor local Agent/CLI/IDE surfaces
+- Loader surfaces: `AGENTS.md` and `CLAUDE.md`
+- Runtime-native adapter packs: `.codex/`, `.claude/`, and `.cursor/`
+- Ralph-managed Codex role configs use `sandbox_mode = "danger-full-access"`.
 - Harness doctrine: `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `.ralph/policy/runtime-overrides.md`
-- Control plane: repo files plus `.codex/config.toml`
+- Control plane: repo files plus runtime-native adapter packs
 - Repo-local skills: `.agents/skills/*`
 - External custom tool server: not required for v1
 - Shared-state coordination uses a single-writer lease in `.ralph/state/orchestrator-lease.json`.
+- Cross-runtime worker coordination uses `.ralph/state/worker-claims.json`.
 - Cross-thread scheduler requests use durable intent intake in `.ralph/state/orchestrator-intents.jsonl`.
 - Project-specific runtime additions belong in `.ralph/policy/runtime-overrides.md`, not as direct edits to `.ralph/runtime-contract.md`.
 
@@ -32,8 +33,9 @@
 ## Git And PR Policy
 
 - Default flow: one branch per spec
-- Branch format: `codex/<spec-key>`
-- Optional task branch format: `codex/<spec-key>/<task-id>` when explicitly required
+- Branch prefix: `ralph`
+- Branch format: `ralph/<spec-key>`
+- Optional task branch format: `ralph/<spec-key>/<task-id>` when explicitly required
 - Admitted specs must execute in dedicated git worktrees under `.ralph/worktrees/`
 - The canonical checkout is reserved for scheduler state, projections, logs, lease state, and durable inbox processing
 - Atomic commits required before task handoff: yes
@@ -62,6 +64,7 @@
   - lease file validity and heartbeat freshness are enforced
   - healthy held leases block concurrent shared-state mutation, and stale held leases must be recovered before validation passes
   - durable intent records remain replay-safe and parseable
+  - worker-claim records remain replay-safe, parseable, and expiration-aware
   - dependency graphs are acyclic and only target existing specs
   - queue branch and worktree assignments remain unique across specs
   - admitted specs have valid git worktrees and branch alignment
@@ -94,12 +97,13 @@
 - The parent orchestrator updates shared state after validating outputs.
 - The parent orchestrator drains the queue until a documented stop condition occurs.
 - The parent orchestrator may launch bounded parallel `research` only for specs in the same planning batch.
-- The parent orchestrator must spawn workers with `fork_context = true`.
-- The parent orchestrator should use `agent_type = "explorer"` for analysis-heavy roles and `agent_type = "worker"` for delivery-heavy roles.
-- Child roles must not spawn nested workers.
+- If the active runtime supports native subagents, the parent orchestrator may delegate analysis-heavy roles and delivery-heavy roles through those runtime-native primitives.
+- If the active runtime does not support native subagents, the assigned role may execute in the current session after the spec role slot is claimed in `.ralph/state/worker-claims.json`.
+- Child roles must not spawn nested workers beyond the runtime's Ralph-managed delegation policy.
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - `review_failed`, `verification_failed`, and `release_failed` must route back through orchestrator-managed remediation unless the report names an explicit human-gated blocker.
 - Workers must not update shared workflow state, queue state, lease state, state Markdown, or orchestrator event logs directly.
+- Runtime sessions may update `.ralph/state/worker-claims.json` only to acquire, heartbeat, or release their own worker claim.
 - Workers execute from their assigned spec worktree and may write spec-local artifacts there, but canonical control-plane updates remain orchestrator-mediated.
 - Handoffs past implementation must preserve `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) in the latest relevant report.
 - Review and verification should treat the assigned spec branch or PR as the unit under inspection.

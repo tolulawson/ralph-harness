@@ -1,6 +1,10 @@
 # Upgrade-safe scaffold paths that may be overwritten in an installed target repository
 AGENTS.md
+CLAUDE.md
 .codex/agents/
+.claude/agents/
+.claude/commands/
+.cursor/rules/
 .agents/skills/
 .ralph/runtime-contract.md
 .ralph/templates/

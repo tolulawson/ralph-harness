@@ -1,10 +1,11 @@
 {
-  "schema_version": "3.0.0",
+  "schema_version": "4.0.0",
   "queue_policy": {
     "selection": "fifo_admission_window",
     "preemption": "failing_out_of_scope_bug",
     "normal_execution_limit": 2
   },
+  "worker_claims_path": ".ralph/state/worker-claims.json",
   "active_spec_id": "{{active_spec_id}}",
   "active_spec_ids": [
     "{{active_spec_id}}"
@@ -45,7 +46,7 @@
       "latest_report_path": ".ralph/reports/{{run_id}}/release.md",
       "worktree_name": "ralph-{{spec_key}}",
       "worktree_path": ".ralph/worktrees/{{spec_key}}",
-      "branch_name": "codex/{{spec_key}}",
+      "branch_name": "ralph/{{spec_key}}",
       "base_branch": "{{base_branch}}",
       "slot_status": "inactive",
       "active_task_id": null,

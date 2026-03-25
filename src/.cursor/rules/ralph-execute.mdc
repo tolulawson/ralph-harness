@@ -1,0 +1,10 @@
+---
+description: How Cursor should resume an installed Ralph runtime.
+alwaysApply: false
+---
+
+# Ralph Execute
+
+- Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/worker-claims.json` before execution.
+- A Cursor session may act as the lease-holding orchestrator or claim a runnable worker slot, but only the orchestrator reconciles shared scheduler state.
+- Use the canonical behavior from `skills/ralph-execute/SKILL.md` and `.agents/skills/orchestrator/SKILL.md`.
