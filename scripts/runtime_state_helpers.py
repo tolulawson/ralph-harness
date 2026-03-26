@@ -15,15 +15,15 @@ except ModuleNotFoundError:
     from pip._vendor import tomli as tomllib  # type: ignore
 
 
-CURRENT_QUEUE_SCHEMA_VERSION = "4.0.0"
-CURRENT_WORKFLOW_SCHEMA_VERSION = "4.0.0"
+CURRENT_QUEUE_SCHEMA_VERSION = "5.0.0"
+CURRENT_WORKFLOW_SCHEMA_VERSION = "5.0.0"
 CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
 CURRENT_QUEUE_SELECTION = "fifo_admission_window"
 CURRENT_NORMAL_EXECUTION_LIMIT = 2
-CURRENT_UPGRADE_CONTRACT_VERSION = 8
+CURRENT_UPGRADE_CONTRACT_VERSION = 9
 CURRENT_LEASE_SCHEMA_VERSION = "1.0.0"
-CURRENT_WORKER_CLAIMS_SCHEMA_VERSION = "1.0.0"
+CURRENT_WORKER_CLAIMS_SCHEMA_VERSION = "1.1.0"
 DEFAULT_LEASE_PATH = ".ralph/state/orchestrator-lease.json"
 DEFAULT_WORKER_CLAIMS_PATH = ".ralph/state/worker-claims.json"
 DEFAULT_INTENTS_PATH = ".ralph/state/orchestrator-intents.jsonl"
@@ -42,6 +42,7 @@ MANAGED_AGENT_NAMES = (
     "plan",
     "task_gen",
     "plan_check",
+    "bootstrap",
     "implement",
     "review",
     "verify",
@@ -54,6 +55,7 @@ MANAGED_AGENT_FILES = (
     "plan-check.toml",
     "prd.toml",
     "research.toml",
+    "bootstrap.toml",
     "release.toml",
     "review.toml",
     "specify.toml",
@@ -68,6 +70,7 @@ MANAGED_AGENT_SANDBOX_MODES = {
     "plan": "danger-full-access",
     "task_gen": "danger-full-access",
     "plan_check": "danger-full-access",
+    "bootstrap": "danger-full-access",
     "implement": "danger-full-access",
     "review": "danger-full-access",
     "verify": "danger-full-access",
@@ -83,6 +86,7 @@ RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     "single-writer lease",
     "orchestrator-intents.jsonl",
     "git worktree",
+    "bootstrap",
 )
 ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
     "worker-claims",
@@ -92,6 +96,7 @@ ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
     "Do not stop merely because review, verification, or release failed.",
     "durable intent",
     "worktree",
+    "bootstrap",
 )
 
 WORKFLOW_REQUIRED_KEYS = (
@@ -165,6 +170,10 @@ QUEUE_SPEC_REQUIRED_KEYS = (
     "worktree_path",
     "branch_name",
     "base_branch",
+    "bootstrap_status",
+    "bootstrap_last_claim_id",
+    "bootstrap_last_report_path",
+    "bootstrap_last_completed_at",
     "slot_status",
     "active_task_id",
     "task_status",
@@ -243,6 +252,7 @@ SPEC_SCOPED_REPORT_ROLES = {
     "plan",
     "task-gen",
     "plan-check",
+    "bootstrap",
     "implement",
     "review",
     "verify",
@@ -253,6 +263,7 @@ INTENT_TYPES = {"create_spec", "schedule_spec", "pause_spec", "resume_spec", "st
 INTENT_STATUSES = {"pending", "acknowledged", "processed", "rejected"}
 LEASE_STATUSES = {"idle", "held"}
 CLAIM_STATUSES = {"claimed", "released", "expired"}
+BOOTSTRAP_STATUSES = {"required", "in_progress", "passed", "failed"}
 SUPPORTED_RUNTIME_NAMES = {"codex", "claude", "cursor"}
 SUPPORTED_EXECUTION_MODES = {"native_subagent", "interactive_session"}
 
@@ -368,6 +379,34 @@ def write_toml(path: Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(render_toml_table(payload)).rstrip() + "\n")
 
 
+def default_project_facts() -> dict[str, Any]:
+    return {
+        "schema_version": "1.0.0",
+        "repo_kind": None,
+        "runtime_kind": None,
+        "base_branch": None,
+        "validation_bootstrap_commands": [],
+        "verification_commands": [],
+        "deployment_model": None,
+        "tooling_facts": {},
+        "unknowns": [],
+        "fact_sources": [],
+    }
+
+
+def normalize_project_facts(project_facts: dict[str, Any]) -> dict[str, Any]:
+    normalized = default_project_facts()
+    normalized.update(project_facts)
+    normalized["validation_bootstrap_commands"] = list(normalized.get("validation_bootstrap_commands") or [])
+    normalized["verification_commands"] = list(normalized.get("verification_commands") or [])
+    normalized["tooling_facts"] = dict(normalized.get("tooling_facts") or {})
+    normalized["unknowns"] = list(normalized.get("unknowns") or [])
+    normalized["fact_sources"] = list(normalized.get("fact_sources") or [])
+    base_branch = normalized.get("base_branch")
+    normalized["base_branch"] = base_branch if isinstance(base_branch, str) and base_branch else None
+    return normalized
+
+
 def merge_codex_config(installed: dict[str, Any], scaffold: dict[str, Any]) -> dict[str, Any]:
     merged = dict(installed)
 
@@ -452,6 +491,7 @@ def derive_queue_snapshot(queue: dict[str, Any]) -> list[dict[str, Any]]:
                 "status": spec.get("status"),
                 "admission_status": spec.get("admission_status"),
                 "slot_status": spec.get("slot_status"),
+                "bootstrap_status": spec.get("bootstrap_status"),
                 "branch_name": spec.get("branch_name"),
                 "pr_number": spec.get("pr_number"),
             }
@@ -508,12 +548,12 @@ def render_workflow_state_markdown(workflow: dict[str, Any], queue: dict[str, An
         f"- Project: `{format_code(workflow.get('project_name'))}`",
         f"- Active epoch: `{format_code(workflow.get('active_epoch_id'))}`",
         f"- Active specs: `{format_code(active_spec_ids)}`",
-        f"- Active spec: `{format_code(workflow.get('active_spec_key'))}`",
+        f"- Primary active spec (compatibility mirror): `{format_code(workflow.get('active_spec_key'))}`",
         f"- Active task: `{format_code(workflow.get('active_task_id'))}`",
         f"- Phase: `{format_code(workflow.get('current_phase'))}`",
         f"- Task status: `{format_code(workflow.get('task_status'))}`",
         f"- Assigned role: `{format_code(workflow.get('assigned_role'))}`",
-        f"- Branch: `{format_code(workflow.get('current_branch'))}`",
+        f"- Primary active branch (compatibility mirror): `{format_code(workflow.get('current_branch'))}`",
         f"- Run id: `{format_code(workflow.get('current_run_id'))}`",
         f"- Active PR number: `{format_code(workflow.get('active_pr_number'))}`",
         f"- Active PR URL: `{format_code(workflow.get('active_pr_url'))}`",
@@ -541,20 +581,21 @@ def render_spec_index_markdown(queue: dict[str, Any]) -> str:
     lines = [
         "# Spec Register",
         "",
-        "| Spec | Kind | Depends On | Epoch | Title | Status | Admission | Slot | Worktree | Branch | PR | Latest Report |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Spec | Kind | Depends On | Epoch | Title | Status | Bootstrap | Admission | Slot | Worktree | Branch | PR | Latest Report |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for spec in queue.get("specs", []):
         branch_name = spec.get("branch_name") or default_branch_name(spec.get("spec_key"))
         depends_on = ",".join(spec.get("depends_on_spec_ids") or []) or "null"
         lines.append(
-            "| {spec_key} | {kind} | {depends_on} | {epoch} | {title} | {status} | {admission} | {slot} | `{worktree}` | `{branch}` | `{pr}` | `{report}` |".format(
+            "| {spec_key} | {kind} | {depends_on} | {epoch} | {title} | {status} | {bootstrap} | {admission} | {slot} | `{worktree}` | `{branch}` | `{pr}` | `{report}` |".format(
                 spec_key=spec.get("spec_key"),
                 kind=spec.get("kind"),
                 depends_on=depends_on,
                 epoch=spec.get("epoch_id"),
                 title=spec.get("title"),
                 status=spec.get("status"),
+                bootstrap=format_code(spec.get("bootstrap_status")),
                 admission=format_code(spec.get("admission_status")),
                 slot=format_code(spec.get("slot_status")),
                 worktree=format_code(spec.get("worktree_path")),
@@ -605,6 +646,78 @@ def run_git(repo_root: Path, *args: str) -> str:
     return completed.stdout.strip()
 
 
+def discover_remote_head_branch(repo_root: Path) -> tuple[str | None, str | None]:
+    try:
+        remote_head = run_git(repo_root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+    except subprocess.CalledProcessError:
+        remote_head = None
+    if isinstance(remote_head, str) and remote_head.startswith("origin/"):
+        return remote_head.split("/", 1)[1], "git:refs/remotes/origin/HEAD"
+
+    try:
+        remote_show = run_git(repo_root, "remote", "show", "origin")
+    except subprocess.CalledProcessError:
+        remote_show = ""
+    for line in remote_show.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("HEAD branch: "):
+            branch = stripped.split(": ", 1)[1].strip()
+            if branch and branch != "(unknown)":
+                return branch, "git:remote-show-origin"
+    return None, None
+
+
+def discover_local_base_branch(repo_root: Path, queue: dict[str, Any], workflow: dict[str, Any]) -> tuple[str | None, str | None]:
+    current_branch = current_git_branch(repo_root)
+    if not isinstance(current_branch, str) or not current_branch or current_branch == "HEAD":
+        return None, None
+
+    known_spec_branches = {spec.get("branch_name") for spec in queue.get("specs", []) if isinstance(spec.get("branch_name"), str)}
+    if current_branch in known_spec_branches:
+        return None, None
+
+    branch_prefix = infer_branch_prefix(queue, workflow)
+    if current_branch.startswith(f"{branch_prefix}/"):
+        return None, None
+
+    if current_branch in {"main", "master", "trunk", "develop", "dev"}:
+        return current_branch, "git:local-head"
+
+    try:
+        local_branches = [line.strip() for line in run_git(repo_root, "branch", "--format=%(refname:short)").splitlines() if line.strip()]
+    except subprocess.CalledProcessError:
+        local_branches = []
+    if len(local_branches) == 1 and local_branches[0] == current_branch:
+        return current_branch, "git:single-local-branch"
+    return None, None
+
+
+def discover_canonical_base_branch(repo_root: Path, queue: dict[str, Any], workflow: dict[str, Any]) -> tuple[str | None, str | None]:
+    branch, source = discover_remote_head_branch(repo_root)
+    if branch:
+        return branch, source
+    return discover_local_base_branch(repo_root, queue, workflow)
+
+
+def ensure_project_facts_file(repo_root: Path, queue: dict[str, Any], workflow: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+    path = repo_root / ".ralph/context/project-facts.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        project_facts = normalize_project_facts(load_json(path))
+    else:
+        project_facts = default_project_facts()
+
+    if project_facts.get("base_branch") is None and is_git_worktree(repo_root):
+        branch, source = discover_canonical_base_branch(repo_root, queue, workflow)
+        if branch:
+            project_facts["base_branch"] = branch
+            if source and source not in project_facts["fact_sources"]:
+                project_facts["fact_sources"].append(source)
+
+    write_json(path, project_facts)
+    return path, project_facts
+
+
 def ensure_runtime_overrides_file(repo_root: Path) -> Path:
     target_path = repo_root / DEFAULT_RUNTIME_OVERRIDES_PATH
     if target_path.exists():
@@ -620,7 +733,14 @@ def ensure_worker_claims_file(repo_root: Path, workflow: dict[str, Any]) -> Path
     if target_path.exists():
         payload = load_json(target_path)
         payload["schema_version"] = CURRENT_WORKER_CLAIMS_SCHEMA_VERSION
-        payload["claims"] = list(payload.get("claims") or [])
+        claims = list(payload.get("claims") or [])
+        for claim in claims:
+            claim.setdefault("bootstrap_status", "required")
+            claim.setdefault("bootstrap_started_at", None)
+            claim.setdefault("bootstrap_completed_at", None)
+            claim.setdefault("bootstrap_report_path", None)
+            claim.setdefault("validation_ready", False)
+        payload["claims"] = claims
         write_json(target_path, payload)
         return target_path
     target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -892,7 +1012,7 @@ def ensure_worktree_root(repo_root: Path) -> Path:
     return worktree_root
 
 
-def ensure_spec_worktree(repo_root: Path, spec: dict[str, Any]) -> Path:
+def ensure_spec_worktree(repo_root: Path, spec: dict[str, Any], project_facts: dict[str, Any] | None = None) -> Path:
     worktree_root = ensure_worktree_root(repo_root)
     worktree_path = repo_root / spec["worktree_path"]
     if worktree_path.exists() and is_git_worktree(worktree_path):
@@ -904,7 +1024,12 @@ def ensure_spec_worktree(repo_root: Path, spec: dict[str, Any]) -> Path:
 
     worktree_path.parent.mkdir(parents=True, exist_ok=True)
     branch_name = spec.get("branch_name") or default_branch_name(spec["spec_key"])
-    base_branch = spec.get("base_branch") or "main"
+    project_facts = normalize_project_facts(project_facts or default_project_facts())
+    base_branch = spec.get("base_branch") or project_facts.get("base_branch")
+    if not isinstance(base_branch, str) or not base_branch:
+        raise RuntimeStateError(
+            f"{spec.get('spec_key')}: cannot create worktree because the canonical base branch is unresolved; set .ralph/context/project-facts.json base_branch or an explicit spec base_branch first"
+        )
     try:
         run_git(repo_root, "show-ref", "--verify", f"refs/heads/{branch_name}")
         subprocess.run(
@@ -928,6 +1053,38 @@ def ensure_spec_worktree(repo_root: Path, spec: dict[str, Any]) -> Path:
 def find_active_specs(queue: dict[str, Any]) -> list[dict[str, Any]]:
     active_ids = set(derive_active_spec_ids(queue))
     return [spec for spec in queue.get("specs", []) if spec.get("spec_id") in active_ids]
+
+
+def bootstrap_claim_sort_key(claim: dict[str, Any]) -> tuple[datetime, datetime, datetime]:
+    epoch = datetime.fromtimestamp(0, tz=timezone.utc)
+    completed = parse_timestamp(claim.get("bootstrap_completed_at")) or epoch
+    started = parse_timestamp(claim.get("bootstrap_started_at")) or epoch
+    claimed = parse_timestamp(claim.get("claimed_at")) or epoch
+    return completed, started, claimed
+
+
+def merge_bootstrap_summary_from_claims(queue: dict[str, Any], worker_claims: dict[str, Any]) -> None:
+    latest_by_spec: dict[str, dict[str, Any]] = {}
+    for claim in worker_claims.get("claims", []):
+        spec_id = claim.get("spec_id")
+        if not isinstance(spec_id, str):
+            continue
+        if claim.get("bootstrap_status") not in BOOTSTRAP_STATUSES:
+            continue
+        prior = latest_by_spec.get(spec_id)
+        if prior is None or bootstrap_claim_sort_key(claim) >= bootstrap_claim_sort_key(prior):
+            latest_by_spec[spec_id] = claim
+
+    for spec in queue.get("specs", []):
+        claim = latest_by_spec.get(spec.get("spec_id"))
+        if claim is None:
+            continue
+        spec["bootstrap_status"] = claim.get("bootstrap_status") or spec.get("bootstrap_status") or "required"
+        spec["bootstrap_last_claim_id"] = claim.get("claim_id")
+        spec["bootstrap_last_report_path"] = claim.get("bootstrap_report_path")
+        spec["bootstrap_last_completed_at"] = (
+            claim.get("bootstrap_completed_at") or claim.get("bootstrap_started_at") or claim.get("claimed_at")
+        )
 
 
 def detect_dependency_cycle(queue: dict[str, Any]) -> bool:
@@ -1309,7 +1466,7 @@ def normalize_task_state(task_state: dict[str, Any], spec: dict[str, Any]) -> di
     return normalized
 
 
-def normalize_spec_entry(spec: dict[str, Any]) -> dict[str, Any]:
+def normalize_spec_entry(spec: dict[str, Any], default_base_branch: str | None = None) -> dict[str, Any]:
     normalized = dict(spec)
     normalized["kind"] = normalized.get("kind") or "normal"
     normalized["origin_spec_key"] = normalized.get("origin_spec_key")
@@ -1329,6 +1486,11 @@ def normalize_spec_entry(spec: dict[str, Any]) -> dict[str, Any]:
     normalized["worktree_name"] = normalized.get("worktree_name") or default_worktree_name(normalized["spec_key"])
     normalized["worktree_path"] = normalized.get("worktree_path") or default_worktree_path(normalized["spec_key"])
     normalized["branch_name"] = normalized.get("branch_name") or default_branch_name(normalized["spec_key"])
+    normalized["base_branch"] = normalized.get("base_branch") or default_base_branch
+    normalized["bootstrap_status"] = normalized.get("bootstrap_status") or "required"
+    normalized["bootstrap_last_claim_id"] = normalized.get("bootstrap_last_claim_id")
+    normalized["bootstrap_last_report_path"] = normalized.get("bootstrap_last_report_path")
+    normalized["bootstrap_last_completed_at"] = normalized.get("bootstrap_last_completed_at")
     normalized["task_summary"] = normalized.get("task_summary") or {"total": 0, "done": 0, "in_progress": 0, "blocked": 0}
     normalized["slot_status"] = normalized.get("slot_status") or "inactive"
     normalized["active_task_id"] = normalized.get("active_task_id")
@@ -1342,7 +1504,7 @@ def normalize_spec_entry(spec: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def normalize_queue(queue: dict[str, Any], workflow: dict[str, Any]) -> dict[str, Any]:
+def normalize_queue(queue: dict[str, Any], workflow: dict[str, Any], project_facts: dict[str, Any] | None = None) -> dict[str, Any]:
     normalized = dict(queue)
     normalized["schema_version"] = CURRENT_QUEUE_SCHEMA_VERSION
     queue_policy = dict(normalized.get("queue_policy") or {})
@@ -1351,7 +1513,8 @@ def normalize_queue(queue: dict[str, Any], workflow: dict[str, Any]) -> dict[str
     queue_policy["normal_execution_limit"] = int(queue_policy.get("normal_execution_limit") or CURRENT_NORMAL_EXECUTION_LIMIT)
     normalized["queue_policy"] = queue_policy
     normalized["worker_claims_path"] = normalized.get("worker_claims_path") or workflow.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
-    normalized_specs = [normalize_spec_entry(spec) for spec in normalized.get("specs", [])]
+    project_facts = normalize_project_facts(project_facts or default_project_facts())
+    normalized_specs = [normalize_spec_entry(spec, project_facts.get("base_branch")) for spec in normalized.get("specs", [])]
     normalized["specs"] = normalized_specs
 
     active_spec_ids = derive_active_spec_ids(normalized, workflow)
@@ -1421,7 +1584,8 @@ def migrate_repo_state(repo_root: Path) -> None:
     queue_path = repo_root / ".ralph/state/spec-queue.json"
     workflow = load_json(workflow_path)
     queue = load_json(queue_path)
-    queue = normalize_queue(queue, workflow)
+    project_facts_path, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
+    queue = normalize_queue(queue, workflow, project_facts)
     workflow = normalize_workflow(workflow, queue)
     lease = ensure_lease_file(repo_root, workflow)
     worker_claims_path = ensure_worker_claims_file(repo_root, workflow)
@@ -1433,6 +1597,7 @@ def migrate_repo_state(repo_root: Path) -> None:
     intents_path = ensure_intent_log(repo_root, workflow)
     ensure_worktree_root(repo_root)
     normalize_queue_worktree_metadata(repo_root, queue)
+    merge_bootstrap_summary_from_claims(queue, worker_claims)
     legacy_report_owners: dict[str, str] = {}
 
     for spec in queue.get("specs", []):
@@ -1475,7 +1640,7 @@ def migrate_repo_state(repo_root: Path) -> None:
             spec["slot_status"] = "inactive"
             spec["admission_status"] = "done"
         if spec.get("spec_id") in queue.get("active_spec_ids", []) or spec.get("slot_status") in WORKTREE_REQUIRED_SLOT_STATUSES:
-            ensure_spec_worktree(repo_root, spec)
+            ensure_spec_worktree(repo_root, spec, project_facts)
 
     workflow_report_owner = workflow.get("active_spec_key")
     if workflow_report_owner is None and isinstance(workflow.get("last_report_path"), str):
@@ -1516,6 +1681,7 @@ def migrate_repo_state(repo_root: Path) -> None:
 
     write_json(queue_path, queue)
     write_json(workflow_path, workflow)
+    write_json(project_facts_path, project_facts)
     write_json(worker_claims_path, worker_claims)
     (repo_root / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
     (repo_root / "specs/INDEX.md").write_text(render_spec_index_markdown(queue))
@@ -1611,6 +1777,7 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     lease_path = repo_root / DEFAULT_LEASE_PATH
     worker_claims_path = repo_root / DEFAULT_WORKER_CLAIMS_PATH
     intents_path = repo_root / DEFAULT_INTENTS_PATH
+    project_facts_path = repo_root / ".ralph/context/project-facts.json"
     runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
     orchestrator_skill_path = repo_root / ".agents/skills/orchestrator/SKILL.md"
     runtime_overrides_path = repo_root / DEFAULT_RUNTIME_OVERRIDES_PATH
@@ -1624,6 +1791,7 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         lease_path,
         worker_claims_path,
         intents_path,
+        project_facts_path,
         agents_loader_path,
         claude_loader_path,
     ):
@@ -1658,6 +1826,8 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     workflow = load_json(workflow_json_path)
     queue = load_json(queue_json_path)
     worker_claims = load_json(worker_claims_path)
+    project_facts = normalize_project_facts(load_json(project_facts_path))
+    merge_bootstrap_summary_from_claims(queue, worker_claims)
 
     harness_version_path = repo_root / ".ralph/harness-version.json"
     if harness_version_path.exists():
@@ -1694,6 +1864,20 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         issues.append(".ralph/state/spec-queue.json worker_claims_path must point at .ralph/state/worker-claims.json")
     if workflow.get("worker_claims_path") != DEFAULT_WORKER_CLAIMS_PATH:
         issues.append(".ralph/state/workflow-state.json worker_claims_path must point at .ralph/state/worker-claims.json")
+    if not isinstance(project_facts.get("validation_bootstrap_commands"), list):
+        issues.append(".ralph/context/project-facts.json validation_bootstrap_commands must be a list")
+    if not isinstance(project_facts.get("verification_commands"), list):
+        issues.append(".ralph/context/project-facts.json verification_commands must be a list")
+    resolved_base_branch = project_facts.get("base_branch")
+    if resolved_base_branch is None:
+        for spec in queue.get("specs", []):
+            if isinstance(spec.get("base_branch"), str) and spec.get("base_branch"):
+                resolved_base_branch = spec["base_branch"]
+                break
+    if resolved_base_branch is None and queue.get("specs"):
+        issues.append(
+            ".ralph/context/project-facts.json must record the canonical base_branch, or every queued spec must carry an explicit base_branch override"
+        )
 
     lease = load_json(lease_path)
     for key in LEASE_REQUIRED_KEYS:
@@ -1719,6 +1903,29 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         if key not in worker_claims:
             issues.append(f".ralph/state/worker-claims.json is missing `{key}`")
     for claim in worker_claims.get("claims", []):
+        for key in (
+            "claim_id",
+            "spec_id",
+            "spec_key",
+            "role",
+            "runtime",
+            "session_id",
+            "thread_id",
+            "holder",
+            "execution_mode",
+            "worktree_path",
+            "status",
+            "claimed_at",
+            "heartbeat_at",
+            "expires_at",
+            "bootstrap_status",
+            "bootstrap_started_at",
+            "bootstrap_completed_at",
+            "bootstrap_report_path",
+            "validation_ready",
+        ):
+            if key not in claim:
+                issues.append(f".ralph/state/worker-claims.json claim is missing `{key}`")
         if claim.get("runtime") not in SUPPORTED_RUNTIME_NAMES:
             issues.append(f".ralph/state/worker-claims.json has unsupported runtime `{claim.get('runtime')}`")
         if claim.get("execution_mode") not in SUPPORTED_EXECUTION_MODES:
@@ -1727,6 +1934,28 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             )
         if claim.get("status") not in CLAIM_STATUSES:
             issues.append(f".ralph/state/worker-claims.json has unsupported status `{claim.get('status')}`")
+        if claim.get("bootstrap_status") not in BOOTSTRAP_STATUSES:
+            issues.append(
+                f".ralph/state/worker-claims.json has unsupported bootstrap_status `{claim.get('bootstrap_status')}`"
+            )
+        if claim.get("bootstrap_status") == "in_progress" and claim.get("bootstrap_started_at") is None:
+            issues.append(".ralph/state/worker-claims.json bootstrap in_progress claims must record bootstrap_started_at")
+        if claim.get("bootstrap_status") in {"passed", "failed"}:
+            if claim.get("bootstrap_completed_at") is None:
+                issues.append(
+                    ".ralph/state/worker-claims.json bootstrap terminal claims must record bootstrap_completed_at"
+                )
+            if not isinstance(claim.get("bootstrap_report_path"), str) or not claim.get("bootstrap_report_path"):
+                issues.append(".ralph/state/worker-claims.json bootstrap terminal claims must record bootstrap_report_path")
+        if claim.get("bootstrap_status") == "passed" and claim.get("validation_ready") is not True:
+            issues.append(".ralph/state/worker-claims.json bootstrap passed claims must set validation_ready=true")
+        if claim.get("bootstrap_status") == "failed" and claim.get("validation_ready") is not False:
+            issues.append(".ralph/state/worker-claims.json bootstrap failed claims must set validation_ready=false")
+        if claim.get("role") != "bootstrap" and claim.get("status") == "claimed":
+            if claim.get("bootstrap_status") != "passed" or claim.get("validation_ready") is not True:
+                issues.append(
+                    f".ralph/state/worker-claims.json active `{claim.get('role')}` claim for {claim.get('spec_key')} must have passed bootstrap before execution"
+                )
 
     intents = load_jsonl_records(intents_path)
     seen_intent_ids: set[str] = set()
@@ -1774,6 +2003,15 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
                 issues.append(f"{spec.get('spec_key', 'unknown-spec')}: dependency `{dep}` does not exist in the queue")
         if spec.get("research_status") not in {"not_started", "in_progress", "done", "failed"}:
             issues.append(f"{spec.get('spec_key', 'unknown-spec')}: research_status must be one of not_started, in_progress, done, failed")
+        if spec.get("bootstrap_status") not in BOOTSTRAP_STATUSES:
+            issues.append(
+                f"{spec.get('spec_key', 'unknown-spec')}: bootstrap_status must be one of required, in_progress, passed, failed"
+            )
+        if spec.get("bootstrap_status") in {"passed", "failed"}:
+            if not isinstance(spec.get("bootstrap_last_report_path"), str) or not spec.get("bootstrap_last_report_path"):
+                issues.append(f"{spec.get('spec_key', 'unknown-spec')}: bootstrap terminal status requires bootstrap_last_report_path")
+            if spec.get("bootstrap_last_completed_at") is None:
+                issues.append(f"{spec.get('spec_key', 'unknown-spec')}: bootstrap terminal status requires bootstrap_last_completed_at")
         if not isinstance(spec.get("research_artifact_path"), str):
             issues.append(f"{spec.get('spec_key', 'unknown-spec')}: research_artifact_path must be a string")
         if spec.get("planning_batch_id") is not None and not isinstance(spec.get("planning_batch_id"), str):
@@ -1786,6 +2024,8 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             and not (repo_root / research_artifact_path).exists()
         ):
             issues.append(f"{spec.get('spec_key', 'unknown-spec')}: research_status is {research_status} but {research_artifact_path} is missing")
+        if not isinstance(spec.get("base_branch"), str) or not spec.get("base_branch"):
+            issues.append(f"{spec.get('spec_key', 'unknown-spec')}: queue entry must carry a resolved base_branch")
         if spec.get("admission_status") in WORKTREE_REQUIRED_SLOT_STATUSES or spec.get("spec_id") in (queue.get("active_spec_ids") or []):
             worktree_relpath = spec.get("worktree_path")
             if not isinstance(worktree_relpath, str) or not worktree_relpath:
@@ -1806,6 +2046,15 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     actual_spec_index = spec_index_path.read_text()
     if actual_spec_index != expected_spec_index:
         issues.append("specs/INDEX.md does not match the canonical spec queue projection")
+
+    expected_bootstrap_projection = json.loads(json.dumps(queue))
+    merge_bootstrap_summary_from_claims(expected_bootstrap_projection, worker_claims)
+    for actual_spec, expected_spec in zip(queue.get("specs", []), expected_bootstrap_projection.get("specs", [])):
+        for key in ("bootstrap_status", "bootstrap_last_claim_id", "bootstrap_last_report_path", "bootstrap_last_completed_at"):
+            if actual_spec.get(key) != expected_spec.get(key):
+                issues.append(
+                    f"{actual_spec.get('spec_key', 'unknown-spec')}: queue bootstrap summary field `{key}` does not match the latest claim lifecycle"
+                )
 
     if workflow.get("queue_snapshot") != derive_queue_snapshot(queue):
         issues.append(".ralph/state/workflow-state.json queue_snapshot does not match spec-queue.json")
@@ -1839,6 +2088,20 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     active_spec: dict[str, Any] | None = None
     active_task_state: dict[str, Any] | None = None
     spec_by_id = {spec.get("spec_id"): spec for spec in queue.get("specs", [])}
+
+    if is_git_worktree(repo_root):
+        repo_branch = current_git_branch(repo_root)
+        if isinstance(resolved_base_branch, str) and resolved_base_branch and repo_branch != resolved_base_branch:
+            issues.append(
+                f"canonical control-plane checkout must stay on base branch `{resolved_base_branch}`, got `{repo_branch}`"
+            )
+        active_branches = {
+            spec.get("branch_name")
+            for spec in queue.get("specs", [])
+            if spec.get("spec_id") in (queue.get("active_spec_ids") or []) and isinstance(spec.get("branch_name"), str)
+        }
+        if isinstance(repo_branch, str) and repo_branch in active_branches:
+            issues.append("canonical control-plane checkout must not execute from an active spec branch")
 
     for spec in queue.get("specs", []):
         task_state_relpath = spec.get("task_state_path")

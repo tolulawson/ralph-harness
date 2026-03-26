@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "claims": [
     {
       "claim_id": "{{claim_id}}",
@@ -16,7 +16,12 @@
       "status": "{{status}}",
       "claimed_at": "{{claimed_at}}",
       "heartbeat_at": "{{heartbeat_at}}",
-      "expires_at": "{{expires_at}}"
+      "expires_at": "{{expires_at}}",
+      "bootstrap_status": "{{bootstrap_status}}",
+      "bootstrap_started_at": "{{bootstrap_started_at}}",
+      "bootstrap_completed_at": "{{bootstrap_completed_at}}",
+      "bootstrap_report_path": "{{bootstrap_report_path}}",
+      "validation_ready": "{{validation_ready}}"
     }
   ]
 }

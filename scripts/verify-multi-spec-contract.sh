@@ -38,6 +38,9 @@ grep -Fq -- 'orchestrator-intents.jsonl' src/.ralph/runtime-contract.md \
 grep -Fq -- 'git worktree' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention per-spec git worktrees"
 
+grep -Fq -- 'bootstrap' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must mention bootstrap"
+
 grep -Fq -- 'single-writer lease' src/.ralph/policy/project-policy.md \
   || fail "project policy must describe the single-writer lease"
 
@@ -49,6 +52,9 @@ grep -Fq -- 'durable intent' src/.agents/skills/orchestrator/SKILL.md \
 
 grep -Fq -- 'worktree' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must mention worktrees"
+
+grep -Fq -- 'bootstrap' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must mention bootstrap"
 
 grep -Fq -- 'depends_on_spec_ids' src/.agents/skills/plan/SKILL.md \
   || fail "plan skill must seed depends_on_spec_ids"
@@ -83,6 +89,12 @@ for key in (
     "admitted_at",
     "worktree_name",
     "worktree_path",
+    "branch_name",
+    "base_branch",
+    "bootstrap_status",
+    "bootstrap_last_claim_id",
+    "bootstrap_last_report_path",
+    "bootstrap_last_completed_at",
     "slot_status",
     "active_task_id",
     "task_status",

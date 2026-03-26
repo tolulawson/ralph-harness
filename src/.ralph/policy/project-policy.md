@@ -38,10 +38,11 @@
 - Optional task branch format: `ralph/<spec-key>/<task-id>` when explicitly required
 - Admitted specs must execute in dedicated git worktrees under `.ralph/worktrees/`
 - The canonical checkout is reserved for scheduler state, projections, logs, lease state, and durable inbox processing
+- All spec execution must happen from the assigned spec worktree, never from the canonical checkout
 - Atomic commits required before task handoff: yes
 - Quality Gate evidence required before review handoff: yes
 - Clean worktree required before review, verification, or release: yes
-- Base branch: `main`
+- Canonical base branch: resolve from `.ralph/context/project-facts.json` and persist it during installation, upgrade, or the next lease-held reconciliation pass
 - Direct-to-main: disabled by default
 - GitHub PR required before merge: yes
 - Review required before merge: yes
@@ -99,12 +100,14 @@
 - The parent orchestrator may launch bounded parallel `research` only for specs in the same planning batch.
 - If the active runtime supports native subagents, the parent orchestrator may delegate analysis-heavy roles and delivery-heavy roles through those runtime-native primitives.
 - If the active runtime does not support native subagents, the assigned role may execute in the current session after the spec role slot is claimed in `.ralph/state/worker-claims.json`.
+- A claimed session must pass `bootstrap` before `implement` or any other execution role begins locally.
 - Child roles must not spawn nested workers beyond the runtime's Ralph-managed delegation policy.
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - `review_failed`, `verification_failed`, and `release_failed` must route back through orchestrator-managed remediation unless the report names an explicit human-gated blocker.
 - Workers must not update shared workflow state, queue state, lease state, state Markdown, or orchestrator event logs directly.
-- Runtime sessions may update `.ralph/state/worker-claims.json` only to acquire, heartbeat, or release their own worker claim.
+- Runtime sessions may update `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own worker claim.
 - Workers execute from their assigned spec worktree and may write spec-local artifacts there, but canonical control-plane updates remain orchestrator-mediated.
+- A finishing runtime session may briefly acquire the lease and reconcile its own validated control-plane updates.
 - Handoffs past implementation must preserve `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) in the latest relevant report.
 - Review and verification should treat the assigned spec branch or PR as the unit under inspection.
 - Review should treat missing or failed `Quality Gate`, missing commit evidence, dirty handoffs, or obviously mixed-scope task commits as findings.

@@ -148,6 +148,22 @@
       "native_subagent_delegation": true
     },
     {
+      "id": "bootstrap",
+      "skill": "bootstrap",
+      "purpose": "Prepare the assigned spec worktree and validation environment before execution.",
+      "classification": "delivery",
+      "allowed_writes": [
+        "spec-local bootstrap artifacts in the assigned worktree",
+        ".ralph/reports/<run-id>/<spec-key>/bootstrap.md"
+      ],
+      "helper_skills": [
+        "reporting",
+        "learning"
+      ],
+      "permission_model": "danger-full-access",
+      "native_subagent_delegation": false
+    },
+    {
       "id": "implement",
       "skill": "implement",
       "purpose": "Execute one assigned task in the spec worktree.",

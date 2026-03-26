@@ -4,6 +4,44 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.10.0 - 2026-03-26
+
+### Summary
+
+Ralph now treats worktree bootstrap as a mandatory execution boundary and makes control-plane leasing explicitly ephemeral.
+
+This release hardens the shipped runtime for real multi-app, multi-thread coordination: the canonical checkout remains a shared control plane, spec execution happens only inside per-spec worktrees, and any eligible session may briefly acquire the lease to reconcile validated shared-state updates.
+
+### Highlights
+
+- Added a first-class `bootstrap` role, skill, agent config, registry entry, state fields, and report path contract.
+- Made `.ralph/context/project-facts.json.base_branch` the canonical resolved base branch and taught install, upgrade, migration, and worktree creation to discover and persist it.
+- Tightened validation so non-bootstrap execution requires a bootstrap-passed, validation-ready claim and fails when work drifts back into the canonical checkout.
+- Promoted `active_spec_ids` to the authoritative active-spec model while demoting single-active mirrors to compatibility metadata.
+- Added short-lived reconciliation support so a finishing worker session can briefly acquire the lease and write back validated queue, workflow, and bootstrap-summary updates.
+- Expanded smoke fixtures and contract checks to cover bootstrap gating, worktree-only execution, cross-runtime claims, and canonical branch enforcement.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.10.0` as the default public install or upgrade reference.
+- Fresh installs now seed bootstrap-aware queue and claim state, a bootstrap role, canonical base-branch discovery, and validation bootstrap command support in project facts.
+- Upgrades continue to use `upgrade_contract_version` `9`, but now backfill bootstrap lifecycle metadata, bootstrap summaries, and persisted canonical base-branch facts.
+
+### Validation And Release Workflow
+
+- Verified locally with `python3 scripts/generate-runtime-adapters.py --check`.
+- Verified the updated contract suite and smoke fixtures with `scripts/smoke-test-install-upgrade.sh`.
+- Verified the full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Runtime helpers: `scripts/runtime_state_helpers.py`
+- Coordination CLI: `scripts/orchestrator-coordination.py`
+- Bootstrap skill: `src/.agents/skills/bootstrap/SKILL.md`
+- Project facts seed: `src/.ralph/context/project-facts.json`
+- Release asset: `ralph-harness-v0.10.0.tar.gz`
+
 ## v0.9.0 - 2026-03-25
 
 ### Summary

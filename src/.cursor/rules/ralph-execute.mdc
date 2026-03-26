@@ -6,5 +6,5 @@ alwaysApply: false
 # Ralph Execute
 
 - Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/worker-claims.json` before execution.
-- A Cursor session may act as the lease-holding orchestrator or claim a runnable worker slot, but only the orchestrator reconciles shared scheduler state.
+- A Cursor session may act as the lease-holder for a brief reconciliation window or claim a runnable worker slot, and a finishing session may reconcile its own validated work after acquiring the lease.
 - Use the canonical behavior from `skills/ralph-execute/SKILL.md` and `.agents/skills/orchestrator/SKILL.md`.

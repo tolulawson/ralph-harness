@@ -8,6 +8,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from runtime_state_helpers import (
+    BOOTSTRAP_STATUSES,
     CLAIM_STATUSES,
     CURRENT_LEASE_SCHEMA_VERSION,
     CURRENT_WORKER_CLAIMS_SCHEMA_VERSION,
@@ -17,13 +18,21 @@ from runtime_state_helpers import (
     INTENT_TYPES,
     LEASE_LOCK_SUFFIX,
     LEASE_TTL_SECONDS,
+    clear_lease_holder_state,
+    ensure_project_facts_file,
     ensure_intent_log,
     ensure_lease_file,
     ensure_spec_worktree,
     ensure_worker_claims_file,
+    lease_is_healthy,
     load_json,
     load_jsonl_records,
+    merge_bootstrap_summary_from_claims,
+    normalize_queue,
+    normalize_workflow,
     parse_timestamp,
+    render_spec_index_markdown,
+    render_workflow_state_markdown,
     worker_claim_is_healthy,
     utc_now,
     write_json,
@@ -152,12 +161,14 @@ def intent_cmd(args: argparse.Namespace) -> int:
 
 def worktree_cmd(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo).resolve()
+    workflow = load_workflow(repo_root)
     queue = load_json(repo_root / ".ralph/state/spec-queue.json")
+    _, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
     spec = next((entry for entry in queue.get("specs", []) if entry.get("spec_id") == args.spec_id or entry.get("spec_key") == args.spec_id), None)
     if spec is None:
         print(f"orchestrator-coordination: spec `{args.spec_id}` not found")
         return 1
-    worktree_path = ensure_spec_worktree(repo_root, spec)
+    worktree_path = ensure_spec_worktree(repo_root, spec, project_facts)
     print(worktree_path)
     return 0
 
@@ -214,6 +225,11 @@ def claim_cmd(args: argparse.Namespace) -> int:
             "claimed_at": now.isoformat(),
             "heartbeat_at": now.isoformat(),
             "expires_at": (now + timedelta(seconds=args.ttl_seconds)).isoformat(),
+            "bootstrap_status": "required" if args.role != "bootstrap" else "in_progress",
+            "bootstrap_started_at": now.isoformat() if args.role == "bootstrap" else None,
+            "bootstrap_completed_at": None,
+            "bootstrap_report_path": None,
+            "validation_ready": False,
         }
         claims.append(claim_record)
         write_json(claims_path, {"schema_version": CURRENT_WORKER_CLAIMS_SCHEMA_VERSION, "claims": claims})
@@ -233,6 +249,29 @@ def claim_cmd(args: argparse.Namespace) -> int:
         target["heartbeat_at"] = now.isoformat()
         target["expires_at"] = (now + timedelta(seconds=args.ttl_seconds)).isoformat()
         target["status"] = "claimed"
+    elif args.action == "bootstrap-start":
+        target["bootstrap_status"] = "in_progress"
+        target["bootstrap_started_at"] = now.isoformat()
+        target["bootstrap_completed_at"] = None
+        if args.bootstrap_report_path:
+            target["bootstrap_report_path"] = args.bootstrap_report_path
+        target["validation_ready"] = False
+    elif args.action == "bootstrap-pass":
+        target["bootstrap_status"] = "passed"
+        if target.get("bootstrap_started_at") is None:
+            target["bootstrap_started_at"] = now.isoformat()
+        target["bootstrap_completed_at"] = now.isoformat()
+        if args.bootstrap_report_path:
+            target["bootstrap_report_path"] = args.bootstrap_report_path
+        target["validation_ready"] = True
+    elif args.action == "bootstrap-fail":
+        target["bootstrap_status"] = "failed"
+        if target.get("bootstrap_started_at") is None:
+            target["bootstrap_started_at"] = now.isoformat()
+        target["bootstrap_completed_at"] = now.isoformat()
+        if args.bootstrap_report_path:
+            target["bootstrap_report_path"] = args.bootstrap_report_path
+        target["validation_ready"] = False
     elif args.action == "release":
         target["heartbeat_at"] = now.isoformat()
         target["expires_at"] = now.isoformat()
@@ -244,6 +283,75 @@ def claim_cmd(args: argparse.Namespace) -> int:
     write_json(claims_path, {"schema_version": CURRENT_WORKER_CLAIMS_SCHEMA_VERSION, "claims": claims})
     print(json.dumps(target, indent=2))
     return 0
+
+
+def reconcile_cmd(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo).resolve()
+    workflow = load_workflow(repo_root)
+    lease = ensure_lease_file(repo_root, workflow)
+    lease_path = repo_root / (workflow.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH)
+    lock_path = lease_path.with_name(lease_path.name + LEASE_LOCK_SUFFIX)
+
+    try:
+        fd = acquire_lock(lock_path)
+    except FileExistsError:
+        print("orchestrator-coordination: lease lock is busy")
+        return 1
+
+    try:
+        lease = load_json(lease_path)
+        now = utc_now()
+        if lease_is_healthy(lease, now) and lease.get("owner_token") != args.owner_token:
+            print("orchestrator-coordination: lease is already held by another owner")
+            return 1
+
+        lease.update(
+            {
+                "schema_version": CURRENT_LEASE_SCHEMA_VERSION,
+                "owner_token": args.owner_token,
+                "holder_thread": args.holder_thread,
+                "run_id": args.run_id,
+                "acquired_at": now.isoformat(),
+                "heartbeat_at": now.isoformat(),
+                "expires_at": (now + timedelta(seconds=args.ttl_seconds)).isoformat(),
+                "status": "held",
+            }
+        )
+        write_json(lease_path, lease)
+
+        queue_path = repo_root / ".ralph/state/spec-queue.json"
+        workflow_path = repo_root / ".ralph/state/workflow-state.json"
+        queue = load_json(queue_path)
+        workflow = load_json(workflow_path)
+        project_facts_path, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
+        queue = normalize_queue(queue, workflow, project_facts)
+        worker_claims_path = ensure_worker_claims_file(repo_root, workflow)
+        worker_claims = load_json(worker_claims_path)
+        merge_bootstrap_summary_from_claims(queue, worker_claims)
+        workflow = normalize_workflow(workflow, queue)
+
+        write_json(queue_path, queue)
+        write_json(workflow_path, workflow)
+        write_json(project_facts_path, project_facts)
+        write_json(worker_claims_path, worker_claims)
+        (repo_root / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
+        (repo_root / "specs/INDEX.md").write_text(render_spec_index_markdown(queue))
+
+        clear_lease_holder_state(lease)
+        write_json(lease_path, lease)
+        print(
+            json.dumps(
+                {
+                    "status": "ok",
+                    "base_branch": project_facts.get("base_branch"),
+                    "active_spec_ids": queue.get("active_spec_ids"),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    finally:
+        release_lock(fd, lock_path)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -278,7 +386,10 @@ def build_parser() -> argparse.ArgumentParser:
     worktree.set_defaults(handler=worktree_cmd)
 
     claim = subparsers.add_parser("claim")
-    claim.add_argument("action", choices=("acquire", "heartbeat", "release", "list"))
+    claim.add_argument(
+        "action",
+        choices=("acquire", "heartbeat", "bootstrap-start", "bootstrap-pass", "bootstrap-fail", "release", "list"),
+    )
     claim.add_argument("--repo", default=".")
     claim.add_argument("--claim-id")
     claim.add_argument("--spec-id")
@@ -289,8 +400,17 @@ def build_parser() -> argparse.ArgumentParser:
     claim.add_argument("--thread-id")
     claim.add_argument("--holder")
     claim.add_argument("--execution-mode", default="interactive_session")
+    claim.add_argument("--bootstrap-report-path")
     claim.add_argument("--ttl-seconds", type=int, default=LEASE_TTL_SECONDS)
     claim.set_defaults(handler=claim_cmd)
+
+    reconcile = subparsers.add_parser("reconcile")
+    reconcile.add_argument("--repo", default=".")
+    reconcile.add_argument("--owner-token", required=True)
+    reconcile.add_argument("--holder-thread", required=True)
+    reconcile.add_argument("--run-id", required=True)
+    reconcile.add_argument("--ttl-seconds", type=int, default=LEASE_TTL_SECONDS)
+    reconcile.set_defaults(handler=reconcile_cmd)
 
     return parser
 

@@ -3,12 +3,12 @@
 - Project: `{{project_name}}`
 - Active epoch: `{{active_epoch_id}}`
 - Active specs: `{{active_spec_ids}}`
-- Active spec: `{{active_spec_key}}`
+- Primary active spec (compatibility mirror): `{{active_spec_key}}`
 - Active task: `{{active_task_id}}`
 - Phase: `{{current_phase}}`
 - Task status: `{{task_status}}`
 - Assigned role: `{{assigned_role}}`
-- Branch: `{{current_branch}}`
+- Primary active branch (compatibility mirror): `{{current_branch}}`
 - Run id: `{{current_run_id}}`
 - Active PR number: `{{active_pr_number}}`
 - Active PR URL: `{{active_pr_url}}`

@@ -79,6 +79,7 @@ required_roles = {
     "plan",
     "task_gen",
     "plan_check",
+    "bootstrap",
     "implement",
     "review",
     "verify",
@@ -100,6 +101,7 @@ expected_sandbox = {
     "plan": "danger-full-access",
     "task_gen": "danger-full-access",
     "implement": "danger-full-access",
+    "bootstrap": "danger-full-access",
     "verify": "danger-full-access",
     "release": "danger-full-access",
 }

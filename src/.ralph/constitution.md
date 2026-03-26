@@ -176,7 +176,7 @@ Default policy is one branch and one GitHub PR per spec:
 
 - branch format: `ralph/<spec-key>`
 - optional task branch suffix: `ralph/<spec-key>/<task-id>` when policy explicitly allows it
-- base branch defaults to the project policy setting
+- canonical base branch resolves from `.ralph/context/project-facts.json`
 - direct-to-main is disabled by default
 - review is required before merge
 - verification is required before merge

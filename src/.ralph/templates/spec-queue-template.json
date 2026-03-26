@@ -1,5 +1,5 @@
 {
-  "schema_version": "4.0.0",
+  "schema_version": "5.0.0",
   "queue_policy": {
     "selection": "fifo_admission_window",
     "preemption": "failing_out_of_scope_bug",
@@ -48,6 +48,10 @@
       "worktree_path": ".ralph/worktrees/{{spec_key}}",
       "branch_name": "ralph/{{spec_key}}",
       "base_branch": "{{base_branch}}",
+      "bootstrap_status": "required",
+      "bootstrap_last_claim_id": null,
+      "bootstrap_last_report_path": null,
+      "bootstrap_last_completed_at": null,
       "slot_status": "inactive",
       "active_task_id": null,
       "task_status": null,

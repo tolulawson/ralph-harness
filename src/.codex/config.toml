@@ -30,6 +30,9 @@ config_file = "agents/task-gen.toml"
 [agents.plan_check]
 config_file = "agents/plan-check.toml"
 
+[agents.bootstrap]
+config_file = "agents/bootstrap.toml"
+
 [agents.implement]
 config_file = "agents/implement.toml"
 

@@ -67,7 +67,9 @@ for required in \
   '.claude/agents/' \
   '.claude/commands/' \
   '.cursor/rules/' \
-  'worker-claims'
+  'worker-claims' \
+  'base_branch' \
+  'validation_bootstrap_commands'
 do
   grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing multi-runtime requirement: $required"
 done

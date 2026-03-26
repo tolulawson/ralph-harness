@@ -3,12 +3,12 @@
 - Project: `replace-me`
 - Active epoch: `null`
 - Active specs: `[]`
-- Active spec: `null`
+- Primary active spec (compatibility mirror): `null`
 - Active task: `null`
 - Phase: `bootstrap`
 - Task status: `queued`
 - Assigned role: `orchestrator`
-- Branch: `null`
+- Primary active branch (compatibility mirror): `null`
 - Run id: `null`
 - Active PR number: `null`
 - Active PR URL: `null`

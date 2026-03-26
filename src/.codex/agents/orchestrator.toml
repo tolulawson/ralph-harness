@@ -14,23 +14,24 @@ Workflow:
 3. Read `.ralph/policy/project-policy.md`.
 4. Read `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, and `.ralph/context/learning-summary.md`.
 5. Read `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, `.ralph/state/orchestrator-lease.json`, `.ralph/state/worker-claims.json`, and the recent durable intents window from `.ralph/state/orchestrator-intents.jsonl`.
-6. Acquire or renew the single-writer lease before mutating canonical shared state.
+6. Acquire the single-writer lease only for the current shared-state mutation window.
 7. If another healthy lease-holder exists, append or acknowledge a durable intent and stop without mutating shared state.
 8. Re-read workflow, queue, lease, worker claims, and intent state after the lease is held.
 9. Read the latest relevant reports plus the admitted spec artifacts, including `task-state.json` when present.
 10. Tail the recent event window from `.ralph/logs/events.jsonl`.
 11. Read the recent learning-log window only when diagnosing or promoting learnings.
 12. Drain durable intents, materialize new specs, and compute the FIFO admission window with hard dependency blocking.
-13. Ensure admitted specs have dedicated worktrees and branches.
+13. Ensure admitted specs have dedicated worktrees and branches, and keep all execution inside those spec worktrees rather than the canonical checkout.
 14. After a PRD-to-spec planning batch stabilizes, identify only the specs from that batch whose `research_status` is `not_started` or `failed` and whose `spec.md` exists.
 15. Use `.ralph/state/worker-claims.json` as the cross-runtime execution registry and use native Codex multi-agent delegation when it is the best fit for the active claimable slots.
 16. Outside that batch-scoped research step, either dispatch bounded Codex workers for admitted specs or leave those admitted slots available for claim by another supported runtime.
-17. Wait for completed workers or released claims, close the completed worker threads when they exist, and validate the required outputs, including the `Interruption Assessment` section, `Quality Gate`, `Commit Evidence`, worktree branch alignment, and clean-worktree guardrails at handoff boundaries.
-18. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Route the spec back to the next fixing role unless the report names an explicit human-gated blocker.
-19. If a worker failed or blocked on a bug marked `scope = interrupt`, create a new interrupt spec, freeze new normal admissions, pause in-flight normal specs at role boundaries, and update amendment records when an origin spec exists.
-20. Write the orchestrator report, append one orchestrator-owned event, update shared state plus projections, and either renew or release the lease.
-21. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused specs in FIFO order.
-22. Continue dispatching workers until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached.
+17. Require `bootstrap` before `implement` or any other execution role begins in a claim that has not yet passed bootstrap locally.
+18. Wait for completed workers or released claims, close the completed worker threads when they exist, and validate the required outputs, including bootstrap evidence, the `Interruption Assessment` section, `Quality Gate`, `Commit Evidence`, worktree branch alignment, and clean-worktree guardrails at handoff boundaries.
+19. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Route the spec back to the next fixing role unless the report names an explicit human-gated blocker.
+20. If a worker failed or blocked on a bug marked `scope = interrupt`, create a new interrupt spec, freeze new normal admissions, pause in-flight normal specs at role boundaries, and update amendment records when an origin spec exists.
+21. Write the orchestrator report, append one orchestrator-owned event, update shared state plus projections, and either renew or release the lease. A finishing runtime session may also briefly acquire the lease to reconcile its own validated work.
+22. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused specs in FIFO order.
+23. Continue dispatching workers until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached.
 
 Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.
 """

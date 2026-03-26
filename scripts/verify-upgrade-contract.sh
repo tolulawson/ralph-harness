@@ -56,6 +56,9 @@ grep -Fq -- 'scripts/check-upgrade-surface.py' "$UPGRADING_MD" \
 grep -Fq -- '.ralph/state/worker-claims.json' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the worker claims file"
 
+grep -Fq -- 'base_branch' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document canonical base-branch preservation"
+
 grep -Fq -- '.claude/agents/' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the Claude adapter pack"
 
@@ -136,8 +139,8 @@ if payload.get("version") != version:
     raise SystemExit("verify-upgrade-contract: harness-version.json version mismatch")
 if payload.get("tag") != current_tag:
     raise SystemExit("verify-upgrade-contract: harness-version.json tag mismatch")
-if payload.get("upgrade_contract_version") != 8:
-    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 8")
+if payload.get("upgrade_contract_version") != 9:
+    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 9")
 if payload.get("runtime_contract_baseline_sha256") != runtime_contract_hash:
     raise SystemExit("verify-upgrade-contract: runtime_contract_baseline_sha256 must match src/.ralph/runtime-contract.md")
 if payload.get("runtime_overrides_path") != ".ralph/policy/runtime-overrides.md":

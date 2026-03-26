@@ -36,12 +36,13 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - `depends_on_spec_ids`
    - `admission_status`
    - default worktree metadata
+   - canonical `base_branch` from `.ralph/context/project-facts.json` unless a spec explicitly overrides it
    - compatibility mirrors only when needed
 5. Reject dependency cycles or missing dependency targets instead of guessing.
 6. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
 7. For the active spec, require `research.md` when the queue entry says `research_status = done`.
 8. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
-9. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, worktree rules, and rollout or migration considerations.
+9. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, worktree rules, bootstrap requirements, and rollout or migration considerations.
 8. Add:
    - `Research Inputs`
    - `Implementation Guardrails`
@@ -51,7 +52,7 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - `data-model.md`
    - `contracts/`
    - `quickstart.md`
-11. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established.
+11. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established, including the canonical `base_branch` and any `validation_bootstrap_commands` that bootstrap should run before implementation.
 12. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
 13. Write the role report and recommend the next role.
 

@@ -112,8 +112,11 @@ import sys
 sys.path.insert(0, str(Path.cwd() / "scripts"))
 
 from runtime_state_helpers import (
+    ensure_project_facts_file,
+    ensure_spec_worktree,
     ensure_worker_claims_file,
     load_json,
+    merge_bootstrap_summary_from_claims,
     normalize_queue,
     normalize_workflow,
     render_spec_index_markdown,
@@ -127,9 +130,15 @@ queue_path = repo / ".ralph/state/spec-queue.json"
 
 workflow = load_json(workflow_path)
 queue = load_json(queue_path)
-queue = normalize_queue(queue, workflow)
+project_facts_path, project_facts = ensure_project_facts_file(repo, queue, workflow)
+queue = normalize_queue(queue, workflow, project_facts)
 workflow = normalize_workflow(workflow, queue)
-ensure_worker_claims_file(repo, workflow)
+claims_path = ensure_worker_claims_file(repo, workflow)
+claims = load_json(claims_path)
+merge_bootstrap_summary_from_claims(queue, claims)
+for spec in queue.get("specs", []):
+    if spec.get("spec_id") in queue.get("active_spec_ids", []) or spec.get("slot_status") in {"admitted", "running", "paused"}:
+        ensure_spec_worktree(repo, spec, project_facts)
 write_json(queue_path, queue)
 write_json(workflow_path, workflow)
 (repo / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
@@ -166,7 +175,7 @@ write_atomic_runtime() {
   "current_phase": "review",
   "task_status": "awaiting_review",
   "assigned_role": "review",
-  "current_branch": "codex/001-atomic-commit-demo",
+  "current_branch": "main",
   "current_run_id": "atomic-20260308",
   "active_pr_number": null,
   "active_pr_url": null,
@@ -199,7 +208,7 @@ write_atomic_runtime() {
       "status": "awaiting_review",
       "admission_status": "admitted",
       "slot_status": "running",
-      "branch_name": "codex/001-atomic-commit-demo",
+      "branch_name": "ralph/001-atomic-commit-demo",
       "pr_number": null
     }
   ]
@@ -251,9 +260,9 @@ EOF
       "tasks_path": "specs/001-atomic-commit-demo/tasks.md",
       "task_state_path": "specs/001-atomic-commit-demo/task-state.json",
       "latest_report_path": ".ralph/reports/atomic-20260308/implement.md",
-      "worktree_name": "canonical-root",
-      "worktree_path": ".",
-      "branch_name": "codex/001-atomic-commit-demo",
+      "worktree_name": "ralph-001-atomic-commit-demo",
+      "worktree_path": ".ralph/worktrees/001-atomic-commit-demo",
+      "branch_name": "ralph/001-atomic-commit-demo",
       "base_branch": "main",
       "slot_status": "running",
       "active_task_id": "001-T001",
@@ -1488,12 +1497,17 @@ copy_manifest_paths src/install-manifest.txt "$ATOMIC_PASS_TARGET"
 create_generated_runtime "$ATOMIC_PASS_TARGET"
 sync_loader_files "$ATOMIC_PASS_TARGET"
 init_git_repo "$ATOMIC_PASS_TARGET"
-git -C "$ATOMIC_PASS_TARGET" checkout -q -b codex/001-atomic-commit-demo
 write_atomic_runtime "$ATOMIC_PASS_TARGET"
+git -C "$ATOMIC_PASS_TARGET" add .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_PASS_TARGET" commit -q -m "chore: seed atomic runtime fixture"
 normalize_current_runtime_fixture "$ATOMIC_PASS_TARGET"
-git -C "$ATOMIC_PASS_TARGET" add .
-git -C "$ATOMIC_PASS_TARGET" commit -q -m "feat: implement 001-T001"
-ATOMIC_PASS_SHA="$(git -C "$ATOMIC_PASS_TARGET" rev-parse --short HEAD)"
+ATOMIC_PASS_WORKTREE="$ATOMIC_PASS_TARGET/.ralph/worktrees/001-atomic-commit-demo"
+git -C "$ATOMIC_PASS_TARGET" add AGENTS.md CLAUDE.md .codex .claude .cursor .agents .ralph/context .ralph/harness-version.json .ralph/logs .ralph/policy .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_PASS_TARGET" commit -q -m "chore: normalize canonical control plane"
+printf '\nImplemented from the spec worktree.\n' >> "$ATOMIC_PASS_WORKTREE/specs/001-atomic-commit-demo/spec.md"
+git -C "$ATOMIC_PASS_WORKTREE" add .
+git -C "$ATOMIC_PASS_WORKTREE" commit -q -m "feat: implement 001-T001"
+ATOMIC_PASS_SHA="$(git -C "$ATOMIC_PASS_WORKTREE" rev-parse --short HEAD)"
 write_atomic_report "$ATOMIC_PASS_TARGET" "None." "$ATOMIC_PASS_SHA"
 git -C "$ATOMIC_PASS_TARGET" add .ralph/reports/atomic-20260308/implement.md
 git -C "$ATOMIC_PASS_TARGET" commit -q -m "docs: record 001-T001 commit evidence"
@@ -1526,16 +1540,21 @@ copy_manifest_paths src/install-manifest.txt "$ATOMIC_MULTI_TARGET"
 create_generated_runtime "$ATOMIC_MULTI_TARGET"
 sync_loader_files "$ATOMIC_MULTI_TARGET"
 init_git_repo "$ATOMIC_MULTI_TARGET"
-git -C "$ATOMIC_MULTI_TARGET" checkout -q -b codex/001-atomic-commit-demo
 write_atomic_runtime "$ATOMIC_MULTI_TARGET"
+git -C "$ATOMIC_MULTI_TARGET" add .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_MULTI_TARGET" commit -q -m "chore: seed atomic runtime fixture"
 normalize_current_runtime_fixture "$ATOMIC_MULTI_TARGET"
-git -C "$ATOMIC_MULTI_TARGET" add .
-git -C "$ATOMIC_MULTI_TARGET" commit -q -m "feat: implement core of 001-T001"
-printf '\nSecond checkpoint for the same task.\n' >> "$ATOMIC_MULTI_TARGET/specs/001-atomic-commit-demo/spec.md"
-git -C "$ATOMIC_MULTI_TARGET" add specs/001-atomic-commit-demo/spec.md
-git -C "$ATOMIC_MULTI_TARGET" commit -q -m "test: finish 001-T001 checkpoint"
-ATOMIC_MULTI_SHA="$(git -C "$ATOMIC_MULTI_TARGET" rev-parse --short HEAD)"
-ATOMIC_MULTI_PREV_SHA="$(git -C "$ATOMIC_MULTI_TARGET" rev-parse --short HEAD~1)"
+ATOMIC_MULTI_WORKTREE="$ATOMIC_MULTI_TARGET/.ralph/worktrees/001-atomic-commit-demo"
+git -C "$ATOMIC_MULTI_TARGET" add AGENTS.md CLAUDE.md .codex .claude .cursor .agents .ralph/context .ralph/harness-version.json .ralph/logs .ralph/policy .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_MULTI_TARGET" commit -q -m "chore: normalize canonical control plane"
+printf '\nFirst checkpoint for the same task.\n' >> "$ATOMIC_MULTI_WORKTREE/specs/001-atomic-commit-demo/spec.md"
+git -C "$ATOMIC_MULTI_WORKTREE" add .
+git -C "$ATOMIC_MULTI_WORKTREE" commit -q -m "feat: implement core of 001-T001"
+printf '\nSecond checkpoint for the same task.\n' >> "$ATOMIC_MULTI_WORKTREE/specs/001-atomic-commit-demo/spec.md"
+git -C "$ATOMIC_MULTI_WORKTREE" add specs/001-atomic-commit-demo/spec.md
+git -C "$ATOMIC_MULTI_WORKTREE" commit -q -m "test: finish 001-T001 checkpoint"
+ATOMIC_MULTI_SHA="$(git -C "$ATOMIC_MULTI_WORKTREE" rev-parse --short HEAD)"
+ATOMIC_MULTI_PREV_SHA="$(git -C "$ATOMIC_MULTI_WORKTREE" rev-parse --short HEAD~1)"
 write_atomic_report "$ATOMIC_MULTI_TARGET" "\`$ATOMIC_MULTI_PREV_SHA..$ATOMIC_MULTI_SHA\`" "$ATOMIC_MULTI_SHA"
 git -C "$ATOMIC_MULTI_TARGET" add .ralph/reports/atomic-20260308/implement.md
 git -C "$ATOMIC_MULTI_TARGET" commit -q -m "docs: record 001-T001 multi-commit evidence"
@@ -1543,7 +1562,7 @@ python3 scripts/check-installed-runtime-state.py --repo "$ATOMIC_MULTI_TARGET"
 
 ATOMIC_DIRTY_TARGET="$TMP_DIR/atomic-dirty-target"
 cp -R "$ATOMIC_PASS_TARGET" "$ATOMIC_DIRTY_TARGET"
-printf '\nUncommitted change.\n' >> "$ATOMIC_DIRTY_TARGET/specs/001-atomic-commit-demo/spec.md"
+printf '\nUncommitted change.\n' >> "$ATOMIC_DIRTY_TARGET/.ralph/worktrees/001-atomic-commit-demo/specs/001-atomic-commit-demo/spec.md"
 if python3 scripts/check-installed-runtime-state.py --repo "$ATOMIC_DIRTY_TARGET"; then
   echo "smoke-test-install-upgrade: dirty worktree should have failed" >&2
   exit 1
@@ -1555,11 +1574,16 @@ copy_manifest_paths src/install-manifest.txt "$ATOMIC_MISSING_REPORT_TARGET"
 create_generated_runtime "$ATOMIC_MISSING_REPORT_TARGET"
 sync_loader_files "$ATOMIC_MISSING_REPORT_TARGET"
 init_git_repo "$ATOMIC_MISSING_REPORT_TARGET"
-git -C "$ATOMIC_MISSING_REPORT_TARGET" checkout -q -b codex/001-atomic-commit-demo
 write_atomic_runtime "$ATOMIC_MISSING_REPORT_TARGET"
+git -C "$ATOMIC_MISSING_REPORT_TARGET" add .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_MISSING_REPORT_TARGET" commit -q -m "chore: seed atomic runtime fixture"
 normalize_current_runtime_fixture "$ATOMIC_MISSING_REPORT_TARGET"
-git -C "$ATOMIC_MISSING_REPORT_TARGET" add .
-git -C "$ATOMIC_MISSING_REPORT_TARGET" commit -q -m "feat: implement 001-T001"
+ATOMIC_MISSING_WORKTREE="$ATOMIC_MISSING_REPORT_TARGET/.ralph/worktrees/001-atomic-commit-demo"
+git -C "$ATOMIC_MISSING_REPORT_TARGET" add AGENTS.md CLAUDE.md .codex .claude .cursor .agents .ralph/context .ralph/harness-version.json .ralph/logs .ralph/policy .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_MISSING_REPORT_TARGET" commit -q -m "chore: normalize canonical control plane"
+printf '\nImplemented without a complete report.\n' >> "$ATOMIC_MISSING_WORKTREE/specs/001-atomic-commit-demo/spec.md"
+git -C "$ATOMIC_MISSING_WORKTREE" add .
+git -C "$ATOMIC_MISSING_WORKTREE" commit -q -m "feat: implement 001-T001"
 cat > "$ATOMIC_MISSING_REPORT_TARGET/.ralph/reports/atomic-20260308/implement.md" <<'EOF'
 # Implementation Report
 
@@ -1581,10 +1605,17 @@ create_generated_runtime "$ATOMIC_BRANCH_MISMATCH_TARGET"
 sync_loader_files "$ATOMIC_BRANCH_MISMATCH_TARGET"
 init_git_repo "$ATOMIC_BRANCH_MISMATCH_TARGET"
 write_atomic_runtime "$ATOMIC_BRANCH_MISMATCH_TARGET"
+git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" add .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" commit -q -m "chore: seed atomic runtime fixture"
 normalize_current_runtime_fixture "$ATOMIC_BRANCH_MISMATCH_TARGET"
-git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" add .
-git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" commit -q -m "feat: implement 001-T001 on the wrong branch"
-ATOMIC_BRANCH_SHA="$(git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" rev-parse --short HEAD)"
+ATOMIC_BRANCH_WORKTREE="$ATOMIC_BRANCH_MISMATCH_TARGET/.ralph/worktrees/001-atomic-commit-demo"
+git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" add AGENTS.md CLAUDE.md .codex .claude .cursor .agents .ralph/context .ralph/harness-version.json .ralph/logs .ralph/policy .ralph/reports .ralph/state specs tasks
+git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" commit -q -m "chore: normalize canonical control plane"
+git -C "$ATOMIC_BRANCH_WORKTREE" checkout -q -b wrong-branch
+printf '\nImplemented on the wrong branch.\n' >> "$ATOMIC_BRANCH_WORKTREE/specs/001-atomic-commit-demo/spec.md"
+git -C "$ATOMIC_BRANCH_WORKTREE" add .
+git -C "$ATOMIC_BRANCH_WORKTREE" commit -q -m "feat: implement 001-T001 on the wrong branch"
+ATOMIC_BRANCH_SHA="$(git -C "$ATOMIC_BRANCH_WORKTREE" rev-parse --short HEAD)"
 write_atomic_report "$ATOMIC_BRANCH_MISMATCH_TARGET" "None." "$ATOMIC_BRANCH_SHA"
 git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" add .ralph/reports/atomic-20260308/implement.md
 git -C "$ATOMIC_BRANCH_MISMATCH_TARGET" commit -q -m "docs: record 001-T001 commit evidence on the wrong branch"

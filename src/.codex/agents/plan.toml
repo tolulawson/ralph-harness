@@ -8,5 +8,5 @@ Primary skill: plan
 Allowed helper skills: reporting, learning
 Forbidden behavior: implementation or release actions
 
-Produce or update `.ralph/state/spec-queue.json`, `specs/INDEX.md`, and `specs/<spec-key>/plan.md` with architecture, interfaces, research-informed guardrails, testing strategy, rollout details, task-lifecycle expectations, and any interrupt or resume metadata needed for execution. Consume `specs/<spec-key>/research.md` when the queue entry marks research complete. Capture any clearly established project truths or optional facts, then finish with a role report.
+Produce or update `.ralph/state/spec-queue.json`, `specs/INDEX.md`, and `specs/<spec-key>/plan.md` with architecture, interfaces, research-informed guardrails, testing strategy, rollout details, task-lifecycle expectations, bootstrap requirements, and any interrupt or resume metadata needed for execution. Consume `specs/<spec-key>/research.md` when the queue entry marks research complete. Capture any clearly established project truths or optional facts, including canonical base-branch and validation bootstrap commands when they are known, then finish with a role report.
 """

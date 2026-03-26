@@ -53,7 +53,9 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - `specs/INDEX.md` must match the canonical queue projection
    - `tasks.md` and `task-state.json` must agree semantically
    - the lease file, worker claims file, and durable intents file must exist and parse
+   - the canonical base branch must be resolved in `.ralph/context/project-facts.json` or safely derivable for queued specs
    - admitted specs must have valid worktrees whose branches match the active queue entries
+   - active non-bootstrap claims must already show `bootstrap_status = passed` and `validation_ready = true`
    - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
    - the latest relevant worker report must include `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) before work advances past implementation
    - the latest relevant worker report must include `Commit Evidence` for the checkpoint under handoff before work advances past implementation
@@ -62,11 +64,12 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 7. Read a recent tail of the event log rather than the full history.
 8. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
 9. Guide the active runtime to use Ralph's lease-plus-claims execution model to:
-   - acquire a single-writer lease before mutating canonical shared state
+   - acquire a single-writer lease only for the current shared-state mutation window
    - append durable intents when another healthy lease-holder is already active
    - honor `depends_on_spec_ids` as hard admission blockers
    - admit bounded normal specs in FIFO order up to `queue_policy.normal_execution_limit`
    - ensure admitted specs have dedicated git worktrees
+   - require `bootstrap` before `implement` or any other execution role begins in a claim that is not yet validation-ready
    - allow bounded same-batch `research` workers only before queue-head planning resumes
    - either dispatch native subagents when the current runtime supports them or expose admitted slots for claim in `.ralph/state/worker-claims.json`
    - preserve the canonical analysis-heavy and delivery-heavy role classification
@@ -74,6 +77,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - wait for completed workers or released claims
    - close completed worker threads before mutating shared state when native subagents were used
    - synchronize validated control-plane artifacts back into the canonical checkout
+   - allow the finishing runtime session to acquire the brief lease and reconcile its own validated work
    - create an interrupt spec automatically for any failing out-of-scope bug
    - pause admitted normal specs at role boundaries and later resume them after the interrupt is released
    - validate outputs
@@ -96,6 +100,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Keep all role configs at full permissions (`danger-full-access`).
 - Do not advance review, verification, or release from a report that lacks `Quality Gate` evidence.
 - Do not advance review, verification, or release from a dirty spec worktree or a report that lacks checkpoint traceability.
+- Do not let `implement` begin until the current claim has passed `bootstrap` and is validation-ready.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
 - Do not stop after a single handoff unless the runtime contract reaches queue completion, lease transfer, or a human-gated boundary.
 - Do not stop merely because review, verification, or release failed; keep routing those failures back through orchestrator-managed remediation unless the report names a human blocker.

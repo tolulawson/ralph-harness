@@ -1,4 +1,4 @@
 # Spec Register
 
-| Spec | Kind | Depends On | Epoch | Title | Status | Admission | Slot | Worktree | Branch | PR | Latest Report |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Spec | Kind | Depends On | Epoch | Title | Status | Bootstrap | Admission | Slot | Worktree | Branch | PR | Latest Report |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

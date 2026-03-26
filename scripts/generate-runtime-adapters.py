@@ -151,6 +151,7 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
             "Read the managed Ralph loader block in `AGENTS.md` before doing substantial work.",
             "Treat `.ralph/` as the canonical runtime doctrine and state surface.",
             "Use `.ralph/state/worker-claims.json` as the shared worker-claims registry for cross-runtime execution.",
+            "Execute numbered spec work only from assigned spec worktrees, never from the canonical checkout.",
             "Use `.cursor/rules/` only as Cursor-native wrappers around the shared Ralph contract, not as a divergent workflow definition.",
             "When a task references a Ralph role or entrypoint, route back to `.agents/skills/` and the public `skills/ralph-*` docs."
         ],
@@ -161,7 +162,7 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
         "How Cursor should resume an installed Ralph runtime.",
         [
             "Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/worker-claims.json` before execution.",
-            "A Cursor session may act as the lease-holding orchestrator or claim a runnable worker slot, but only the orchestrator reconciles shared scheduler state.",
+            "A Cursor session may act as the lease-holder for a brief reconciliation window or claim a runnable worker slot, and a finishing session may reconcile its own validated work after acquiring the lease.",
             "Use the canonical behavior from `skills/ralph-execute/SKILL.md` and `.agents/skills/orchestrator/SKILL.md`."
         ],
         False,
