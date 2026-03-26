@@ -23,3 +23,4 @@
 ## Operational Expectations
 
 - Add runtime, release, verification, and workflow expectations here.
+- Before publishing a Ralph release from this repository, audit the control-plane doctrine, supporting docs, public skills, generated sub-agent instructions, and related release surfaces for drift from the latest contracts and worktree or bootstrap rules.

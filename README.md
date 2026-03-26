@@ -4,7 +4,7 @@ Ralph turns a coding agent into a repo-resident engineering loop with durable st
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.10.0`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, require a canonical bootstrap step before implementation begins, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a short-lived single-writer lease, and let different supported runtimes claim different admitted spec slots through a shared worker-claims file.
+As of `v0.10.1`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, require a canonical bootstrap step before implementation begins, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a short-lived single-writer lease, and let different supported runtimes claim different admitted spec slots through a shared worker-claims file.
 
 ## Why People Use Ralph
 
@@ -114,7 +114,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.10.0` as the default public reference right now
+- use `v0.10.1` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
@@ -156,14 +156,15 @@ flowchart TD
     G --> H["Lease + durable intents"]
     H --> I["Admit bounded normal specs"]
     I --> J["Worker claims + per-spec git worktrees"]
-    J --> K["Implement / Review / Verify / Release"]
-    K --> L["Synchronize canonical state"]
-    L --> M["Advance queue"]
+    J --> K["Bootstrap"]
+    K --> L["Implement / Review / Verify / Release"]
+    L --> M["Synchronize canonical state"]
+    M --> P["Advance queue"]
     G -- "plan issues" --> E
     G -- "task issues" --> F
-    K -- "review failed" --> J
-    K -- "verification failed" --> J
-    K -- "out-of-scope failing bug" --> N["Interrupt spec"]
+    L -- "review failed" --> J
+    L -- "verification failed" --> J
+    L -- "out-of-scope failing bug" --> N["Interrupt spec"]
     N --> O["Pause admitted normal specs and push resume_spec_stack"]
     O --> J
 ```
@@ -178,10 +179,11 @@ In practice, that means:
 - `.ralph/state/worker-claims.json` lets Codex, Claude, or Cursor claim different admitted slots safely
 - `.ralph/state/orchestrator-intents.jsonl` records cross-thread requests durably
 - admitted specs run in dedicated git worktrees under `.ralph/worktrees/`
+- `bootstrap` is the required first execution boundary before implementation or any other execution role begins in a claim
 - worker reports live at `.ralph/reports/<run-id>/<spec-key>/<role>.md`, while the orchestrator report stays at `.ralph/reports/<run-id>/orchestrator.md`
 - project-specific runtime additions belong in `.ralph/policy/runtime-overrides.md`, while `.ralph/runtime-contract.md` stays scaffold-owned
 - supported runtimes may use native subagents, but a plain runtime session may also execute a claimed slot directly
-- implementation, review, verification, and release run at most one worker per admitted spec
+- bootstrap, implementation, review, verification, and release run at most one worker per admitted spec
 - all role configs run with `sandbox_mode = "danger-full-access"`
 - if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
 - `plan-check` can route work back to `plan` or `task-gen`
@@ -196,13 +198,13 @@ Ralph now separates three concerns that used to get conflated in lighter-weight 
 - coordination:
   `.ralph/state/orchestrator-lease.json` prevents multiple threads from mutating shared state at the same time, while `.ralph/state/orchestrator-intents.jsonl` lets new work requests land durably even when another orchestrator run is active
 - execution:
-  every admitted spec gets one branch, one worktree, one active non-research worker at a time, and its own report path
+  every admitted spec gets one branch, one worktree, one active non-research worker at a time, must pass `bootstrap` before execution begins locally, and owns its own report path
 
 That means you can ask Ralph to start another spec while other work is already in progress, but the scheduler still decides when that spec becomes admissible. Hard dependencies are not bypassed, and later specs do not jump ahead of earlier eligible ones.
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.10.0`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.10.1`, the shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
 - runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
@@ -283,4 +285,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.10.0`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.10.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

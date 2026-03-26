@@ -30,7 +30,7 @@ Interpret an installed Ralph harness in this order:
 - When the active runtime does not support native subagents for a role, the runtime may execute that role in the current session after claiming the assigned spec role slot in `.ralph/state/worker-claims.json`.
 - The canonical role classification remains:
   - analysis-heavy roles: `research`, `plan_check`, `review`
-  - delivery-heavy roles: `prd`, `specify`, `plan`, `task_gen`, `implement`, `verify`, `release`
+  - delivery-heavy roles: `prd`, `specify`, `plan`, `task_gen`, `bootstrap`, `implement`, `verify`, `release`
 - Child roles must not spawn nested workers beyond the active runtime's Ralph-managed delegation policy.
 - The orchestrator may persist only validated worker outputs and reports into shared runtime state; worker chain-of-thought or scratch deliberation must not be copied into shared artifacts.
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
@@ -51,7 +51,7 @@ Interpret an installed Ralph harness in this order:
 - Handoffs past implementation must include `Quality Gate` evidence in the latest relevant worker report.
 - Review, verification, and release failures are remediation signals, not stop conditions.
 - No role besides the orchestrator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
-- Runtime sessions may mutate `.ralph/state/worker-claims.json` only to acquire, heartbeat, or release their own active claim.
+- Runtime sessions may mutate `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own active claim.
 - Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
 
 ## Core Loop

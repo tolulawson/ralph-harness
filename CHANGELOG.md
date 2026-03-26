@@ -4,6 +4,40 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.10.1 - 2026-03-26
+
+### Summary
+
+This patch tightens the release-facing doctrine after the control-plane bootstrap and ephemeral-lease rollout.
+
+It closes the remaining drift between the latest control-plane contract and the supporting docs, public skills, generated guidance, and dogfood learning records, while also turning that audit expectation into an explicit source-repo lesson for future releases.
+
+### Highlights
+
+- Fixed remaining doctrine drift so the shipped runtime contract, README flow, spec-index template, and install or upgrade skills all align with bootstrap-gated, worktree-only execution.
+- Added a dogfood release-process lesson: before publishing a tag, run an explicit drift pass across the control plane, supporting docs, public skills, generated sub-agent instructions, and related release surfaces.
+- Promoted that lesson into the source repo's learning summary and project truths so future release passes treat doctrine alignment as an operational expectation, not an ad hoc cleanup.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.10.1` as the default public install or upgrade reference.
+- Fresh installs and upgrades now point to the corrected current stable tag in docs and examples.
+- `upgrade_contract_version` remains `9`; this patch is doctrine and release-surface alignment work, not a new migration contract.
+
+### Validation And Release Workflow
+
+- Verified locally with `python3 scripts/generate-runtime-adapters.py --check`.
+- Verified the full contract suite and smoke fixtures with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Public install skill: `skills/ralph-install/SKILL.md`
+- Public upgrade skill: `skills/ralph-upgrade/SKILL.md`
+- Dogfood learning summary: `.ralph/context/learning-summary.md`
+- Dogfood lessons log: `tasks/lessons.md`
+- Release asset: `ralph-harness-v0.10.1.tar.gz`
+
 ## v0.10.0 - 2026-03-26
 
 ### Summary

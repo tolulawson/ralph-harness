@@ -30,9 +30,10 @@ This is the main external entry point for refreshing an existing install without
 9. Let the migration preserve user-owned runtime-specific settings while Ralph-managed adapter packs and shared runtime files are refreshed.
 10. Do not upgrade over a healthy held orchestrator lease; if the migration reports a live lease-holder, stop and retry after the active run releases or expires.
 11. Let the migration rewrite only Ralph-owned runtime state and projections, recover stale lease state, create or normalize the durable intents file, preserve or backfill `.ralph/context/project-facts.json` canonical `base_branch` data, seed collision-safe worktree metadata, propagate bootstrap lifecycle fields into claims and queue summaries, normalize clear legacy worker report paths into spec-scoped aliases, create `.ralph/policy/runtime-overrides.md` when it is missing, and create missing `task-state.json` files when inference is clear.
-12. If migration reports ambiguous history, duplicate branch ownership across specs, or ambiguous shared legacy report ownership, stop and repair that state instead of guessing.
-13. Update `.ralph/harness-version.json` with the selected tag, resolved commit, and runtime-contract baseline metadata.
-14. Complete the upgrade without overwriting project-owned runtime files unless a named migration step requires it.
+12. Confirm the upgraded runtime still enforces worktree-only execution, bootstrap-gated implementation, and `active_spec_ids` as the authoritative active-spec set instead of relying on compatibility mirrors.
+13. If migration reports ambiguous history, duplicate branch ownership across specs, or ambiguous shared legacy report ownership, stop and repair that state instead of guessing.
+14. Update `.ralph/harness-version.json` with the selected tag, resolved commit, and runtime-contract baseline metadata.
+15. Complete the upgrade without overwriting project-owned runtime files unless a named migration step requires it.
 
 ## Outputs
 
@@ -43,4 +44,5 @@ This is the main external entry point for refreshing an existing install without
 At the end of upgrade:
 
 - verify the upgrade against the checklist and verification section in `UPGRADING.md`
+- confirm the upgraded runtime still matches the latest control-plane doctrine around ephemeral lease windows, worktree-only execution, and bootstrap lifecycle tracking
 - remind the user to restart their coding agent if it needs to reload newly upgraded project instructions

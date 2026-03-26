@@ -30,3 +30,8 @@
 - Use a managed Ralph block inside `AGENTS.md` for installs and upgrades. Refresh only that block in existing repos instead of replacing the whole loader file.
 - Version the shipped scaffold surface with a canonical `VERSION` file, then record the installed tag and resolved commit in `.ralph/harness-version.json`.
 - Keep upgrades scaffold-only by default. Policies, states, specs, tasks, reports, logs, and other project-owned runtime records should stay outside the automatic overwrite surface unless a named migration explicitly targets them.
+
+## 2026-03-26
+
+- Before publishing any Ralph release from this source repository, run an explicit drift pass across the control-plane doctrine, supporting docs, public skills, and role or sub-agent instructions so every support surface matches the latest control-plane contract.
+- When a doctrine change alters control-plane ownership, bootstrap flow, lease semantics, or worktree rules, audit not just `src/.ralph/*` but also README, install or upgrade guides, public `ralph-*` entry skills, generated runtime adapters, and dogfood learning records before tagging the release.
