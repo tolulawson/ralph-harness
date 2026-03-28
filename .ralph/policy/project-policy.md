@@ -21,7 +21,9 @@
 - Queue unit: numbered spec
 - Epochs: grouping layer only
 - Normal execution limit: `2`
-- Normal-spec execution: bounded admission window with one worker per admitted spec
+- Default operational mode: run through all runnable specs until the queue is drained or a documented human gate is reached
+- Normal-spec execution: bounded admission window with one worker per admitted spec, and the orchestrator should prefer filling every runnable slot in that window
+- Parallel execution: encouraged for dependency-independent specs within `normal_execution_limit`
 - hard dependency policy: a spec may not be admitted until every spec in `depends_on_spec_ids` is `released` or `done`
 - Bounded planning-time parallelism: allowed only for `research` on specs from the same planning batch
 - Automatic preemption: create an interrupt spec for any failing out-of-scope bug
@@ -92,6 +94,7 @@
 - A role stops when its assigned artifact and report are complete.
 - The parent orchestrator updates shared state after validating outputs.
 - The parent orchestrator drains the queue until a documented stop condition occurs.
+- The parent orchestrator should not stop after a single spec or successful handoff when other admitted or dependency-satisfied specs are still runnable.
 - The parent orchestrator may launch bounded parallel `research` only for specs in the same planning batch.
 - The parent orchestrator must spawn workers with `fork_context = true`.
 - The parent orchestrator should use `agent_type = "explorer"` for analysis-heavy roles and `agent_type = "worker"` for delivery-heavy roles.

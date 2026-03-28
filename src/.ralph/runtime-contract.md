@@ -4,6 +4,8 @@ This file is the generic installed-runtime doctrine for the Ralph harness.
 
 It defines how an installed target repository should orchestrate worker roles, own shared runtime state, coordinate concurrent user threads, and stop safely while draining a dependency-aware multi-spec queue.
 
+The default operating principle is queue-wide throughput: once orchestration begins, Ralph should keep advancing every runnable spec in series or in bounded parallel when dependencies allow, rather than stopping after a single spec, task, or successful handoff.
+
 This base runtime contract is scaffold-owned. Project-specific runtime extensions belong in `.ralph/policy/runtime-overrides.md` rather than direct edits to this file.
 
 ## Runtime Priority
@@ -36,6 +38,7 @@ Interpret an installed Ralph harness in this order:
 - The orchestrator may persist only validated worker outputs and reports into shared runtime state; worker chain-of-thought or scratch deliberation must not be copied into shared artifacts.
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
 - At most one non-research worker role may be active per admitted spec at any time.
+- When multiple normal specs are dependency-satisfied, the orchestrator should prefer filling the bounded admission window before idling or stopping.
 - The scheduler must coordinate through a single-writer lease stored in `.ralph/state/orchestrator-lease.json`.
 - Cross-runtime worker execution must coordinate through `.ralph/state/worker-claims.json`.
 - A healthy held lease blocks concurrent shared-state mutation; expired or malformed held leases must be recovered to `idle` before mutation resumes.
@@ -77,9 +80,10 @@ Interpret an installed Ralph harness in this order:
    - active interrupt spec
    - oldest ready interrupt spec by `created_at`
    - else oldest normal specs whose dependencies are satisfied, in FIFO order, up to `queue_policy.normal_execution_limit`
-16. ensure every admitted spec has a dedicated git worktree and branch
-17. load only the admitted spec artifacts, `task-state.json`, and the latest relevant reports
-18. choose the next task for each admitted spec in this order:
+16. prefer filling every open slot in that admission window with a runnable spec before considering any stop path
+17. ensure every admitted spec has a dedicated git worktree and branch
+18. load only the admitted spec artifacts, `task-state.json`, and the latest relevant reports
+19. choose the next task for each admitted spec in this order:
    - first `in_progress`
    - else first `paused`
    - else first `ready`
@@ -87,25 +91,25 @@ Interpret an installed Ralph harness in this order:
    - else first `verification_failed`
    - else first `plan_check_failed`
    - else advance the spec toward PR, merge, or completion
-19. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
-20. if that batch contains specs with valid `spec.md` files and `research_status` needing work, either:
+20. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
+21. if that batch contains specs with valid `spec.md` files and `research_status` needing work, either:
    - delegate bounded parallel `research` through native subagents when the runtime supports them, or
    - let independent runtime sessions claim those admitted `research` slots through `.ralph/state/worker-claims.json`
-21. wait for the research batch to finish, close or release the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
-22. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, next action, and bootstrap readiness
-23. make each runnable spec role slot claimable through `.ralph/state/worker-claims.json`
-24. if the next execution role for a claim has not yet passed `bootstrap`, dispatch or claim `bootstrap` first
-25. if the active runtime supports native delegation, it may dispatch bounded workers directly for claimable slots; otherwise the current runtime session may acquire one claim and execute that role locally
-26. ensure every worker or claiming runtime session receives one spec, one worktree path, one report path, one execution mode, and one claim heartbeat window
-27. wait for completed workers or released claims, and validate outputs from the assigned spec worktrees, including bootstrap evidence, `Quality Gate`, `Commit Evidence`, and clean-worktree handoff requirements
-28. synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before updating shared state; a finishing runtime session may acquire the brief lease and reconcile its own completed work
-29. if review, verification, or release reports a fixable failure without an explicit human-gated blocker, update the task lifecycle, route the spec back to the next remediation role, and keep draining the queue
-30. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
-31. write the orchestrator report
-32. append one orchestrator-owned event
-33. update shared state and projections
-34. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in FIFO order
-35. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
+22. wait for the research batch to finish, close or release the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
+23. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, next action, and bootstrap readiness
+24. make each runnable spec role slot claimable through `.ralph/state/worker-claims.json`
+25. if the next execution role for a claim has not yet passed `bootstrap`, dispatch or claim `bootstrap` first
+26. if the active runtime supports native delegation, it may dispatch bounded workers directly for claimable slots; otherwise the current runtime session may acquire one claim and execute that role locally
+27. ensure every worker or claiming runtime session receives one spec, one worktree path, one report path, one execution mode, and one claim heartbeat window
+28. wait for completed workers or released claims, and validate outputs from the assigned spec worktrees, including bootstrap evidence, `Quality Gate`, `Commit Evidence`, and clean-worktree handoff requirements
+29. synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before updating shared state; a finishing runtime session may acquire the brief lease and reconcile its own completed work
+30. if review, verification, or release reports a fixable failure without an explicit human-gated blocker, update the task lifecycle, route the spec back to the next remediation role, and keep draining the queue
+31. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
+32. write the orchestrator report
+33. append one orchestrator-owned event
+34. update shared state and projections
+35. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in FIFO order
+36. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
 
 ## Stop Conditions
 
@@ -287,6 +291,7 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 - Strict FIFO admission is the default rule for normal specs.
 - Interrupt specs preempt normal specs when they exist.
 - Normal specs may run concurrently only inside the bounded admission window.
+- The scheduler should keep that bounded admission window filled with every runnable spec before concluding that orchestration is done.
 - Hard dependencies block admission until every required spec is `released` or `done`.
 - Later ready specs may not bypass an earlier eligible spec in admission order.
 - Parallel research may improve later spec readiness but must never let a later spec bypass an earlier spec in normal admission.
