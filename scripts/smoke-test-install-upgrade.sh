@@ -64,6 +64,13 @@ copy_manifest_paths() {
     if [[ "$path" == "CLAUDE.md" && -f "$target/CLAUDE.md" ]]; then
       continue
     fi
+    if [[ -f "$target/$path" ]]; then
+      case "$path" in
+        .codex/config.toml|.codex/hooks.json|.claude/settings.json|.cursor/hooks.json)
+          continue
+          ;;
+      esac
+    fi
     mkdir -p "$target/$(dirname "$path")"
     rsync -a "src/$path" "$target/$path"
   done < "$manifest"
@@ -1140,6 +1147,26 @@ python3 scripts/check-installed-runtime-state.py --repo "$INSTALL_TARGET"
   exit 1
 }
 
+[[ -f "$INSTALL_TARGET/.codex/hooks.json" ]] || {
+  echo "smoke-test-install-upgrade: missing .codex/hooks.json after install" >&2
+  exit 1
+}
+
+[[ -f "$INSTALL_TARGET/.claude/settings.json" ]] || {
+  echo "smoke-test-install-upgrade: missing .claude/settings.json after install" >&2
+  exit 1
+}
+
+[[ -f "$INSTALL_TARGET/.cursor/hooks.json" ]] || {
+  echo "smoke-test-install-upgrade: missing .cursor/hooks.json after install" >&2
+  exit 1
+}
+
+[[ -f "$INSTALL_TARGET/.ralph/hooks/stop-boundary.py" ]] || {
+  echo "smoke-test-install-upgrade: missing .ralph/hooks/stop-boundary.py after install" >&2
+  exit 1
+}
+
 [[ ! -d "$INSTALL_TARGET/agents" ]] || {
   echo "smoke-test-install-upgrade: legacy root agents directory should not exist after install" >&2
   exit 1
@@ -1191,6 +1218,32 @@ grep -Fq 'Claude loader before install.' "$INSTALL_TARGET/CLAUDE.md" || {
 }
 
 python3 scripts/check-upgrade-surface.py --repo "$INSTALL_TARGET"
+python3 - <<'PY' "$INSTALL_TARGET"
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+project_facts = json.loads((root / ".ralph/context/project-facts.json").read_text())
+assert project_facts["orchestrator_stop_hook"] == {
+    "enabled": True,
+    "mode": "conservative",
+    "max_auto_continue_count": 1,
+}
+assert project_facts["worktree_bootstrap_commands"] == []
+assert project_facts["bootstrap_env_files"] == []
+assert "node_modules" in project_facts["bootstrap_copy_exclude_globs"]
+assert ".venv/**" in project_facts["bootstrap_copy_exclude_globs"]
+
+codex_hooks = json.loads((root / ".codex/hooks.json").read_text())
+assert codex_hooks["hooks"]["Stop"][0]["hooks"][0]["command"] == "python3 ./.ralph/hooks/stop-boundary.py --runtime codex"
+
+claude_settings = json.loads((root / ".claude/settings.json").read_text())
+assert claude_settings["hooks"]["Stop"][0]["hooks"][0]["command"] == 'python3 "$CLAUDE_PROJECT_DIR"/.ralph/hooks/stop-boundary.py --runtime claude'
+
+cursor_hooks = json.loads((root / ".cursor/hooks.json").read_text())
+assert cursor_hooks["hooks"]["stop"][0]["command"] == "python3 ./.ralph/hooks/stop-boundary.py --runtime cursor"
+PY
 
 OVERLAY_TARGET="$TMP_DIR/overlay-target"
 mkdir -p "$OVERLAY_TARGET"
@@ -1216,6 +1269,17 @@ sync_loader_files "$DRIFTED_RUNTIME_TARGET"
 printf '\n## Local Drift\n\n- keep custom runtime edits here.\n' >> "$DRIFTED_RUNTIME_TARGET/.ralph/runtime-contract.md"
 if python3 scripts/check-upgrade-surface.py --repo "$DRIFTED_RUNTIME_TARGET"; then
   echo "smoke-test-install-upgrade: direct runtime-contract edits should have blocked upgrade preflight" >&2
+  exit 1
+fi
+
+DRIFTED_MANAGED_SKILL_TARGET="$TMP_DIR/drifted-managed-skill-target"
+mkdir -p "$DRIFTED_MANAGED_SKILL_TARGET"
+copy_manifest_paths src/install-manifest.txt "$DRIFTED_MANAGED_SKILL_TARGET"
+create_generated_runtime "$DRIFTED_MANAGED_SKILL_TARGET"
+sync_loader_files "$DRIFTED_MANAGED_SKILL_TARGET"
+printf '\nLocal managed-skill drift.\n' >> "$DRIFTED_MANAGED_SKILL_TARGET/.agents/skills/bootstrap/SKILL.md"
+if python3 scripts/check-upgrade-surface.py --repo "$DRIFTED_MANAGED_SKILL_TARGET"; then
+  echo "smoke-test-install-upgrade: managed runtime skill drift should have blocked upgrade preflight" >&2
   exit 1
 fi
 
@@ -1423,10 +1487,73 @@ developer_instructions = """
 Custom user agent.
 """
 EOF
+cat > "$CUSTOM_CONFIG_TARGET/.codex/hooks.json" <<'EOF'
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./.codex/hooks/custom-stop.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+mkdir -p "$CUSTOM_CONFIG_TARGET/.claude" "$CUSTOM_CONFIG_TARGET/.cursor" "$CUSTOM_CONFIG_TARGET/.agents/skills/custom-user-skill"
+cat > "$CUSTOM_CONFIG_TARGET/.claude/settings.json" <<'EOF'
+{
+  "env": {
+    "KEEP_ME": "true"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/custom-stop.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+cat > "$CUSTOM_CONFIG_TARGET/.cursor/hooks.json" <<'EOF'
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "./hooks/check-shell.sh",
+        "matcher": "curl|wget"
+      }
+    ],
+    "stop": [
+      {
+        "command": "./hooks/custom-stop.sh",
+        "failClosed": true
+      }
+    ]
+  }
+}
+EOF
+cat > "$CUSTOM_CONFIG_TARGET/.agents/skills/custom-user-skill/SKILL.md" <<'EOF'
+# Custom User Skill
+
+Preserve this during Ralph upgrades.
+EOF
 copy_manifest_paths src/upgrade-manifest.txt "$CUSTOM_CONFIG_TARGET"
 python3 scripts/migrate-installed-runtime.py --repo "$CUSTOM_CONFIG_TARGET"
 python3 scripts/check-installed-runtime-state.py --repo "$CUSTOM_CONFIG_TARGET"
 python3 - <<'PY' "$CUSTOM_CONFIG_TARGET"
+import json
 from pathlib import Path
 import sys
 
@@ -1438,12 +1565,39 @@ except ModuleNotFoundError:
 config = tomllib.loads((Path(sys.argv[1]) / ".codex/config.toml").read_text())
 assert config["sandbox_mode"] == "danger-full-access"
 assert config["features"]["multi_agent"] is True
+assert config["features"]["codex_hooks"] is True
 assert config["agents"]["max_threads"] == 9
 assert config["agents"]["max_depth"] == 2
 assert config["agents"]["orchestrator"]["config_file"] == "agents/orchestrator.toml"
 assert config["agents"]["research"]["config_file"] == "agents/research.toml"
 assert config["agents"]["plan_check"]["config_file"] == "agents/plan-check.toml"
 assert config["agents"]["custom"]["config_file"] == "agents/custom.toml"
+
+codex_hooks = json.loads((Path(sys.argv[1]) / ".codex/hooks.json").read_text())
+codex_stop_commands = [
+    hook["command"]
+    for group in codex_hooks["hooks"]["Stop"]
+    for hook in group.get("hooks", [])
+]
+assert "python3 ./.codex/hooks/custom-stop.py" in codex_stop_commands
+assert "python3 ./.ralph/hooks/stop-boundary.py --runtime codex" in codex_stop_commands
+
+claude_settings = json.loads((Path(sys.argv[1]) / ".claude/settings.json").read_text())
+claude_stop_commands = [
+    hook["command"]
+    for group in claude_settings["hooks"]["Stop"]
+    for hook in group.get("hooks", [])
+]
+assert claude_settings["env"]["KEEP_ME"] == "true"
+assert 'python3 "$CLAUDE_PROJECT_DIR"/.claude/custom-stop.py' in claude_stop_commands
+assert 'python3 "$CLAUDE_PROJECT_DIR"/.ralph/hooks/stop-boundary.py --runtime claude' in claude_stop_commands
+
+cursor_hooks = json.loads((Path(sys.argv[1]) / ".cursor/hooks.json").read_text())
+assert cursor_hooks["hooks"]["beforeShellExecution"][0]["command"] == "./hooks/check-shell.sh"
+cursor_stop_commands = [entry["command"] for entry in cursor_hooks["hooks"]["stop"]]
+assert "./hooks/custom-stop.sh" in cursor_stop_commands
+assert "python3 ./.ralph/hooks/stop-boundary.py --runtime cursor" in cursor_stop_commands
+assert (Path(sys.argv[1]) / ".agents/skills/custom-user-skill/SKILL.md").exists()
 
 orchestrator = tomllib.loads((Path(sys.argv[1]) / ".codex/agents/orchestrator.toml").read_text())
 implement = tomllib.loads((Path(sys.argv[1]) / ".codex/agents/implement.toml").read_text())

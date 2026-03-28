@@ -93,6 +93,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 39. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
 40. After an interrupt spec is released, pop `resume_spec_stack`, thaw normal admissions, restore paused specs and tasks, and continue dispatching.
 41. Continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated stop condition occurs.
+42. If the active runtime ships the Ralph stop-boundary hook, treat it as a conservative backstop only. The orchestrator should still avoid stopping just because it hit a self-resolvable objection.
 
 ## Outputs
 
@@ -109,4 +110,4 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 
 ## Stop Condition
 
-Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.
+Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Treat the orchestration safety cap as a human review boundary, not an automatic failure state. The shipped stop hook may prompt one extra self-check, but it must not replace deliberate stop-boundary reasoning inside the orchestrator itself.

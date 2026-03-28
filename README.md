@@ -4,7 +4,7 @@ Ralph turns a coding agent into a repo-resident engineering loop with durable st
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.10.1`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, require a canonical bootstrap step before implementation begins, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a short-lived single-writer lease, and let different supported runtimes claim different admitted spec slots through a shared worker-claims file.
+As of `v0.11.0`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, require a canonical bootstrap step before implementation begins, auto-continue safe stop boundaries through repo-local hooks in Codex, Claude Code, and Cursor, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a short-lived single-writer lease, and let different supported runtimes claim different admitted spec slots through a shared worker-claims file.
 
 ## Why People Use Ralph
 
@@ -24,7 +24,7 @@ What you get:
 - canonical workflow and queue state on disk
 - numbered specs, plans, tasks, reports, and logs that survive restarts
 - bounded parallel `research`, hard spec dependencies, durable intent intake, and per-spec worktree execution
-- bootstrap-gated implementation, spec-scoped worker reports, upgrade-safe state migration, and lease-aware cross-thread coordination
+- bootstrap-gated implementation, spec-scoped worker reports, conservative stop-boundary auto-continuation hooks, upgrade-safe state migration, and lease-aware cross-thread coordination
 
 ## Human Installation Instructions
 
@@ -114,10 +114,11 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.10.1` as the default public reference right now
+- use `v0.11.0` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
-- during upgrade, merge `.codex/config.toml` instead of overwriting user-owned settings like `sandbox_mode`
+- during upgrade, merge `.codex/config.toml` plus repo-local hook configs instead of overwriting user-owned settings like `sandbox_mode`
+- preserve unknown runtime skills under `.agents/skills/` while Ralph refreshes only its managed runtime skill set
 - install and upgrade all supported runtime adapter packs together rather than selecting one agent up front
 - do not upgrade over a healthy live orchestrator lease
 - persist the canonical project base branch in `.ralph/context/project-facts.json`
@@ -204,7 +205,7 @@ That means you can ask Ralph to start another spec while other work is already i
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.10.1`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.11.0`, the shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
 - runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
@@ -285,4 +286,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.10.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.11.0`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

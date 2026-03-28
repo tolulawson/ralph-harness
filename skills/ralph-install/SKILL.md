@@ -24,9 +24,10 @@ This is the main external entry point for adopting the harness in a target repos
 3. Treat `src/` as the only installable scaffold root.
 4. Read `INSTALLATION.md` first and follow it as the authoritative install workflow.
 5. Use `src/install-manifest.txt` and `src/generated-runtime-manifest.txt` exactly as `INSTALLATION.md` specifies.
-6. Persist the project's canonical `base_branch` into `.ralph/context/project-facts.json` during installation, and seed `validation_bootstrap_commands` there only when the project already has known environment-prep commands.
-7. Use the canonical `AGENTS.md` and `CLAUDE.md` loader guidance plus the install checklist from `INSTALLATION.md` rather than inventing or rephrasing the install flow.
-8. Complete the installation without copying any root dogfood runtime history from the source repository.
+6. Persist the project's canonical `base_branch` into `.ralph/context/project-facts.json` during installation, seed `validation_bootstrap_commands` there only when the project already has known environment-prep commands, and initialize `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs` with the shipped conservative defaults.
+7. Install the repo-local hook surfaces for Codex, Claude Code, and Cursor plus the shared `.ralph/hooks/stop-boundary.py` file.
+8. Use the canonical `AGENTS.md` and `CLAUDE.md` loader guidance plus the install checklist from `INSTALLATION.md` rather than inventing or rephrasing the install flow.
+9. Complete the installation without copying any root dogfood runtime history from the source repository.
 
 ## Outputs
 
@@ -42,5 +43,5 @@ This is the main external entry point for adopting the harness in a target repos
 At the end of installation:
 
 - verify the installation against the checklist and verification section in `INSTALLATION.md`
-- confirm the installed runtime reflects worktree-only execution and bootstrap-gated implementation before handing it back
+- confirm the installed runtime reflects worktree-only execution, bootstrap-gated implementation, and repo-local stop-boundary hook setup before handing it back
 - remind the user to restart their coding agent if it needs to reload newly installed project instructions

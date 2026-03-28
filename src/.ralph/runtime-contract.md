@@ -26,6 +26,7 @@ Interpret an installed Ralph harness in this order:
 ## Required Runtime Features
 
 - The installed scaffold must ship all supported runtime adapter packs together: Codex, Claude Code, and Cursor local Agent/CLI/IDE surfaces.
+- The installed scaffold must also ship repo-local hook surfaces for all supported adapters: `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and the shared Ralph hook code under `.ralph/hooks/`.
 - The orchestrator may delegate work through native runtime subagents when the active runtime supports them.
 - When the active runtime does not support native subagents for a role, the runtime may execute that role in the current session after claiming the assigned spec role slot in `.ralph/state/worker-claims.json`.
 - The canonical role classification remains:
@@ -50,6 +51,8 @@ Interpret an installed Ralph harness in this order:
 - Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
 - Handoffs past implementation must include `Quality Gate` evidence in the latest relevant worker report.
 - Review, verification, and release failures are remediation signals, not stop conditions.
+- Supported runtimes should use the shipped stop-boundary hook so the orchestrator re-checks whether it is truly done or human-blocked before stopping.
+- The stop-boundary hook may auto-continue only once per stop chain, only for the top-level orchestrator, and only when the stop is not clearly human-gated.
 - No role besides the orchestrator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
 - Runtime sessions may mutate `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own active claim.
 - Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
@@ -115,6 +118,15 @@ The orchestrator may stop only when one of these is true:
 - the orchestration safety cap is reached and a human should decide whether to resume with a fresh run
 
 The default orchestration safety cap is `200` role handoffs in one invocation.
+
+Project facts should also preserve:
+
+- `orchestrator_stop_hook`
+- `worktree_bootstrap_commands`
+- `bootstrap_env_files`
+- `bootstrap_copy_exclude_globs`
+
+`bootstrap_env_files` is an allowlist only. Local dependency, cache, and build artifacts should stay excluded by default; bootstrap should recreate them through commands instead of copying them from another checkout.
 
 ## Shared-State Ownership
 

@@ -18,10 +18,11 @@ except ModuleNotFoundError:
 CURRENT_QUEUE_SCHEMA_VERSION = "5.0.0"
 CURRENT_WORKFLOW_SCHEMA_VERSION = "5.0.0"
 CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
+CURRENT_PROJECT_FACTS_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
 CURRENT_QUEUE_SELECTION = "fifo_admission_window"
 CURRENT_NORMAL_EXECUTION_LIMIT = 2
-CURRENT_UPGRADE_CONTRACT_VERSION = 9
+CURRENT_UPGRADE_CONTRACT_VERSION = 10
 CURRENT_LEASE_SCHEMA_VERSION = "1.0.0"
 CURRENT_WORKER_CLAIMS_SCHEMA_VERSION = "1.1.0"
 DEFAULT_LEASE_PATH = ".ralph/state/orchestrator-lease.json"
@@ -29,6 +30,10 @@ DEFAULT_WORKER_CLAIMS_PATH = ".ralph/state/worker-claims.json"
 DEFAULT_INTENTS_PATH = ".ralph/state/orchestrator-intents.jsonl"
 DEFAULT_WORKTREE_ROOT = ".ralph/worktrees"
 DEFAULT_RUNTIME_OVERRIDES_PATH = ".ralph/policy/runtime-overrides.md"
+DEFAULT_STOP_HOOK_PATH = ".ralph/hooks/stop-boundary.py"
+DEFAULT_CODEX_HOOKS_PATH = ".codex/hooks.json"
+DEFAULT_CLAUDE_SETTINGS_PATH = ".claude/settings.json"
+DEFAULT_CURSOR_HOOKS_PATH = ".cursor/hooks.json"
 LEASE_LOCK_SUFFIX = ".lock"
 LEASE_TTL_SECONDS = 90
 SCAFFOLD_ROOT = Path(__file__).resolve().parents[1]
@@ -98,6 +103,37 @@ ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
     "worktree",
     "bootstrap",
 )
+DEFAULT_ORCHESTRATOR_STOP_HOOK = {
+    "enabled": True,
+    "mode": "conservative",
+    "max_auto_continue_count": 1,
+}
+DEFAULT_BOOTSTRAP_COPY_EXCLUDE_GLOBS = [
+    "node_modules",
+    "node_modules/**",
+    ".venv",
+    ".venv/**",
+    "venv",
+    "venv/**",
+    ".next",
+    ".next/**",
+    "dist",
+    "dist/**",
+    "build",
+    "build/**",
+    ".turbo",
+    ".turbo/**",
+    ".cache",
+    ".cache/**",
+]
+CODEX_STOP_HOOK_COMMAND = f"python3 ./{DEFAULT_STOP_HOOK_PATH} --runtime codex"
+CLAUDE_STOP_HOOK_COMMAND = f'python3 "$CLAUDE_PROJECT_DIR"/{DEFAULT_STOP_HOOK_PATH} --runtime claude'
+CURSOR_STOP_HOOK_COMMAND = f"python3 ./{DEFAULT_STOP_HOOK_PATH} --runtime cursor"
+RUNTIME_HOOK_MANAGED_COMMANDS = {
+    CODEX_STOP_HOOK_COMMAND,
+    CLAUDE_STOP_HOOK_COMMAND,
+    CURSOR_STOP_HOOK_COMMAND,
+}
 
 WORKFLOW_REQUIRED_KEYS = (
     "schema_version",
@@ -381,10 +417,14 @@ def write_toml(path: Path, payload: dict[str, Any]) -> None:
 
 def default_project_facts() -> dict[str, Any]:
     return {
-        "schema_version": "1.0.0",
+        "schema_version": CURRENT_PROJECT_FACTS_SCHEMA_VERSION,
         "repo_kind": None,
         "runtime_kind": None,
         "base_branch": None,
+        "orchestrator_stop_hook": dict(DEFAULT_ORCHESTRATOR_STOP_HOOK),
+        "worktree_bootstrap_commands": [],
+        "bootstrap_env_files": [],
+        "bootstrap_copy_exclude_globs": list(DEFAULT_BOOTSTRAP_COPY_EXCLUDE_GLOBS),
         "validation_bootstrap_commands": [],
         "verification_commands": [],
         "deployment_model": None,
@@ -397,11 +437,28 @@ def default_project_facts() -> dict[str, Any]:
 def normalize_project_facts(project_facts: dict[str, Any]) -> dict[str, Any]:
     normalized = default_project_facts()
     normalized.update(project_facts)
+    stop_hook = normalized.get("orchestrator_stop_hook")
+    merged_stop_hook = dict(DEFAULT_ORCHESTRATOR_STOP_HOOK)
+    if isinstance(stop_hook, dict):
+        merged_stop_hook.update(stop_hook)
+    merged_stop_hook["enabled"] = bool(merged_stop_hook.get("enabled", True))
+    mode = merged_stop_hook.get("mode")
+    merged_stop_hook["mode"] = mode if isinstance(mode, str) and mode else DEFAULT_ORCHESTRATOR_STOP_HOOK["mode"]
+    max_auto_continue_count = merged_stop_hook.get("max_auto_continue_count")
+    if not isinstance(max_auto_continue_count, int) or max_auto_continue_count < 0:
+        max_auto_continue_count = DEFAULT_ORCHESTRATOR_STOP_HOOK["max_auto_continue_count"]
+    merged_stop_hook["max_auto_continue_count"] = max_auto_continue_count
+    normalized["orchestrator_stop_hook"] = merged_stop_hook
+    normalized["worktree_bootstrap_commands"] = list(normalized.get("worktree_bootstrap_commands") or [])
+    normalized["bootstrap_env_files"] = list(normalized.get("bootstrap_env_files") or [])
+    exclude_globs = list(normalized.get("bootstrap_copy_exclude_globs") or [])
+    normalized["bootstrap_copy_exclude_globs"] = exclude_globs or list(DEFAULT_BOOTSTRAP_COPY_EXCLUDE_GLOBS)
     normalized["validation_bootstrap_commands"] = list(normalized.get("validation_bootstrap_commands") or [])
     normalized["verification_commands"] = list(normalized.get("verification_commands") or [])
     normalized["tooling_facts"] = dict(normalized.get("tooling_facts") or {})
     normalized["unknowns"] = list(normalized.get("unknowns") or [])
     normalized["fact_sources"] = list(normalized.get("fact_sources") or [])
+    normalized["schema_version"] = CURRENT_PROJECT_FACTS_SCHEMA_VERSION
     base_branch = normalized.get("base_branch")
     normalized["base_branch"] = base_branch if isinstance(base_branch, str) and base_branch else None
     return normalized
@@ -418,7 +475,7 @@ def merge_codex_config(installed: dict[str, Any], scaffold: dict[str, Any]) -> d
     merged_features = dict(installed.get("features") or {})
     scaffold_features = dict(scaffold.get("features") or {})
     for key, value in scaffold_features.items():
-        if key == "multi_agent":
+        if key in {"multi_agent", "codex_hooks"}:
             merged_features[key] = True
         else:
             merged_features.setdefault(key, value)
@@ -456,6 +513,102 @@ def merge_installed_codex_config(repo_root: Path) -> None:
     merged_config = merge_codex_config(installed_config, scaffold_config)
     target_config_path.parent.mkdir(parents=True, exist_ok=True)
     write_toml(target_config_path, merged_config)
+
+
+def merge_nested_command_hooks(
+    installed_groups: list[Any],
+    scaffold_groups: list[Any],
+    managed_commands: set[str],
+) -> list[Any]:
+    merged_groups: list[Any] = []
+    for group in installed_groups:
+        if not isinstance(group, dict):
+            merged_groups.append(group)
+            continue
+        hooks = group.get("hooks")
+        if not isinstance(hooks, list):
+            merged_groups.append(group)
+            continue
+        filtered_hooks = [
+            hook
+            for hook in hooks
+            if not (isinstance(hook, dict) and isinstance(hook.get("command"), str) and hook.get("command") in managed_commands)
+        ]
+        if filtered_hooks:
+            updated_group = dict(group)
+            updated_group["hooks"] = filtered_hooks
+            merged_groups.append(updated_group)
+    merged_groups.extend(scaffold_groups)
+    return merged_groups
+
+
+def merge_top_level_command_hooks(
+    installed_entries: list[Any],
+    scaffold_entries: list[Any],
+    managed_commands: set[str],
+) -> list[Any]:
+    filtered_entries = [
+        entry
+        for entry in installed_entries
+        if not (isinstance(entry, dict) and isinstance(entry.get("command"), str) and entry.get("command") in managed_commands)
+    ]
+    filtered_entries.extend(scaffold_entries)
+    return filtered_entries
+
+
+def merge_installed_codex_hooks(repo_root: Path) -> None:
+    scaffold_hooks_path = SCAFFOLD_ROOT / f"src/{DEFAULT_CODEX_HOOKS_PATH}"
+    target_hooks_path = repo_root / DEFAULT_CODEX_HOOKS_PATH
+    scaffold_hooks = load_json(scaffold_hooks_path)
+    installed_hooks = load_json(target_hooks_path) if target_hooks_path.exists() else {}
+    merged = dict(installed_hooks)
+    merged_hooks = dict(merged.get("hooks") or {})
+    for event_name, scaffold_groups in (scaffold_hooks.get("hooks") or {}).items():
+        merged_hooks[event_name] = merge_nested_command_hooks(
+            list(merged_hooks.get(event_name) or []),
+            list(scaffold_groups or []),
+            {CODEX_STOP_HOOK_COMMAND},
+        )
+    merged["hooks"] = merged_hooks
+    target_hooks_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(target_hooks_path, merged)
+
+
+def merge_installed_claude_settings(repo_root: Path) -> None:
+    scaffold_settings_path = SCAFFOLD_ROOT / f"src/{DEFAULT_CLAUDE_SETTINGS_PATH}"
+    target_settings_path = repo_root / DEFAULT_CLAUDE_SETTINGS_PATH
+    scaffold_settings = load_json(scaffold_settings_path)
+    installed_settings = load_json(target_settings_path) if target_settings_path.exists() else {}
+    merged = dict(installed_settings)
+    merged_hooks = dict(merged.get("hooks") or {})
+    for event_name, scaffold_groups in (scaffold_settings.get("hooks") or {}).items():
+        merged_hooks[event_name] = merge_nested_command_hooks(
+            list(merged_hooks.get(event_name) or []),
+            list(scaffold_groups or []),
+            {CLAUDE_STOP_HOOK_COMMAND},
+        )
+    merged["hooks"] = merged_hooks
+    target_settings_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(target_settings_path, merged)
+
+
+def merge_installed_cursor_hooks(repo_root: Path) -> None:
+    scaffold_hooks_path = SCAFFOLD_ROOT / f"src/{DEFAULT_CURSOR_HOOKS_PATH}"
+    target_hooks_path = repo_root / DEFAULT_CURSOR_HOOKS_PATH
+    scaffold_hooks = load_json(scaffold_hooks_path)
+    installed_hooks = load_json(target_hooks_path) if target_hooks_path.exists() else {}
+    merged = dict(installed_hooks)
+    merged["version"] = scaffold_hooks.get("version", 1)
+    merged_hooks = dict(merged.get("hooks") or {})
+    for event_name, scaffold_entries in (scaffold_hooks.get("hooks") or {}).items():
+        merged_hooks[event_name] = merge_top_level_command_hooks(
+            list(merged_hooks.get(event_name) or []),
+            list(scaffold_entries or []),
+            {CURSOR_STOP_HOOK_COMMAND},
+        )
+    merged["hooks"] = merged_hooks
+    target_hooks_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(target_hooks_path, merged)
 
 
 def format_code(value: Any) -> str:
@@ -792,6 +945,134 @@ def expected_runtime_contract_baseline_hash(repo_root: Path) -> str | None:
     return None
 
 
+def current_scaffold_tag() -> str | None:
+    harness_version_path = SCAFFOLD_ROOT / "src/.ralph/harness-version.json"
+    if not harness_version_path.exists():
+        return None
+    payload = load_json(harness_version_path)
+    tag = payload.get("tag")
+    return tag if isinstance(tag, str) and tag else None
+
+
+def load_managed_runtime_skill_names() -> list[str]:
+    registry_path = SCAFFOLD_ROOT / "src/.ralph/agent-registry.json"
+    if not registry_path.exists():
+        return []
+    payload = load_json(registry_path)
+    skills = payload.get("managed_runtime_skills") or []
+    return [skill for skill in skills if isinstance(skill, str) and skill]
+
+
+def canonical_src_paths_for_ref(ref: str, prefix: str) -> list[str] | None:
+    if not ref:
+        return None
+    try:
+        output = run_git(SCAFFOLD_ROOT, "ls-tree", "-r", "--name-only", ref, "--", prefix)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        output = ""
+    if output:
+        return [line.strip() for line in output.splitlines() if line.strip()]
+    current_tag = current_scaffold_tag()
+    if ref == current_tag:
+        current_prefix = SCAFFOLD_ROOT / prefix
+        if not current_prefix.exists():
+            return []
+        return [
+            path.relative_to(SCAFFOLD_ROOT).as_posix()
+            for path in sorted(current_prefix.rglob("*"))
+            if path.is_file()
+        ]
+    return None
+
+
+def canonical_src_text_for_ref(ref: str, relative_path: str) -> str | None:
+    if not ref:
+        return None
+    try:
+        return run_git(SCAFFOLD_ROOT, "show", f"{ref}:{relative_path}")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        current_tag = current_scaffold_tag()
+        if ref == current_tag:
+            current_path = SCAFFOLD_ROOT / relative_path
+            if current_path.exists():
+                return current_path.read_text()
+    return None
+
+
+def validate_managed_runtime_skill_drift(repo_root: Path) -> list[str]:
+    issues: list[str] = []
+    harness_version_path = repo_root / ".ralph/harness-version.json"
+    if not harness_version_path.exists():
+        return issues
+
+    harness_version = load_json(harness_version_path)
+    if int(harness_version.get("upgrade_contract_version") or 0) < CURRENT_UPGRADE_CONTRACT_VERSION:
+        return issues
+    candidate_refs = [ref for ref in (harness_version.get("resolved_commit"), harness_version.get("tag")) if isinstance(ref, str) and ref]
+    managed_skills = load_managed_runtime_skill_names()
+    if not managed_skills:
+        return issues
+
+    ref_for_skills: str | None = None
+    canonical_files_by_skill: dict[str, list[str]] = {}
+    for candidate_ref in candidate_refs:
+        missing = False
+        current_files: dict[str, list[str]] = {}
+        for skill_name in managed_skills:
+            prefix = f"src/.agents/skills/{skill_name}"
+            paths = canonical_src_paths_for_ref(candidate_ref, prefix)
+            if paths is None:
+                missing = True
+                break
+            current_files[skill_name] = paths
+        if not missing:
+            ref_for_skills = candidate_ref
+            canonical_files_by_skill = current_files
+            break
+
+    if ref_for_skills is None:
+        issues.append(
+            "cannot determine the previously installed canonical managed runtime skills; restore the canonical base before upgrading or reinstall the managed runtime skills"
+        )
+        return issues
+
+    for skill_name in managed_skills:
+        installed_dir = repo_root / f".agents/skills/{skill_name}"
+        canonical_files = canonical_files_by_skill.get(skill_name, [])
+        installed_files = []
+        if installed_dir.exists():
+            installed_files = [
+                path.relative_to(repo_root).as_posix()
+                for path in sorted(installed_dir.rglob("*"))
+                if path.is_file()
+            ]
+        expected_installed_files = [path.removeprefix("src/") for path in canonical_files]
+
+        missing_files = sorted(set(expected_installed_files) - set(installed_files))
+        extra_files = sorted(set(installed_files) - set(expected_installed_files))
+        if missing_files or extra_files:
+            issues.append(
+                f".agents/skills/{skill_name} differs from the managed Ralph runtime skill baseline; repair the managed skill before upgrading"
+            )
+            continue
+
+        for installed_relative_path in expected_installed_files:
+            installed_path = repo_root / installed_relative_path
+            canonical_text = canonical_src_text_for_ref(ref_for_skills, f"src/{installed_relative_path}")
+            if canonical_text is None:
+                issues.append(
+                    f"cannot determine the canonical baseline for managed runtime skill `{skill_name}`; repair the install source before upgrading"
+                )
+                break
+            if sha256_text(canonical_text) != sha256_file(installed_path):
+                issues.append(
+                    f"{installed_relative_path} differs from the managed Ralph runtime skill baseline; repair or remove the local change before upgrading"
+                )
+                break
+
+    return issues
+
+
 def validate_upgrade_preflight(repo_root: Path) -> list[str]:
     issues: list[str] = []
     runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
@@ -808,6 +1089,7 @@ def validate_upgrade_preflight(repo_root: Path) -> list[str]:
         issues.append(
             ".ralph/runtime-contract.md differs from its recorded canonical baseline; move project-specific runtime changes into `.ralph/policy/runtime-overrides.md` before upgrading"
         )
+    issues.extend(validate_managed_runtime_skill_drift(repo_root))
     return issues
 
 
@@ -1577,6 +1859,9 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
 
 def migrate_repo_state(repo_root: Path) -> None:
     merge_installed_codex_config(repo_root)
+    merge_installed_codex_hooks(repo_root)
+    merge_installed_claude_settings(repo_root)
+    merge_installed_cursor_hooks(repo_root)
     migrate_legacy_agent_configs(repo_root)
     ensure_runtime_overrides_file(repo_root)
 
@@ -1729,11 +2014,16 @@ def validate_task_state_alignment(
 def validate_installed_runtime(repo_root: Path) -> list[str]:
     issues: list[str] = []
     parsed_agent_targets: dict[str, dict[str, Any]] = {}
+    codex_hooks: dict[str, Any] = {}
+    claude_settings: dict[str, Any] = {}
+    cursor_hooks: dict[str, Any] = {}
 
     config_path, configured_targets, config_issues = configured_agent_targets(repo_root)
     issues.extend(config_issues)
     if config_path.exists():
         config = load_toml(config_path)
+        if not config.get("features", {}).get("codex_hooks"):
+            issues.append(".codex/config.toml must enable Codex hooks support")
         max_depth = config.get("agents", {}).get("max_depth")
         if not isinstance(max_depth, int):
             issues.append(".codex/config.toml agents.max_depth must be an integer")
@@ -1779,6 +2069,10 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     intents_path = repo_root / DEFAULT_INTENTS_PATH
     project_facts_path = repo_root / ".ralph/context/project-facts.json"
     runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
+    stop_hook_path = repo_root / DEFAULT_STOP_HOOK_PATH
+    codex_hooks_path = repo_root / DEFAULT_CODEX_HOOKS_PATH
+    claude_settings_path = repo_root / DEFAULT_CLAUDE_SETTINGS_PATH
+    cursor_hooks_path = repo_root / DEFAULT_CURSOR_HOOKS_PATH
     orchestrator_skill_path = repo_root / ".agents/skills/orchestrator/SKILL.md"
     runtime_overrides_path = repo_root / DEFAULT_RUNTIME_OVERRIDES_PATH
     agents_loader_path = repo_root / "AGENTS.md"
@@ -1792,6 +2086,10 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         worker_claims_path,
         intents_path,
         project_facts_path,
+        stop_hook_path,
+        codex_hooks_path,
+        claude_settings_path,
+        cursor_hooks_path,
         agents_loader_path,
         claude_loader_path,
     ):
@@ -1822,6 +2120,19 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
 
     if issues:
         return issues
+
+    try:
+        codex_hooks = load_json(codex_hooks_path)
+    except Exception as exc:
+        issues.append(f"{codex_hooks_path.relative_to(repo_root)} does not parse as JSON: {exc}")
+    try:
+        claude_settings = load_json(claude_settings_path)
+    except Exception as exc:
+        issues.append(f"{claude_settings_path.relative_to(repo_root)} does not parse as JSON: {exc}")
+    try:
+        cursor_hooks = load_json(cursor_hooks_path)
+    except Exception as exc:
+        issues.append(f"{cursor_hooks_path.relative_to(repo_root)} does not parse as JSON: {exc}")
 
     workflow = load_json(workflow_json_path)
     queue = load_json(queue_json_path)
@@ -1864,6 +2175,22 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         issues.append(".ralph/state/spec-queue.json worker_claims_path must point at .ralph/state/worker-claims.json")
     if workflow.get("worker_claims_path") != DEFAULT_WORKER_CLAIMS_PATH:
         issues.append(".ralph/state/workflow-state.json worker_claims_path must point at .ralph/state/worker-claims.json")
+    orchestrator_stop_hook = project_facts.get("orchestrator_stop_hook")
+    if not isinstance(orchestrator_stop_hook, dict):
+        issues.append(".ralph/context/project-facts.json orchestrator_stop_hook must be an object")
+    else:
+        if not isinstance(orchestrator_stop_hook.get("enabled"), bool):
+            issues.append(".ralph/context/project-facts.json orchestrator_stop_hook.enabled must be a boolean")
+        if not isinstance(orchestrator_stop_hook.get("mode"), str) or not orchestrator_stop_hook.get("mode"):
+            issues.append(".ralph/context/project-facts.json orchestrator_stop_hook.mode must be a non-empty string")
+        if not isinstance(orchestrator_stop_hook.get("max_auto_continue_count"), int):
+            issues.append(".ralph/context/project-facts.json orchestrator_stop_hook.max_auto_continue_count must be an integer")
+    if not isinstance(project_facts.get("worktree_bootstrap_commands"), list):
+        issues.append(".ralph/context/project-facts.json worktree_bootstrap_commands must be a list")
+    if not isinstance(project_facts.get("bootstrap_env_files"), list):
+        issues.append(".ralph/context/project-facts.json bootstrap_env_files must be a list")
+    if not isinstance(project_facts.get("bootstrap_copy_exclude_globs"), list):
+        issues.append(".ralph/context/project-facts.json bootstrap_copy_exclude_globs must be a list")
     if not isinstance(project_facts.get("validation_bootstrap_commands"), list):
         issues.append(".ralph/context/project-facts.json validation_bootstrap_commands must be a list")
     if not isinstance(project_facts.get("verification_commands"), list):
@@ -1878,6 +2205,40 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         issues.append(
             ".ralph/context/project-facts.json must record the canonical base_branch, or every queued spec must carry an explicit base_branch override"
         )
+    if codex_hooks.get("hooks") is None:
+        issues.append(".codex/hooks.json must define a hooks object")
+    else:
+        stop_groups = list((codex_hooks.get("hooks") or {}).get("Stop") or [])
+        if not any(
+            isinstance(group, dict)
+            and any(
+                isinstance(hook, dict) and hook.get("command") == CODEX_STOP_HOOK_COMMAND
+                for hook in list(group.get("hooks") or [])
+            )
+            for group in stop_groups
+        ):
+            issues.append(".codex/hooks.json must register the Ralph Stop hook command")
+    if claude_settings.get("hooks") is None:
+        issues.append(".claude/settings.json must define a hooks object")
+    else:
+        stop_groups = list((claude_settings.get("hooks") or {}).get("Stop") or [])
+        if not any(
+            isinstance(group, dict)
+            and any(
+                isinstance(hook, dict) and hook.get("command") == CLAUDE_STOP_HOOK_COMMAND
+                for hook in list(group.get("hooks") or [])
+            )
+            for group in stop_groups
+        ):
+            issues.append(".claude/settings.json must register the Ralph Stop hook command")
+    if cursor_hooks.get("version") != 1:
+        issues.append(".cursor/hooks.json must declare version 1")
+    if cursor_hooks.get("hooks") is None:
+        issues.append(".cursor/hooks.json must define a hooks object")
+    else:
+        stop_entries = list((cursor_hooks.get("hooks") or {}).get("stop") or [])
+        if not any(isinstance(entry, dict) and entry.get("command") == CURSOR_STOP_HOOK_COMMAND for entry in stop_entries):
+            issues.append(".cursor/hooks.json must register the Ralph stop hook command")
 
     lease = load_json(lease_path)
     for key in LEASE_REQUIRED_KEYS:

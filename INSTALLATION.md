@@ -8,26 +8,26 @@ This guide explains how an LLM or human operator should install the Ralph multi-
 
 The installable scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.10.1`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.11.0`
 
 The canonical copy contract is:
 
-- [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/src/install-manifest.txt)
+- [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/src/install-manifest.txt)
 
 The canonical generated-runtime contract is:
 
-- [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/src/generated-runtime-manifest.txt)
+- [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/src/generated-runtime-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/VERSION)
 
 The install authority order is:
 
-1. [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/INSTALLATION.md)
-2. [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/src/install-manifest.txt)
-3. [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/src/generated-runtime-manifest.txt)
-4. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/VERSION)
+1. [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/INSTALLATION.md)
+2. [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/src/install-manifest.txt)
+3. [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/src/generated-runtime-manifest.txt)
+4. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/VERSION)
 
 Do not install from the repository root. The root contains this repository’s live dogfood runtime history.
 
@@ -41,8 +41,10 @@ After installation, the target repository should contain:
 - the Codex adapter pack
 - the Claude adapter pack
 - the Cursor adapter pack
+- repo-local hook configs for Codex, Claude Code, and Cursor
 - repo-local role skills
 - the shipped `research` and `plan-check` roles
+- the shared Ralph stop-boundary hook under `.ralph/hooks/`
 - neutral seed runtime state and templates
 - generated runtime tracking files, logs, and report directories
 - project-specific policy
@@ -66,7 +68,7 @@ From inside the target repository, ask your coding agent to use `src/` as the so
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the scaffold source repository.
-Use tag v0.10.1 from that repository unless the user explicitly requests another release.
+Use tag v0.11.0 from that repository unless the user explicitly requests another release.
 Use the scaffold under src/ in that repository.
 Install the Ralph multi-agent runtime into this repository using src/install-manifest.txt as the copy contract.
 Preserve the existing AGENTS.md and CLAUDE.md if they already exist and replace only the managed Ralph blocks between <!-- RALPH-HARNESS:START --> and <!-- RALPH-HARNESS:END -->.
@@ -75,6 +77,9 @@ Copy only the manifest-listed runtime adapter files, repo-local role skills, neu
 Then create the generated runtime files listed in src/generated-runtime-manifest.txt.
 Do not copy the source repo's dogfood runtime logs, reports, PRD, or numbered spec history.
 Adapt the constitution, project policy, runtime overrides, and copied knowledge files for this repo, preserve existing code, keep the base `.ralph/runtime-contract.md` scaffold-owned, discover and persist the canonical base branch in `.ralph/context/project-facts.json`, seed any `validation_bootstrap_commands` that are already known, create the project PRD, decompose it into epochs and numbered specs, seed the initial FIFO admission queue plus `depends_on_spec_ids`, keep any planning-time parallelism limited to same-batch research only, seed the lease, worker-claims, and durable intents files, create the `.ralph/worktrees/` directory, and update .ralph/harness-version.json with the selected tag, the resolved commit, the scaffold runtime-contract baseline hash, the installed adapter packs, and the default branch prefix.
+Seed `.ralph/context/project-facts.json` with the conservative stop-hook policy plus bootstrap hydration fields: `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs`.
+Install repo-local `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and `.ralph/hooks/stop-boundary.py`.
+Keep `bootstrap_env_files` allowlisted and leave `bootstrap_copy_exclude_globs` on the default no-copy policy for dependency, cache, and build artifacts unless the project explicitly needs something narrower.
 ```
 
 ### Option 2: Copy the scaffold manually
@@ -83,7 +88,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.10.1
+SOURCE_REF=v0.11.0
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 
@@ -99,7 +104,7 @@ done < "$SOURCE_REPO/src/install-manifest.txt"
 rm -rf "$WORK_DIR"
 ```
 
-Then create the runtime files listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/src/generated-runtime-manifest.txt), refresh the managed Ralph block in `AGENTS.md`, update `.ralph/harness-version.json`, discover and persist the canonical base branch in `.ralph/context/project-facts.json`, and adapt the target repository before first use.
+Then create the runtime files listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/src/generated-runtime-manifest.txt), refresh the managed Ralph block in `AGENTS.md`, update `.ralph/harness-version.json`, discover and persist the canonical base branch in `.ralph/context/project-facts.json`, and adapt the target repository before first use.
 
 ## Optional Skill-Driven Entry
 
@@ -114,15 +119,36 @@ Copy only the manifest-listed scaffold paths from `src/`:
 - `AGENTS.md`
 - `CLAUDE.md`
 - `.codex/config.toml`
+- `.codex/hooks.json`
 - `.codex/agents/`
+- `.claude/settings.json`
 - `.claude/agents/`
 - `.claude/commands/`
+- `.cursor/hooks.json`
 - `.cursor/rules/`
-- `.agents/skills/`
+- `.agents/skills/analyze/`
+- `.agents/skills/bootstrap/`
+- `.agents/skills/deslopify-lite/`
+- `.agents/skills/implement/`
+- `.agents/skills/learning/`
+- `.agents/skills/orchestrator/`
+- `.agents/skills/plan/`
+- `.agents/skills/plan-check/`
+- `.agents/skills/prd/`
+- `.agents/skills/react-effects-without-effects/`
+- `.agents/skills/release/`
+- `.agents/skills/reporting/`
+- `.agents/skills/research/`
+- `.agents/skills/review/`
+- `.agents/skills/specify/`
+- `.agents/skills/state-sync/`
+- `.agents/skills/task-gen/`
+- `.agents/skills/verify/`
 - `.ralph/constitution.md`
 - `.ralph/runtime-contract.md`
 - `.ralph/harness-version.json`
 - `.ralph/context/`
+- `.ralph/hooks/`
 - `.ralph/policy/`
 - `.ralph/state/`
 - `.ralph/templates/`
@@ -130,7 +156,7 @@ Copy only the manifest-listed scaffold paths from `src/`:
 
 ## What Gets Generated After Copy
 
-After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.10.1/src/generated-runtime-manifest.txt):
+After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.0/src/generated-runtime-manifest.txt):
 
 - `tasks/todo.md`
 - `tasks/lessons.md`
@@ -213,6 +239,10 @@ Set at minimum:
 - explicit project truths that are already known
 - any applicable structured project facts that can be verified at install time
 - canonical `base_branch` when it can be discovered safely at install time
+- `orchestrator_stop_hook` with the default conservative stop-boundary policy
+- `worktree_bootstrap_commands` only for explicit worktree hydration setup commands
+- `bootstrap_env_files` only for allowlisted env or config files that are safe to copy into a fresh worktree
+- `bootstrap_copy_exclude_globs` with the default no-copy excludes for dependency, cache, and build artifacts
 - `validation_bootstrap_commands` when the project already has known environment-prep commands
 - an empty or target-initialized learning summary and learning log
 - active epoch
@@ -233,14 +263,15 @@ When an LLM installs this harness into a new or existing project, it should:
 4. preserve the target repo’s existing product code
 5. adapt `.ralph/constitution.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, and the copied `.ralph/context/` files for the target project
 6. rewrite the workflow state and spec queue files for the target project
-7. update `.ralph/harness-version.json` with tag `v0.10.1`, the resolved source commit, and the scaffold runtime-contract baseline hash
+7. update `.ralph/harness-version.json` with tag `v0.11.0`, the resolved source commit, and the scaffold runtime-contract baseline hash
 8. seed explicit truths in `.ralph/context/project-truths.md`
 9. seed any known structured facts in `.ralph/context/project-facts.json`, including the canonical `base_branch`, and leave unknown or irrelevant facts absent or null
-10. initialize `.ralph/context/learning-summary.md` and `.ralph/context/learning-log.jsonl` for the target project
-11. create the project PRD
-12. create the epoch map and numbered spec queue
-13. create the first numbered spec, spec-local `research.md`, plan, task list, and `task-state.json`
-14. append the initial events and reports
+10. install the repo-local hook surfaces and the shared `.ralph/hooks/stop-boundary.py` handler so supported agents can auto-continue only at safe stop boundaries
+11. initialize `.ralph/context/learning-summary.md` and `.ralph/context/learning-log.jsonl` for the target project
+12. create the project PRD
+13. create the epoch map and numbered spec queue
+14. create the first numbered spec, spec-local `research.md`, plan, task list, and `task-state.json`
+15. append the initial events and reports
 
 ## Canonical Install Checklist
 
@@ -251,10 +282,12 @@ An install is correct only if it does all of the following:
 3. preserves existing `AGENTS.md` and `CLAUDE.md` files and replaces only the managed Ralph blocks from this guide instead of replacing whole files
 4. adapts `.ralph/constitution.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, and copied `.ralph/context/` files for the target project
 5. rewrites scaffold seed state into target-project state
-6. records tag `v0.10.1` plus the resolved source commit in `.ralph/harness-version.json`
+6. records tag `v0.11.0` plus the resolved source commit in `.ralph/harness-version.json`
 7. persists the canonical `base_branch` in `.ralph/context/project-facts.json`
-8. creates the first real project PRD, epoch map, spec queue, and first numbered spec artifacts
-9. avoids copying this repository's root dogfood runtime files into the target repo
+8. seeds the conservative `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs` facts in `.ralph/context/project-facts.json`
+9. installs repo-local `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and `.ralph/hooks/stop-boundary.py`
+10. creates the first real project PRD, epoch map, spec queue, and first numbered spec artifacts
+11. avoids copying this repository's root dogfood runtime files into the target repo
 
 ## Verification After Installation
 
@@ -262,12 +295,17 @@ At the end of setup, verify:
 
 - every manifest-listed `src/` path exists in the target repo
 - `.codex/config.toml` exists, parses, and enables Codex multi-agent
+- `.codex/config.toml` exists, parses, and enables Codex hooks
 - `.codex/config.toml` enforces `agents.max_depth <= 2` to prevent nested worker fan-out
+- `.codex/hooks.json` exists and points `Stop` at `.ralph/hooks/stop-boundary.py`
 - `.codex/agents/*.toml` exist and parse
 - `.codex/agents/*.toml` all use `sandbox_mode = "danger-full-access"`
+- `.claude/settings.json` exists and carries the managed `Stop` hook without requiring user-global hook config
 - `.claude/agents/` exists
 - `.claude/commands/` exists
+- `.cursor/hooks.json` exists and carries the managed `stop` hook
 - `.cursor/rules/` exists
+- `.ralph/hooks/stop-boundary.py` exists and is shared by all supported adapters
 - `.ralph/constitution.md` exists and matches the intended harness doctrine for the target project
 - `.ralph/runtime-contract.md` exists and matches the installed runtime doctrine
 - `.ralph/policy/runtime-overrides.md` exists and is the project-owned extension surface for runtime-specific additions
@@ -278,7 +316,9 @@ At the end of setup, verify:
 - `.ralph/harness-version.json` exists, parses, and records the selected tag, the resolved source commit, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed adapter packs, and the default branch prefix
 - `.ralph/context/project-truths.md` exists and contains the target project's initial explicit truths or placeholders adapted for that repo
 - `.ralph/context/project-facts.json` exists, parses, contains only relevant structured facts for the target repo, and records the canonical `base_branch` when it can be discovered safely
+- `.ralph/context/project-facts.json` records `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs`
 - `.ralph/context/project-facts.json` uses `validation_bootstrap_commands` only for real environment-prep commands, not speculative placeholders
+- `.ralph/context/project-facts.json` keeps `bootstrap_env_files` allowlisted and keeps dependency or build directories out of copied bootstrap inputs by default
 - `.ralph/context/learning-summary.md` exists and is initialized for the target repo
 - `.ralph/context/learning-log.jsonl` exists and is valid JSONL
 - `.ralph/state/workflow-state.json` exists and matches the target project

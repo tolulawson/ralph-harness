@@ -104,6 +104,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
 - Do not stop after a single handoff unless the runtime contract reaches queue completion, lease transfer, or a human-gated boundary.
 - Do not stop merely because review, verification, or release failed; keep routing those failures back through orchestrator-managed remediation unless the report names a human blocker.
+- If the installed runtime includes the Ralph stop-boundary hook, treat it as a conservative self-check that can recover one safe stop, not as a substitute for reading the queue and runtime state correctly.
 
 ## Completion
 

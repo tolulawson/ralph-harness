@@ -18,6 +18,9 @@ root = pathlib.Path(".")
 json_paths = [
     *sorted((root / ".ralph").rglob("*.json")),
     *sorted((root / "src/.ralph").rglob("*.json")),
+    root / "src/.codex/hooks.json",
+    root / "src/.claude/settings.json",
+    root / "src/.cursor/hooks.json",
 ]
 
 jsonl_paths = [
@@ -85,6 +88,7 @@ PY
 
 scripts/render-release-notes.sh "v$(tr -d '[:space:]' < VERSION)" >/dev/null
 python3 scripts/generate-runtime-adapters.py --check
+python3 scripts/test-stop-boundary-hook.py
 scripts/verify-installation-contract.sh
 scripts/verify-atomic-commit-contract.sh
 scripts/verify-human-stop-boundaries.sh

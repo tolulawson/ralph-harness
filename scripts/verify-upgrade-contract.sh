@@ -65,6 +65,21 @@ grep -Fq -- '.claude/agents/' "$UPGRADING_MD" \
 grep -Fq -- '.cursor/rules/' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the Cursor adapter pack"
 
+for required in \
+  '.codex/hooks.json' \
+  '.claude/settings.json' \
+  '.cursor/hooks.json' \
+  '.ralph/hooks/' \
+  'orchestrator_stop_hook' \
+  'bootstrap_env_files' \
+  'bootstrap_copy_exclude_globs' \
+  'preserve unknown runtime skills' \
+  'managed runtime skill' \
+  'check-upgrade-surface.py'
+do
+  grep -Fq -- "$required" "$UPGRADING_MD" || fail "UPGRADING.md missing hook/bootstrap/skill-preservation requirement: $required"
+done
+
 grep -Fq -- 'upgrade_contract_version' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document upgrade_contract_version"
 
@@ -139,8 +154,8 @@ if payload.get("version") != version:
     raise SystemExit("verify-upgrade-contract: harness-version.json version mismatch")
 if payload.get("tag") != current_tag:
     raise SystemExit("verify-upgrade-contract: harness-version.json tag mismatch")
-if payload.get("upgrade_contract_version") != 9:
-    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 9")
+if payload.get("upgrade_contract_version") != 10:
+    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 10")
 if payload.get("runtime_contract_baseline_sha256") != runtime_contract_hash:
     raise SystemExit("verify-upgrade-contract: runtime_contract_baseline_sha256 must match src/.ralph/runtime-contract.md")
 if payload.get("runtime_overrides_path") != ".ralph/policy/runtime-overrides.md":

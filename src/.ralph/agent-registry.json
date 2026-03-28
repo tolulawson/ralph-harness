@@ -23,6 +23,26 @@
       "recent tail of .ralph/logs/events.jsonl"
     ]
   },
+  "managed_runtime_skills": [
+    "analyze",
+    "bootstrap",
+    "deslopify-lite",
+    "implement",
+    "learning",
+    "orchestrator",
+    "plan",
+    "plan-check",
+    "prd",
+    "react-effects-without-effects",
+    "release",
+    "reporting",
+    "research",
+    "review",
+    "specify",
+    "state-sync",
+    "task-gen",
+    "verify"
+  ],
   "roles": [
     {
       "id": "orchestrator",

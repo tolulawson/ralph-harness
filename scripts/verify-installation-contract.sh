@@ -64,12 +64,20 @@ done
 
 for required in \
   '.codex/agents/' \
+  '.codex/hooks.json' \
+  '.claude/settings.json' \
   '.claude/agents/' \
   '.claude/commands/' \
+  '.cursor/hooks.json' \
   '.cursor/rules/' \
+  '.ralph/hooks/' \
   'worker-claims' \
   'base_branch' \
-  'validation_bootstrap_commands'
+  'validation_bootstrap_commands' \
+  'orchestrator_stop_hook' \
+  'worktree_bootstrap_commands' \
+  'bootstrap_env_files' \
+  'bootstrap_copy_exclude_globs'
 do
   grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing multi-runtime requirement: $required"
 done

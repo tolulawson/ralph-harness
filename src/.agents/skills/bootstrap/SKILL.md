@@ -26,17 +26,23 @@ description: Prepare the assigned spec worktree and local validation environment
 2. Resolve the canonical base branch from `.ralph/context/project-facts.json`, unless the spec queue entry explicitly overrides `base_branch`.
 3. Create or reuse the assigned spec worktree under `.ralph/worktrees/`.
 4. Verify the worktree branch matches the assigned spec branch and that the canonical checkout is not being used as the execution worktree.
-5. Prepare the local validation environment using:
+5. Hydrate the fresh worktree conservatively:
+   - copy only allowlisted files from `.ralph/context/project-facts.json` `bootstrap_env_files`
+   - do not copy dependency, cache, build, or other generated artifacts that match `bootstrap_copy_exclude_globs`
+   - leave `node_modules`, virtualenvs, `.next`, `dist`, `build`, `.turbo`, `.cache`, and similar paths alone unless the project facts explicitly opt into a narrower policy
+6. Prepare the local environment in this order:
+   - `.ralph/context/project-facts.json` `worktree_bootstrap_commands`
    - `.ralph/context/project-facts.json` `validation_bootstrap_commands`
    - then `.ralph/context/project-facts.json` `verification_commands` when they are safe as bootstrap checks
-6. Record exact command results and any missing prerequisites.
-7. Update the active claim bootstrap lifecycle so the claim records whether bootstrap is `in_progress`, `passed`, or `failed`.
-8. Write `.ralph/reports/<run-id>/<spec-key>/bootstrap.md`.
-9. Recommend `implement` only when bootstrap passed and the claim is validation-ready.
+7. Record exact command results, copied files, skipped files, exclusions, and any missing prerequisites.
+8. Update the active claim bootstrap lifecycle so the claim records whether bootstrap is `in_progress`, `passed`, or `failed`.
+9. Write `.ralph/reports/<run-id>/<spec-key>/bootstrap.md`.
+10. Recommend `implement` only when bootstrap passed and the claim is validation-ready.
 
 ## Outputs
 
 - prepared assigned spec worktree
+- copied or skipped allowlisted env or config files
 - bootstrap lifecycle updates in `.ralph/state/worker-claims.json`
 - `.ralph/reports/<run-id>/<spec-key>/bootstrap.md`
 
