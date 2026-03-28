@@ -23,5 +23,6 @@ When resuming the harness:
 19. check `active_spec_ids`, `active_interrupt_spec_id`, `resume_spec_stack`, `interruption_state`, worker claims, durable intents, and lease health before selecting the next spec
 20. confirm deprecated compatibility mirrors in `workflow-state.json` still match slot `0` or the most recently dispatched spec when they are present
 21. choose the next role from spec status, task lifecycle state, interruption state, dependency state, and PR state
-22. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
-23. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs
+22. prefer filling every runnable slot in the bounded admission window before concluding that orchestration should stop
+23. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
+24. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs

@@ -1,13 +1,13 @@
 ---
 name: plan-check
-description: Review a queue-head spec's spec, research, plan, and tasks artifacts before implementation to confirm they are complete, consistent, and safe for one-task-at-a-time execution.
+description: Review an admitted spec's spec, research, plan, and tasks artifacts before implementation to confirm they are complete, consistent, and safe for deterministic task progression within that spec.
 ---
 
 # Plan Check
 
 ## Use When
 
-- A queue-head spec has `spec.md`, `plan.md`, `tasks.md`, and `task-state.json`.
+- An admitted or next-runnable spec has `spec.md`, `plan.md`, `tasks.md`, and `task-state.json`.
 - Implementation must be gated on artifact quality before any code changes begin.
 
 ## Inputs
@@ -30,7 +30,7 @@ description: Review a queue-head spec's spec, research, plan, and tasks artifact
    - task freshness for a new worker
    - verification completeness
    - compliance with `research.md`
-   - preservation of one-task-at-a-time execution
+   - preservation of one-task-at-a-time execution within the admitted spec's own task graph
    - absence of deferred or out-of-scope leakage
 4. Present findings first, ordered by severity.
 5. If there are no findings, say so explicitly and recommend `implement`.

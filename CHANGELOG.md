@@ -4,42 +4,39 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
-## v0.11.0 - 2026-03-28
+## v0.11.1 - 2026-03-28
 
 ### Summary
 
-This release makes the shipped runtime more resilient at stop boundaries, more deliberate when hydrating fresh worktrees, and safer for repos that carry their own custom runtime skills or hook entries.
+This release tightens Ralph's queue-throughput doctrine so the executor keeps working through every runnable spec instead of slipping back toward one-spec-and-stop behavior.
 
-It adds a conservative cross-adapter stop-boundary hook for Codex, Claude Code, and Cursor, expands the bootstrap contract around allowlisted env-file copying plus explicit worktree setup commands, and hardens upgrade preflight so Ralph-managed runtime skills cannot be overwritten silently while unknown user skills remain intact.
+It makes the queue-draining posture explicit in the shipped runtime contract, project policy, orchestrator prompts, and public execute skill, while also removing queue-head wording from plan-check so spec-level serialization does not get mistaken for whole-queue serialization.
 
 ### Highlights
 
-- Added repo-local hook configs for Codex, Claude Code, and Cursor plus the shared Ralph stop-boundary hook at `src/.ralph/hooks/stop-boundary.py`.
-- Enabled `features.codex_hooks = true` in the shipped Codex config and taught migration to merge `.codex/hooks.json`, `.claude/settings.json`, and `.cursor/hooks.json` while preserving unrelated user entries.
-- Seeded `.ralph/context/project-facts.json` with `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs`.
-- Tightened the shipped bootstrap doctrine so fresh worktrees use allowlisted env or config copies only and default to no-copy behavior for dependency, cache, and build artifacts.
-- Added managed-runtime-skill ownership to `src/.ralph/agent-registry.json` and taught upgrade preflight to block when a Ralph-managed runtime skill directory has local drift, while preserving unknown runtime skills under `.agents/skills/`.
+- Declared queue-wide throughput as the default operating principle in the shipped `src/.ralph/runtime-contract.md` and `src/.ralph/policy/project-policy.md`.
+- Tightened the shipped orchestrator prompts so they prefer filling every runnable admission slot before considering a stop.
+- Removed queue-head framing from plan-check and narrowed its sequentiality requirement to one-task-at-a-time execution within a single spec's task graph.
+- Updated the public `ralph-execute` skill so it explicitly keeps advancing runnable specs in series or bounded parallel as dependencies allow.
 
 ### Install And Upgrade Impact
 
-- Use tag `v0.11.0` as the default public install or upgrade reference.
-- Fresh installs now include `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and `.ralph/hooks/`.
-- Upgrades now use `upgrade_contract_version` `10`.
-- Upgrade migration preserves unrelated user hook entries and unknown runtime skills, but blocks if a Ralph-managed runtime skill directory no longer matches its recorded canonical baseline.
+- Use tag `v0.11.1` as the default public install or upgrade reference.
+- Fresh installs and upgrades now carry the tighter queue-throughput doctrine and stop-boundary wording.
+- `upgrade_contract_version` remains `10`; this patch updates doctrine and runtime prompts, not the migration schema.
 
 ### Validation And Release Workflow
 
-- Verified the stop-boundary hook behavior with `python3 scripts/test-stop-boundary-hook.py`.
-- Verified the install and upgrade contracts, hook merges, and mixed-ownership preservation scenarios with `scripts/smoke-test-install-upgrade.sh`.
+- Verified the install and upgrade contracts, queue-throughput doctrine, and mixed-ownership preservation scenarios with `scripts/smoke-test-install-upgrade.sh`.
 - Verified the full release surface with `scripts/validate-harness.sh`.
 
 ### Artifacts And References
 
-- Shared stop hook: `src/.ralph/hooks/stop-boundary.py`
-- Hook-aware migration logic: `scripts/runtime_state_helpers.py`
-- Bootstrap doctrine: `src/.agents/skills/bootstrap/SKILL.md`
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Public execute skill: `skills/ralph-execute/SKILL.md`
+- Plan-check skill: `src/.agents/skills/plan-check/SKILL.md`
 - Upgrade contract: `UPGRADING.md`
-- Release asset: `ralph-harness-v0.11.0.tar.gz`
+- Release asset: `ralph-harness-v0.11.1.tar.gz`
 
 ## v0.10.1 - 2026-03-26
 

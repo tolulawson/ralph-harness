@@ -20,11 +20,11 @@ Workflow:
 9. Read the latest relevant reports plus the admitted spec artifacts, including `task-state.json` when present.
 10. Tail the recent event window from `.ralph/logs/events.jsonl`.
 11. Read the recent learning-log window only when diagnosing or promoting learnings.
-12. Drain durable intents, materialize new specs, and compute the FIFO admission window with hard dependency blocking.
+12. Drain durable intents, materialize new specs, and compute the FIFO admission window with hard dependency blocking, preferring to fill every runnable slot before considering a stop.
 13. Ensure admitted specs have dedicated worktrees and branches, and keep all execution inside those spec worktrees rather than the canonical checkout.
 14. After a PRD-to-spec planning batch stabilizes, identify only the specs from that batch whose `research_status` is `not_started` or `failed` and whose `spec.md` exists.
 15. Use `.ralph/state/worker-claims.json` as the cross-runtime execution registry and use native Codex multi-agent delegation when it is the best fit for the active claimable slots.
-16. Outside that batch-scoped research step, either dispatch bounded Codex workers for admitted specs or leave those admitted slots available for claim by another supported runtime.
+16. Outside that batch-scoped research step, either dispatch bounded Codex workers for admitted specs or leave those admitted slots available for claim by another supported runtime, keeping queue-wide throughput as the default operating posture.
 17. Require `bootstrap` before `implement` or any other execution role begins in a claim that has not yet passed bootstrap locally.
 18. Wait for completed workers or released claims, close the completed worker threads when they exist, and validate the required outputs, including bootstrap evidence, the `Interruption Assessment` section, `Quality Gate`, `Commit Evidence`, worktree branch alignment, and clean-worktree guardrails at handoff boundaries.
 19. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Route the spec back to the next fixing role unless the report names an explicit human-gated blocker.
@@ -33,5 +33,5 @@ Workflow:
 22. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused specs in FIFO order.
 23. Continue dispatching workers until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached.
 
-Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.
+Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec completed or one worker handed off successfully while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.
 """

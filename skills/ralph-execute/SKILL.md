@@ -7,6 +7,8 @@ description: Resume an already-installed Ralph harness in the current repository
 
 Resume and advance an already-installed Ralph harness in the current repository until the queue is empty, lease ownership must transfer, or a documented human-gated stop condition occurs.
 
+The default operating principle is to keep advancing every runnable spec in series or in bounded parallel when dependencies allow, rather than completing one spec and stopping while other runnable specs remain.
+
 This skill does not install the harness. It assumes the current repository already contains the Ralph harness scaffold.
 
 In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are dogfood runtime artifacts. The shipped scaffold under `src/` stays cleaner than the root runtime, and target runtime records are generated after installation or first run.
@@ -70,7 +72,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - admit bounded normal specs in FIFO order up to `queue_policy.normal_execution_limit`
    - ensure admitted specs have dedicated git worktrees
    - require `bootstrap` before `implement` or any other execution role begins in a claim that is not yet validation-ready
-   - allow bounded same-batch `research` workers only before queue-head planning resumes
+   - allow bounded same-batch `research` workers only before normal execution resumes across the admitted queue
    - either dispatch native subagents when the current runtime supports them or expose admitted slots for claim in `.ralph/state/worker-claims.json`
    - preserve the canonical analysis-heavy and delivery-heavy role classification
    - spawn at most one non-research worker per admitted spec at a time
@@ -102,7 +104,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Do not advance review, verification, or release from a dirty spec worktree or a report that lacks checkpoint traceability.
 - Do not let `implement` begin until the current claim has passed `bootstrap` and is validation-ready.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
-- Do not stop after a single handoff unless the runtime contract reaches queue completion, lease transfer, or a human-gated boundary.
+- Do not stop after a single spec or handoff unless the runtime contract reaches queue completion, lease transfer, or a human-gated boundary.
 - Do not stop merely because review, verification, or release failed; keep routing those failures back through orchestrator-managed remediation unless the report names a human blocker.
 - If the installed runtime includes the Ralph stop-boundary hook, treat it as a conservative self-check that can recover one safe stop, not as a substitute for reading the queue and runtime state correctly.
 

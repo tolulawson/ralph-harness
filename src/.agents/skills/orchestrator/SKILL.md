@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Coordinate the Ralph multi-agent runtime by managing the dependency-aware scheduler, durable intent intake, lease ownership, worker claims, per-spec worktrees, bounded research fan-out, and canonical shared-state synchronization until a stop condition occurs.
+description: Coordinate the Ralph multi-agent runtime by managing the dependency-aware scheduler, durable intent intake, lease ownership, worker claims, per-spec worktrees, bounded research fan-out, and canonical shared-state synchronization until the queue is drained or a real stop condition occurs.
 ---
 
 # Orchestrator
@@ -55,7 +55,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
    - `resume_spec`
    - `status_request`
 15. For new specs, seed the queue entry, `depends_on_spec_ids`, default worktree metadata, and compatibility mirrors without bypassing hard dependencies.
-16. Compute the admission window:
+16. Compute the admission window and prefer filling every open slot with a runnable spec:
    - active interrupt spec
    - oldest ready interrupt spec by `created_at`
    - else oldest dependency-satisfied normal specs in FIFO order up to `queue_policy.normal_execution_limit`
@@ -71,7 +71,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 19. After a PRD-to-spec pass creates or refreshes a planning batch, identify only the specs from that batch whose `spec.md` exists and whose `research_status` still needs work.
 20. For same-batch `research`, either dispatch bounded native subagents when the active runtime supports them or expose those slots for claim in `.ralph/state/worker-claims.json`.
 21. Join the research batch, close each completed research worker or released claim, validate each `research.md`, and then update shared queue metadata once.
-22. Outside that batch-scoped research step, decide the next role for each admitted spec from lifecycle state, dependency status, PR state, interruption state, next action, and bootstrap readiness.
+22. Outside that batch-scoped research step, decide the next role for each admitted spec from lifecycle state, dependency status, PR state, interruption state, next action, and bootstrap readiness, keeping queue-wide throughput as the default posture.
 23. Preserve the canonical role classification for every dispatch:
    - analysis-heavy: `plan_check`, `review`, and optionally `research`
    - delivery-heavy: `prd`, `specify`, `plan`, `task_gen`, `bootstrap`, `implement`, `verify`, `release`
@@ -110,4 +110,4 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 
 ## Stop Condition
 
-Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Treat the orchestration safety cap as a human review boundary, not an automatic failure state. The shipped stop hook may prompt one extra self-check, but it must not replace deliberate stop-boundary reasoning inside the orchestrator itself.
+Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec finished or one worker handed off successfully while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state. The shipped stop hook may prompt one extra self-check, but it must not replace deliberate stop-boundary reasoning inside the orchestrator itself.
