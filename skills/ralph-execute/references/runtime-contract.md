@@ -16,3 +16,6 @@ Source of truth for an installed harness:
 12. `workflow-state.md` and `specs/INDEX.md` as human-readable projections of canonical JSON state
 13. `.ralph/reports/` as the role handoff history and checkpoint traceability layer
 14. `.ralph/logs/events.jsonl` as the append-only audit trail
+15. `.ralph/shared/` inside an admitted spec worktree as a generated convenience overlay back to the canonical shared control plane, never as a branch-owned source of truth
+
+Shared-state reads and writes must resolve to the canonical checkout directly or through `.ralph/shared/`. Tracked shared-control-plane copies inside a spec worktree are checkout artifacts only, not authoritative runtime state.

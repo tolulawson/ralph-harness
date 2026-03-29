@@ -4,6 +4,42 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.11.4 - 2026-03-28
+
+### Summary
+
+This release completes a full doctrine-consistency pass across the shipped role skills, adapter references, and dogfood release rules.
+
+It closes the remaining gap where some worker-facing surfaces still used generic `.ralph/state` and report-path wording after the canonical-control-plane model shipped, and it records a stronger dogfood release truth that doctrine drift is itself a release blocker.
+
+### Highlights
+
+- Updated the remaining shipped role skills so shared-state reads and canonical report writes explicitly resolve through the canonical checkout or `.ralph/shared/` when running from a spec worktree.
+- Tightened the shipped reporting, state-sync, release, planning, research, and specification guidance so path ownership is explicit instead of generic.
+- Updated the adapter registry and generated loader surfaces so `last_report_path` and shared-state guidance stay aligned with canonical-control-plane ownership.
+- Expanded the canonical-control-plane verifier to cover the wider shipped skill and reference surface.
+- Added dogfood project truth and learning records requiring a full alignment review of skills, doctrine files, adapter references, and control services before every release.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.11.4` as the default public install or upgrade reference.
+- Fresh installs and upgrades now point at a release where worker-facing skills, adapter surfaces, and doctrine files all agree on canonical shared-state ownership.
+- `upgrade_contract_version` remains `10`; this patch tightens doctrine consistency and release discipline without changing migration schema.
+
+### Validation And Release Workflow
+
+- Verified the expanded doctrine checks with `scripts/verify-canonical-control-plane-contract.sh`.
+- Regenerated shipped adapter files with `python3 scripts/generate-runtime-adapters.py`.
+- Verified the full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Shipped role skills: `src/.agents/skills/`
+- Adapter registry: `src/.ralph/agent-registry.json`
+- Generated loaders: `src/AGENTS.md`, `src/CLAUDE.md`
+- Dogfood release truth: `.ralph/context/project-truths.md`
+- Release asset: `ralph-harness-v0.11.4.tar.gz`
+
 ## v0.11.3 - 2026-03-28
 
 ### Summary

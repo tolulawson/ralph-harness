@@ -27,7 +27,7 @@ Every report must include:
 
 - Keep the report concise.
 - Include exact artifact paths.
-- Worker reports should use `.ralph/reports/<run-id>/<spec-key>/<role>.md`; the orchestrator report stays at `.ralph/reports/<run-id>/orchestrator.md`.
+- Worker reports should use the canonical `.ralph/reports/<run-id>/<spec-key>/<role>.md`, typically via `.ralph/shared/reports/` when authored from an assigned spec worktree; the orchestrator report stays at `.ralph/reports/<run-id>/orchestrator.md`.
 - Distinguish confirmed facts from recommendations.
 - `Quality Gate` must include `React Effects Audit` (`pass` or `not_applicable`), `React files checked`, `Deslopify Lite` (`pass`), and short notes.
 - `Commit Evidence` must identify the task checkpoint commit under handoff, the matching commit subject, covered task ids, and the validation run tied to that checkpoint. When the report itself lands in a later bookkeeping commit, keep the checkpoint SHA from the implemented work and list any later report-only commit in `Additional commits or range`.

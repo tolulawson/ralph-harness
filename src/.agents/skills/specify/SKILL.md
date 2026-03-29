@@ -12,16 +12,16 @@ description: Turn an approved project PRD or queued spec seed into a decision-co
 ## Inputs
 
 - `tasks/prd-<project>.md`
-- `.ralph/state/workflow-state.json`
-- `.ralph/state/spec-queue.json`
-- `.ralph/policy/project-policy.md`
+- `.ralph/shared/state/workflow-state.json` or the resolved canonical `.ralph/state/workflow-state.json`
+- `.ralph/shared/state/spec-queue.json` or the resolved canonical `.ralph/state/spec-queue.json`
+- `.ralph/shared/policy/project-policy.md` or the resolved canonical `.ralph/policy/project-policy.md`
 - related repo context
 
 If the project PRD or spec queue entry is missing, stop and report that planning must complete first.
 
 ## Workflow
 
-1. Treat the project PRD and the active queue entry as the canonical inputs.
+1. Treat the project PRD and the active queue entry as the canonical inputs. Shared-state reads must resolve to the canonical checkout directly or through `.ralph/shared/` when the role runs from an assigned spec worktree.
 2. Use the queue entry's `spec_id`, `spec_slug`, and `epoch_id` to determine the output path.
 3. Extract actors, actions, data, constraints, and success expectations from the PRD and queue entry.
 4. Make informed guesses for low-risk gaps. Only mark critical ambiguities as `NEEDS CLARIFICATION` when they materially change scope or user experience.
@@ -38,13 +38,13 @@ If the project PRD or spec queue entry is missing, stop and report that planning
 6. Ensure each requirement is testable and each user story is actionable.
 7. Create a lightweight quality checklist at `specs/<spec-key>/checklists/requirements.md`.
 8. Review the spec against the checklist and update it until it passes or until any remaining clarification items are explicit.
-9. Write the role report and recommend the next role.
+9. Write the role report to the canonical `.ralph/reports/<run-id>/<spec-key>/specify.md`, typically via `.ralph/shared/reports/` when the role runs from an assigned spec worktree, and recommend the next role.
 
 ## Outputs
 
 - `specs/<spec-key>/spec.md`
 - `specs/<spec-key>/checklists/requirements.md`
-- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/specify.md`
+- the canonical role report path, typically `.ralph/reports/<run-id>/<spec-key>/specify.md`
 
 ## Stop Condition
 

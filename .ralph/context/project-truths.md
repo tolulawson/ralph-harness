@@ -24,3 +24,5 @@
 
 - Add runtime, release, verification, and workflow expectations here.
 - Before publishing a Ralph release from this repository, audit the control-plane doctrine, supporting docs, public skills, generated sub-agent instructions, and related release surfaces for drift from the latest contracts and worktree or bootstrap rules.
+- Before every new release from this source repository, review all shipped role skills, public `ralph-*` skills, doctrine files, adapter references, and control services so they all express the same canonical-control-plane ownership model.
+- Treat doctrine drift between skills, docs, and control services as a release blocker because misaligned control-plane guidance can produce invalid runtime state.

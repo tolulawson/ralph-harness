@@ -35,3 +35,9 @@
 
 - Before publishing any Ralph release from this source repository, run an explicit drift pass across the control-plane doctrine, supporting docs, public skills, and role or sub-agent instructions so every support surface matches the latest control-plane contract.
 - When a doctrine change alters control-plane ownership, bootstrap flow, lease semantics, or worktree rules, audit not just `src/.ralph/*` but also README, install or upgrade guides, public `ralph-*` entry skills, generated runtime adapters, and dogfood learning records before tagging the release.
+
+## 2026-03-28
+
+- A control-plane doctrine change is not complete until every shipped role skill, public `ralph-*` skill, adapter reference, verifier, and supporting doctrine file uses the same ownership language for `.ralph/state`, `.ralph/reports`, and `.ralph/shared/`.
+- Generic references to `.ralph/state/*` or report paths are not enough once worktree overlays exist. Worker-facing docs must say whether the path is canonical shared state, canonical report output, or a convenience view exposed through `.ralph/shared/`.
+- Treat doctrine misalignment across skills, docs, and control services as a release blocker. Even small wording drift can make workers mutate tracked worktree copies instead of the canonical control plane.

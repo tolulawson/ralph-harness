@@ -21,7 +21,7 @@ Before doing substantial work, read these files in order:
 10. `.ralph/state/orchestrator-lease.json`
 11. `.ralph/state/worker-claims.json`
 12. `recent tail of .ralph/state/orchestrator-intents.jsonl`
-13. `report at last_report_path`
+13. `canonical report at last_report_path, resolving through the canonical checkout or .ralph/shared/ when running from a spec worktree`
 14. `active or admitted spec artifacts under specs/<spec-id>-<slug>/`
 15. `specs/INDEX.md`
 16. `tasks/todo.md`

@@ -8,26 +8,26 @@ This guide explains how to upgrade an already-installed Ralph harness in a targe
 
 The upgrade-safe scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.11.3`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.11.4`
 
 The canonical upgrade overwrite contract is:
 
-- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.3/src/upgrade-manifest.txt)
+- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.4/src/upgrade-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.11.3/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.11.4/VERSION)
 
 The installed harness metadata file is:
 
-- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.11.3/src/.ralph/harness-version.json)
+- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.11.4/src/.ralph/harness-version.json)
 
 The upgrade authority order is:
 
-1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.11.3/UPGRADING.md)
-2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.3/src/upgrade-manifest.txt)
-3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.11.3/VERSION)
-4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.11.3/src/.ralph/harness-version.json)
+1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.11.4/UPGRADING.md)
+2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.11.4/src/upgrade-manifest.txt)
+3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.11.4/VERSION)
+4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.11.4/src/.ralph/harness-version.json)
 
 ## Goal
 
@@ -57,7 +57,7 @@ An upgrade must not run over a healthy live orchestrator lease. If `.ralph/state
 
 ## Default Reference
 
-Use the latest stable semver tag by default. The current stable example in this guide is `v0.11.3`.
+Use the latest stable semver tag by default. The current stable example in this guide is `v0.11.4`.
 
 If exact reproducibility matters more than readability, pin to a specific commit SHA instead and still record the human-facing tag when known.
 
@@ -77,7 +77,7 @@ From inside the target repository, ask your coding agent to upgrade from a tagge
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the source repository.
-Upgrade this repository's installed Ralph harness to tag v0.11.3 using UPGRADING.md as the authoritative guide.
+Upgrade this repository's installed Ralph harness to tag v0.11.4 using UPGRADING.md as the authoritative guide.
 Run the upgrade preflight first so direct edits to the installed .ralph/runtime-contract.md are detected before any scaffold-owned files are overwritten.
 If the preflight reports drift in .ralph/runtime-contract.md, move those project-specific runtime rules into .ralph/policy/runtime-overrides.md before continuing.
 Only overwrite the scaffold-owned paths listed in src/upgrade-manifest.txt.
@@ -86,7 +86,7 @@ Refresh the managed Ralph blocks inside AGENTS.md and CLAUDE.md instead of repla
 Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, lease state, worker claims, durable intents, task-state, projection files, worktree metadata, `.ralph/shared/` worktree overlays, and the runtime adapter packs are upgraded together.
 If .ralph/state/orchestrator-lease.json still shows a healthy held lease, stop instead of upgrading over live orchestration.
 If migration cannot infer historic task lifecycle safely, stop and report the ambiguous spec instead of guessing.
-Update .ralph/harness-version.json so it records version 0.11.3, tag v0.11.3, the source repo, the resolved commit used for this upgrade, upgrade_contract_version 10, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed runtime adapters, and the preserved branch prefix.
+Update .ralph/harness-version.json so it records version 0.11.4, tag v0.11.4, the source repo, the resolved commit used for this upgrade, upgrade_contract_version 10, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed runtime adapters, and the preserved branch prefix.
 Merge `.codex/config.toml`, `.codex/hooks.json`, `.claude/settings.json`, and `.cursor/hooks.json` instead of clobbering user-owned settings or unrelated hook entries.
 Preserve unknown runtime skills in `.agents/skills/`, but if a Ralph-managed runtime skill directory has local drift or a same-name conflict, stop and report the managed runtime skill that needs repair.
 Run the upgrade verification checklist from UPGRADING.md before finishing.
@@ -98,7 +98,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.11.3
+SOURCE_REF=v0.11.4
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 

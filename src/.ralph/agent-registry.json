@@ -16,7 +16,7 @@
       ".ralph/state/orchestrator-lease.json",
       ".ralph/state/worker-claims.json",
       "recent tail of .ralph/state/orchestrator-intents.jsonl",
-      "report at last_report_path",
+      "canonical report at last_report_path, resolving through the canonical checkout or .ralph/shared/ when running from a spec worktree",
       "active or admitted spec artifacts under specs/<spec-id>-<slug>/",
       "specs/INDEX.md",
       "tasks/todo.md",

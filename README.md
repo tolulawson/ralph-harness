@@ -4,7 +4,7 @@ Ralph turns a coding agent into a repo-resident engineering loop with durable st
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.11.3`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, require a canonical bootstrap step before implementation begins, auto-continue safe stop boundaries through repo-local hooks in Codex, Claude Code, and Cursor, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a short-lived single-writer lease, let different supported runtimes claim different admitted spec slots through a shared worker-claims file, and keep advancing all runnable specs instead of stopping after the first completed spec.
+As of `v0.11.4`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, require a canonical bootstrap step before implementation begins, auto-continue safe stop boundaries through repo-local hooks in Codex, Claude Code, and Cursor, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a short-lived single-writer lease, let different supported runtimes claim different admitted spec slots through a shared worker-claims file, and keep advancing all runnable specs instead of stopping after the first completed spec.
 
 ## Why People Use Ralph
 
@@ -114,7 +114,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.11.3` as the default public reference right now
+- use `v0.11.4` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - keep the canonical shared control plane in the main checkout and use generated `.ralph/shared/` overlays inside admitted spec worktrees
@@ -210,7 +210,7 @@ That means you can ask Ralph to start another spec while other work is already i
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.11.3`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.11.4`, the shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
 - runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
@@ -292,4 +292,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.11.3`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.11.4`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

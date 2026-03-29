@@ -13,12 +13,24 @@ for path in \
   README.md \
   src/.ralph/runtime-contract.md \
   src/.ralph/policy/project-policy.md \
+  src/.ralph/agent-registry.json \
+  src/.agents/skills/prd/SKILL.md \
+  src/.agents/skills/specify/SKILL.md \
+  src/.agents/skills/research/SKILL.md \
+  src/.agents/skills/plan/SKILL.md \
+  src/.agents/skills/task-gen/SKILL.md \
+  src/.agents/skills/plan-check/SKILL.md \
   src/.agents/skills/orchestrator/SKILL.md \
   src/.agents/skills/bootstrap/SKILL.md \
   src/.agents/skills/implement/SKILL.md \
   src/.agents/skills/review/SKILL.md \
   src/.agents/skills/verify/SKILL.md \
+  src/.agents/skills/release/SKILL.md \
+  src/.agents/skills/reporting/SKILL.md \
+  src/.agents/skills/state-sync/SKILL.md \
   skills/ralph-execute/SKILL.md \
+  skills/ralph-execute/references/runtime-contract.md \
+  skills/ralph-execute/references/resume-checklist.md \
   skills/ralph-install/SKILL.md \
   skills/ralph-upgrade/SKILL.md \
   INSTALLATION.md \
@@ -48,18 +60,36 @@ grep -Fq -- '.ralph/shared/' src/.ralph/policy/project-policy.md \
   || fail "project policy must mention the generated shared overlay"
 
 for path in \
+  src/.agents/skills/specify/SKILL.md \
+  src/.agents/skills/research/SKILL.md \
+  src/.agents/skills/plan/SKILL.md \
+  src/.agents/skills/task-gen/SKILL.md \
+  src/.agents/skills/plan-check/SKILL.md \
   src/.agents/skills/orchestrator/SKILL.md \
   src/.agents/skills/bootstrap/SKILL.md \
   src/.agents/skills/implement/SKILL.md \
   src/.agents/skills/review/SKILL.md \
   src/.agents/skills/verify/SKILL.md \
+  src/.agents/skills/release/SKILL.md \
+  src/.agents/skills/state-sync/SKILL.md \
   skills/ralph-execute/SKILL.md \
+  skills/ralph-execute/references/runtime-contract.md \
+  skills/ralph-execute/references/resume-checklist.md \
   skills/ralph-install/SKILL.md \
   skills/ralph-upgrade/SKILL.md
 do
   grep -Fq -- '.ralph/shared/' "$path" \
     || fail "$path must mention the generated shared overlay"
 done
+
+grep -Fq -- 'canonical `.ralph/reports/' src/.agents/skills/prd/SKILL.md \
+  || fail "src/.agents/skills/prd/SKILL.md must describe canonical report ownership"
+
+grep -Fq -- '.ralph/shared/reports/' src/.agents/skills/reporting/SKILL.md \
+  || fail "src/.agents/skills/reporting/SKILL.md must describe canonical report writes via the overlay"
+
+grep -Fq -- 'canonical report at last_report_path' src/.ralph/agent-registry.json \
+  || fail "src/.ralph/agent-registry.json must describe canonical report resolution"
 
 grep -Fq -- 'canonical shared control plane' INSTALLATION.md \
   || fail "INSTALLATION.md must describe canonical shared-state ownership"

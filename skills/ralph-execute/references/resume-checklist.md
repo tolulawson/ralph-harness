@@ -18,11 +18,12 @@ When resuming the harness:
 14. tail only recent events from `.ralph/logs/events.jsonl`
 15. treat `workflow-state.json`, `spec-queue.json`, `worker-claims.json`, `orchestrator-lease.json`, and `task-state.json` as canonical machine state
 16. verify `workflow-state.md` and `specs/INDEX.md` still match their canonical JSON projections
-17. verify admitted spec worktrees still match their queue branches
-18. confirm review, verification, and release handoffs are on clean spec worktrees and the latest relevant worker report includes `Quality Gate` plus `Commit Evidence`
-19. check `active_spec_ids`, `active_interrupt_spec_id`, `resume_spec_stack`, `interruption_state`, worker claims, durable intents, and lease health before selecting the next spec
-20. confirm deprecated compatibility mirrors in `workflow-state.json` still match slot `0` or the most recently dispatched spec when they are present
-21. choose the next role from spec status, task lifecycle state, interruption state, dependency state, and PR state
-22. prefer filling every runnable slot in the bounded admission window before concluding that orchestration should stop
-23. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
-24. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs
+17. when operating from an admitted spec worktree, resolve shared-state reads and report reads to the canonical checkout directly or through `.ralph/shared/`
+18. verify admitted spec worktrees still match their queue branches
+19. confirm review, verification, and release handoffs are on clean spec worktrees and the latest relevant worker report includes `Quality Gate` plus `Commit Evidence`
+20. check `active_spec_ids`, `active_interrupt_spec_id`, `resume_spec_stack`, `interruption_state`, worker claims, durable intents, and lease health before selecting the next spec
+21. confirm deprecated compatibility mirrors in `workflow-state.json` still match slot `0` or the most recently dispatched spec when they are present
+22. choose the next role from spec status, task lifecycle state, interruption state, dependency state, and PR state
+23. prefer filling every runnable slot in the bounded admission window before concluding that orchestration should stop
+24. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
+25. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs

@@ -15,13 +15,13 @@ description: Generate dependency-ordered tasks for one numbered spec so each fre
 - `specs/<spec-key>/plan.md`
 - `.ralph/templates/task-state-template.json`
 - optional `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`
-- active queue entry from `.ralph/state/spec-queue.json`
+- active queue entry from `.ralph/shared/state/spec-queue.json` or the resolved canonical `.ralph/state/spec-queue.json`
 
 If the plan is missing, stop and report that the planning step must complete first.
 
 ## Workflow
 
-1. Read the spec, plan, queue entry, and any optional design artifacts.
+1. Read the spec, plan, queue entry, and any optional design artifacts. Resolve shared-state reads to the canonical checkout directly or through `.ralph/shared/` when the role runs from a spec worktree.
 2. Extract user stories, priorities, technical dependencies, and required checks.
 3. Organize tasks by user story so each story can be implemented and verified independently where possible.
 4. Use phase structure close to Speckit:
@@ -39,13 +39,13 @@ If the plan is missing, stop and report that the planning step must complete fir
 7. Record dependencies, per-task requirement ids, verification commands, planned artifacts, independent test criteria, and PR readiness hooks.
 8. Write `specs/<spec-key>/tasks.md`.
 9. Write `specs/<spec-key>/task-state.json` so every generated task has a canonical lifecycle record plus requirement and verification metadata.
-10. Write the role report and recommend the next role.
+10. Write the role report to the canonical `.ralph/reports/<run-id>/<spec-key>/task-gen.md`, typically via `.ralph/shared/reports/`, and recommend the next role.
 
 ## Outputs
 
 - `specs/<spec-key>/tasks.md`
 - `specs/<spec-key>/task-state.json`
-- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/task-gen.md`
+- the canonical role report path, typically `.ralph/reports/<run-id>/<spec-key>/task-gen.md`
 
 ## Stop Condition
 
