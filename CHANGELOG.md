@@ -4,6 +4,39 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.11.3 - 2026-03-28
+
+### Summary
+
+This release finishes the control-plane alignment pass across the public release surface.
+
+It brings the README and doctrine verifier into the same canonical-control-plane model already enforced by the shipped harness, so installation, upgrade, execution, and contributor-facing explanations all describe one authoritative shared-state story.
+
+### Highlights
+
+- Updated the README to explicitly define the canonical shared control plane, generated `.ralph/shared/` overlays, and the non-authoritative status of tracked shared-state copies inside spec worktrees.
+- Tightened the doctrine verifier so README plus the public `ralph-install` and `ralph-upgrade` entrypoints are checked alongside the shipped runtime contract and role skills.
+- Kept the shipped `src/` runtime behavior unchanged while closing the last public-documentation drift from the canonical control-plane doctrine.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.11.3` as the default public install or upgrade reference.
+- Fresh installs and upgrades now point at a release whose public docs, install guide, upgrade guide, public skills, and shipped contract all agree on canonical shared-state ownership.
+- `upgrade_contract_version` remains `10`; this patch is release-surface alignment work, not a migration-schema change.
+
+### Validation And Release Workflow
+
+- Verified the doctrine-specific checks with `scripts/verify-canonical-control-plane-contract.sh`.
+- Verified the full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Public overview: `README.md`
+- Install guide: `INSTALLATION.md`
+- Upgrade guide: `UPGRADING.md`
+- Canonical doctrine verifier: `scripts/verify-canonical-control-plane-contract.sh`
+- Release asset: `ralph-harness-v0.11.3.tar.gz`
+
 ## v0.11.2 - 2026-03-28
 
 ### Summary

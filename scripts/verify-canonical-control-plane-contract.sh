@@ -10,6 +10,7 @@ fail() {
 }
 
 for path in \
+  README.md \
   src/.ralph/runtime-contract.md \
   src/.ralph/policy/project-policy.md \
   src/.agents/skills/orchestrator/SKILL.md \
@@ -18,6 +19,8 @@ for path in \
   src/.agents/skills/review/SKILL.md \
   src/.agents/skills/verify/SKILL.md \
   skills/ralph-execute/SKILL.md \
+  skills/ralph-install/SKILL.md \
+  skills/ralph-upgrade/SKILL.md \
   INSTALLATION.md \
   UPGRADING.md \
   scripts/runtime_state_helpers.py \
@@ -25,6 +28,12 @@ for path in \
 do
   [[ -f "$path" ]] || fail "missing required file $path"
 done
+
+grep -Fq -- 'canonical shared control plane' README.md \
+  || fail "README.md must describe canonical shared-state ownership"
+
+grep -Fq -- '.ralph/shared/' README.md \
+  || fail "README.md must describe the generated shared overlay"
 
 grep -Fq -- 'canonical shared control plane' src/.ralph/runtime-contract.md \
   || fail "runtime contract must define the canonical shared control plane"
@@ -44,7 +53,9 @@ for path in \
   src/.agents/skills/implement/SKILL.md \
   src/.agents/skills/review/SKILL.md \
   src/.agents/skills/verify/SKILL.md \
-  skills/ralph-execute/SKILL.md
+  skills/ralph-execute/SKILL.md \
+  skills/ralph-install/SKILL.md \
+  skills/ralph-upgrade/SKILL.md
 do
   grep -Fq -- '.ralph/shared/' "$path" \
     || fail "$path must mention the generated shared overlay"
