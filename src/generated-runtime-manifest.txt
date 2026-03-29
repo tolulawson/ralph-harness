@@ -1,4 +1,5 @@
 # Runtime files and directories created in the target repository after the scaffold is copied
+# Each admitted spec worktree also gets a generated `.ralph/shared/` overlay when Ralph creates or refreshes that worktree.
 tasks/todo.md
 tasks/lessons.md
 .ralph/logs/events.jsonl

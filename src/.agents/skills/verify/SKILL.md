@@ -15,10 +15,10 @@ description: Run the required checks for the active numbered spec, capture exact
 - canonical task entry from `specs/<spec-key>/task-state.json`
 - active spec queue entry
 - latest implementation or review report
-- `.ralph/policy/project-policy.md`
-- `.ralph/context/project-truths.md`
-- `.ralph/context/project-facts.json`
-- `.ralph/context/learning-summary.md`
+- `.ralph/shared/policy/project-policy.md` or the resolved canonical `.ralph/policy/project-policy.md`
+- `.ralph/shared/context/project-truths.md` or the resolved canonical `.ralph/context/project-truths.md`
+- `.ralph/shared/context/project-facts.json` or the resolved canonical `.ralph/context/project-facts.json`
+- `.ralph/shared/context/learning-summary.md` or the resolved canonical `.ralph/context/learning-summary.md`
 - `specs/<spec-key>/research.md` when present
 - in-scope artifacts and reports
 
@@ -29,10 +29,10 @@ description: Run the required checks for the active numbered spec, capture exact
 3. Verify not only commands but also the observable truths, required artifacts, and critical links called out in the plan.
 4. Record exact pass, fail, or blocked evidence and tie the result to the checkpoint listed in `Commit Evidence`.
 5. Capture durable command truths or failure signatures in `Candidate Learnings` when they are project-relevant.
-6. Treat the assigned spec worktree or active PR branch as the verification unit when PR metadata exists.
+6. Treat the assigned spec worktree or active PR branch as the verification unit when PR metadata exists, but resolve shared policy, claims, queue state, and reports to the canonical checkout directly or through `.ralph/shared/`.
 7. Preserve or refresh the `Commit Evidence` section so the release role can trace the verified checkpoint cleanly.
 8. Fill in the `Interruption Assessment` section and use `Scope: interrupt` only for failing out-of-scope bugs that should preempt the normal queue.
-9. Write a verification report.
+9. Write the verification report to the canonical `.ralph/reports/<run-id>/<spec-key>/verify.md`, typically via `.ralph/shared/reports/`.
 
 ## Outputs
 

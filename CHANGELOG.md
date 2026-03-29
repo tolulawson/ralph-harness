@@ -4,6 +4,41 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.11.2 - 2026-03-28
+
+### Summary
+
+This release hardens the shipped harness around a single canonical control plane.
+
+It stops treating worktree-local tracked copies of shared state as meaningful runtime inputs, teaches shipped skills and coordination helpers to resolve shared artifacts back to the canonical checkout, and adds validation plus smoke coverage so multi-agent spec execution sees one authoritative control-plane view.
+
+### Highlights
+
+- Declared the canonical shared control plane explicitly in the shipped runtime contract and project policy, with spec worktrees reserved for branch-owned execution artifacts.
+- Added canonical-root resolution and generated `.ralph/shared/` overlays for admitted worktrees so workers can read canonical shared state safely without relying on tracked worktree duplicates.
+- Tightened orchestrator reconciliation so it mutates canonical shared state directly instead of copying tracked control-plane files back from worktrees.
+- Updated the shipped bootstrap, implement, review, verify, install, upgrade, and execute surfaces so they all expose the same canonical shared-state ownership model.
+- Added install, upgrade, and smoke-test safeguards that fail when a spec worktree edits shared-control-plane paths or when the generated overlay is missing or invalid.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.11.2` as the default public install or upgrade reference.
+- Fresh installs and upgrades now create or validate `.ralph/shared/` overlays for admitted worktrees and enforce canonical shared-state ownership during execution.
+- `upgrade_contract_version` remains `10`; this patch tightens ownership and validation without introducing a new migration schema.
+
+### Validation And Release Workflow
+
+- Verified the new overlay, reconciliation, and dirty-control-plane cases with `scripts/smoke-test-install-upgrade.sh`.
+- Verified the full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Runtime helpers: `scripts/runtime_state_helpers.py`
+- Coordination CLI: `scripts/orchestrator-coordination.py`
+- Public execute skill: `skills/ralph-execute/SKILL.md`
+- Release asset: `ralph-harness-v0.11.2.tar.gz`
+
 ## v0.11.1 - 2026-03-28
 
 ### Summary

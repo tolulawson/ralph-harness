@@ -32,6 +32,9 @@ grep -Fq -- 'orchestrator-lease.json' src/.ralph/runtime-contract.md \
 grep -Fq -- 'worker-claims.json' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention the worker claims file"
 
+grep -Fq -- '.ralph/shared/' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must mention the generated shared overlay"
+
 grep -Fq -- 'orchestrator-intents.jsonl' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention the durable intents file"
 
@@ -56,11 +59,17 @@ grep -Fq -- 'worktree' src/.agents/skills/orchestrator/SKILL.md \
 grep -Fq -- 'bootstrap' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must mention bootstrap"
 
+grep -Fq -- '.ralph/shared/' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must mention the generated shared overlay"
+
 grep -Fq -- 'depends_on_spec_ids' src/.agents/skills/plan/SKILL.md \
   || fail "plan skill must seed depends_on_spec_ids"
 
 grep -Fq -- 'lease' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must mention lease coordination"
+
+grep -Fq -- '.ralph/shared/' skills/ralph-execute/SKILL.md \
+  || fail "ralph-execute must mention the generated shared overlay"
 
 python3 - <<'PY'
 import json

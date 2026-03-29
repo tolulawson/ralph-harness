@@ -49,7 +49,8 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 1. Verify the Ralph harness exists in the current repository.
 2. Read the constitution, runtime contract, runtime overrides, project policy, workflow state, spec queue, and worker claims.
 3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
-4. Run a preflight consistency check before selecting the next role:
+4. Treat the tracked `.ralph/` files that appear inside a spec worktree as checkout artifacts only. Shared-state reads and writes must resolve to the canonical checkout directly or through the generated `.ralph/shared/` overlay.
+5. Run a preflight consistency check before selecting the next role:
    - the runtime must already be on the current multi-spec, lease-capable state shape
    - `.ralph/state/workflow-state.md` must match the canonical JSON projection
    - `specs/INDEX.md` must match the canonical queue projection
@@ -57,20 +58,22 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - the lease file, worker claims file, and durable intents file must exist and parse
    - the canonical base branch must be resolved in `.ralph/context/project-facts.json` or safely derivable for queued specs
    - admitted specs must have valid worktrees whose branches match the active queue entries
+   - admitted spec worktrees must expose a valid `.ralph/shared/` overlay back to the canonical checkout
+   - admitted spec worktrees must not carry tracked or untracked edits under canonical shared-control-plane paths
    - active non-bootstrap claims must already show `bootstrap_status = passed` and `validation_ready = true`
    - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
    - the latest relevant worker report must include `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) before work advances past implementation
    - the latest relevant worker report must include `Commit Evidence` for the checkpoint under handoff before work advances past implementation
-5. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
-6. Read the latest report and admitted spec artifacts.
-7. Read a recent tail of the event log rather than the full history.
-8. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
-9. Guide the active runtime to use Ralph's lease-plus-claims execution model to:
+6. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
+7. Read the latest report and admitted spec artifacts.
+8. Read a recent tail of the event log rather than the full history.
+9. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
+10. Guide the active runtime to use Ralph's lease-plus-claims execution model to:
    - acquire a single-writer lease only for the current shared-state mutation window
    - append durable intents when another healthy lease-holder is already active
    - honor `depends_on_spec_ids` as hard admission blockers
    - admit bounded normal specs in FIFO order up to `queue_policy.normal_execution_limit`
-   - ensure admitted specs have dedicated git worktrees
+   - ensure admitted specs have dedicated git worktrees plus generated `.ralph/shared/` overlays
    - require `bootstrap` before `implement` or any other execution role begins in a claim that is not yet validation-ready
    - allow bounded same-batch `research` workers only before normal execution resumes across the admitted queue
    - either dispatch native subagents when the current runtime supports them or expose admitted slots for claim in `.ralph/state/worker-claims.json`
@@ -78,7 +81,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - spawn at most one non-research worker per admitted spec at a time
    - wait for completed workers or released claims
    - close completed worker threads before mutating shared state when native subagents were used
-   - synchronize validated control-plane artifacts back into the canonical checkout
+   - update canonical shared state directly in the canonical checkout instead of copying tracked control-plane files back from the worktree
    - allow the finishing runtime session to acquire the brief lease and reconcile its own validated work
    - create an interrupt spec automatically for any failing out-of-scope bug
    - pause admitted normal specs at role boundaries and later resume them after the interrupt is released
@@ -86,7 +89,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - update shared state
    - treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops
    - continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs
-10. Stop with a concise summary of:
+11. Stop with a concise summary of:
    - what moved
    - what artifacts changed
    - why execution stopped
@@ -98,6 +101,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - If the harness files are missing, stop and tell the user to use `$ralph-install`.
 - Treat the constitution, runtime contract, policy, workflow state, and spec queue as source of truth.
 - Do not continue execution from stale projections or mixed-version runtime state.
+- Do not rely on tracked worktree copies of shared-control-plane files when a spec worktree is active.
 - Keep all parallelism bounded to same-batch `research` plus the scheduler's admitted-spec execution window.
 - Keep all role configs at full permissions (`danger-full-access`).
 - Do not advance review, verification, or release from a report that lacks `Quality Gate` evidence.

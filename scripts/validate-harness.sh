@@ -93,6 +93,7 @@ scripts/verify-installation-contract.sh
 scripts/verify-atomic-commit-contract.sh
 scripts/verify-human-stop-boundaries.sh
 scripts/verify-interruption-contract.sh
+scripts/verify-canonical-control-plane-contract.sh
 scripts/verify-multi-spec-contract.sh
 scripts/verify-parallel-research-contract.sh
 scripts/verify-subagent-isolation-contract.sh

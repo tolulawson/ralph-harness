@@ -29,7 +29,7 @@ This is the main external entry point for refreshing an existing install without
 8. Run `python3 scripts/migrate-installed-runtime.py --repo <target-repo>` from the checked-out source repo after the scaffold-owned files have been refreshed.
 9. Let the migration preserve user-owned runtime-specific settings while Ralph-managed adapter packs, repo-local hook configs, and shared runtime files are refreshed.
 10. Do not upgrade over a healthy held orchestrator lease; if the migration reports a live lease-holder, stop and retry after the active run releases or expires.
-11. Let the migration rewrite only Ralph-owned runtime state and projections, recover stale lease state, create or normalize the durable intents file, preserve or backfill `.ralph/context/project-facts.json` canonical `base_branch` data plus the new bootstrap or stop-hook facts, seed collision-safe worktree metadata, propagate bootstrap lifecycle fields into claims and queue summaries, normalize clear legacy worker report paths into spec-scoped aliases, create `.ralph/policy/runtime-overrides.md` when it is missing, and create missing `task-state.json` files when inference is clear.
+11. Let the migration rewrite only Ralph-owned runtime state and projections, recover stale lease state, create or normalize the durable intents file, preserve or backfill `.ralph/context/project-facts.json` canonical `base_branch` data plus the new bootstrap or stop-hook facts, seed collision-safe worktree metadata, regenerate `.ralph/shared/` overlays for admitted worktrees, propagate bootstrap lifecycle fields into claims and queue summaries, normalize clear legacy worker report paths into spec-scoped aliases, create `.ralph/policy/runtime-overrides.md` when it is missing, and create missing `task-state.json` files when inference is clear.
 12. Preserve unknown runtime skills under `.agents/skills/`, and stop when a Ralph-managed runtime skill directory has local drift instead of deleting or overwriting it silently.
 13. Confirm the upgraded runtime still enforces worktree-only execution, bootstrap-gated implementation, and `active_spec_ids` as the authoritative active-spec set instead of relying on compatibility mirrors.
 14. If migration reports ambiguous history, duplicate branch ownership across specs, or ambiguous shared legacy report ownership, stop and repair that state instead of guessing.
@@ -45,5 +45,5 @@ This is the main external entry point for refreshing an existing install without
 At the end of upgrade:
 
 - verify the upgrade against the checklist and verification section in `UPGRADING.md`
-- confirm the upgraded runtime still matches the latest control-plane doctrine around ephemeral lease windows, worktree-only execution, bootstrap lifecycle tracking, and conservative repo-local stop-boundary hooks
+- confirm the upgraded runtime still matches the latest control-plane doctrine around ephemeral lease windows, canonical shared-state ownership, `.ralph/shared/` worktree overlays, bootstrap lifecycle tracking, and conservative repo-local stop-boundary hooks
 - remind the user to restart their coding agent if it needs to reload newly upgraded project instructions

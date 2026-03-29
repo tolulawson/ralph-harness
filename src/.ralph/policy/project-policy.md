@@ -9,6 +9,7 @@
 - Ralph-managed Codex role configs use `sandbox_mode = "danger-full-access"`.
 - Harness doctrine: `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `.ralph/policy/runtime-overrides.md`
 - Control plane: repo files plus runtime-native adapter packs
+- Canonical shared control plane lives in the canonical checkout; spec worktrees get a generated `.ralph/shared/` overlay for shared reads and canonical report writes
 - Repo-local skills: `.agents/skills/*`
 - External custom tool server: not required for v1
 - Shared-state coordination uses a single-writer lease in `.ralph/state/orchestrator-lease.json`.
@@ -41,6 +42,7 @@
 - Admitted specs must execute in dedicated git worktrees under `.ralph/worktrees/`
 - The canonical checkout is reserved for scheduler state, projections, logs, lease state, and durable inbox processing
 - All spec execution must happen from the assigned spec worktree, never from the canonical checkout
+- Shared-state reads and writes must resolve to the canonical checkout directly or through `.ralph/shared/`; worktree-local tracked copies of shared-control-plane files must not be used
 - Atomic commits required before task handoff: yes
 - Quality Gate evidence required before review handoff: yes
 - Clean worktree required before review, verification, or release: yes
@@ -71,6 +73,8 @@
   - dependency graphs are acyclic and only target existing specs
   - queue branch and worktree assignments remain unique across specs
   - admitted specs have valid git worktrees and branch alignment
+  - admitted specs have a valid `.ralph/shared/` overlay that resolves back to the canonical checkout
+  - spec worktrees do not carry tracked or untracked edits under canonical shared-control-plane paths
   - canonical checkout cleanliness rules are enforced separately from spec worktree cleanliness
 - Stronger checks may be added by spec-specific tasks.
 - Project-specific gate commands should be encoded here rather than hard-coded into the harness loop.
@@ -110,6 +114,7 @@
 - Workers must not update shared workflow state, queue state, lease state, state Markdown, or orchestrator event logs directly.
 - Runtime sessions may update `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own worker claim.
 - Workers execute from their assigned spec worktree and may write spec-local artifacts there, but canonical control-plane updates remain orchestrator-mediated.
+- Workers must use the generated `.ralph/shared/` overlay or an equivalent canonical-path resolver for shared inputs and canonical report writes.
 - A finishing runtime session may briefly acquire the lease and reconcile its own validated control-plane updates.
 - Handoffs past implementation must preserve `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) in the latest relevant report.
 - Review and verification should treat the assigned spec branch or PR as the unit under inspection.

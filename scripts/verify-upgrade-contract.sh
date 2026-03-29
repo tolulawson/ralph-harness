@@ -70,6 +70,8 @@ for required in \
   '.claude/settings.json' \
   '.cursor/hooks.json' \
   '.ralph/hooks/' \
+  '.ralph/shared/' \
+  'canonical shared control plane' \
   'orchestrator_stop_hook' \
   'bootstrap_env_files' \
   'bootstrap_copy_exclude_globs' \

@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -25,10 +26,12 @@ CURRENT_NORMAL_EXECUTION_LIMIT = 2
 CURRENT_UPGRADE_CONTRACT_VERSION = 10
 CURRENT_LEASE_SCHEMA_VERSION = "1.0.0"
 CURRENT_WORKER_CLAIMS_SCHEMA_VERSION = "1.1.0"
+CURRENT_SCAFFOLD_REF = "__current_scaffold__"
 DEFAULT_LEASE_PATH = ".ralph/state/orchestrator-lease.json"
 DEFAULT_WORKER_CLAIMS_PATH = ".ralph/state/worker-claims.json"
 DEFAULT_INTENTS_PATH = ".ralph/state/orchestrator-intents.jsonl"
 DEFAULT_WORKTREE_ROOT = ".ralph/worktrees"
+DEFAULT_SHARED_OVERLAY_ROOT = ".ralph/shared"
 DEFAULT_RUNTIME_OVERRIDES_PATH = ".ralph/policy/runtime-overrides.md"
 DEFAULT_STOP_HOOK_PATH = ".ralph/hooks/stop-boundary.py"
 DEFAULT_CODEX_HOOKS_PATH = ".codex/hooks.json"
@@ -86,6 +89,9 @@ RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     "supported runtime adapter packs together",
     "native runtime subagents",
     ".ralph/state/worker-claims.json",
+    ".ralph/shared/",
+    "canonical shared control plane",
+    "worktree-local tracked copies",
     "Child roles must not spawn nested workers",
     "Review, verification, and release failures are remediation signals, not stop conditions.",
     "single-writer lease",
@@ -97,6 +103,9 @@ ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
     "worker-claims",
     "native subagents",
     "current session",
+    ".ralph/shared/",
+    "canonical checkout",
+    "shared-control-plane",
     "close that worker thread",
     "Do not stop merely because review, verification, or release failed.",
     "durable intent",
@@ -126,6 +135,26 @@ DEFAULT_BOOTSTRAP_COPY_EXCLUDE_GLOBS = [
     ".cache",
     ".cache/**",
 ]
+CANONICAL_SHARED_CONTROL_PLANE_PATHS = (
+    ".ralph/constitution.md",
+    ".ralph/runtime-contract.md",
+    ".ralph/context",
+    ".ralph/policy",
+    ".ralph/state",
+    ".ralph/logs",
+    ".ralph/reports",
+    "specs/INDEX.md",
+)
+SHARED_OVERLAY_LINK_TARGETS = {
+    "constitution.md": ".ralph/constitution.md",
+    "runtime-contract.md": ".ralph/runtime-contract.md",
+    "context": ".ralph/context",
+    "policy": ".ralph/policy",
+    "state": ".ralph/state",
+    "logs": ".ralph/logs",
+    "reports": ".ralph/reports",
+    "specs/INDEX.md": "specs/INDEX.md",
+}
 CODEX_STOP_HOOK_COMMAND = f"python3 ./{DEFAULT_STOP_HOOK_PATH} --runtime codex"
 CLAUDE_STOP_HOOK_COMMAND = f'python3 "$CLAUDE_PROJECT_DIR"/{DEFAULT_STOP_HOOK_PATH} --runtime claude'
 CURSOR_STOP_HOOK_COMMAND = f"python3 ./{DEFAULT_STOP_HOOK_PATH} --runtime cursor"
@@ -799,6 +828,115 @@ def run_git(repo_root: Path, *args: str) -> str:
     return completed.stdout.strip()
 
 
+def resolve_canonical_checkout_root(repo_root: Path) -> Path:
+    candidate = repo_root.resolve()
+    if not is_git_worktree(candidate):
+        return candidate
+    try:
+        common_dir = run_git(candidate, "rev-parse", "--git-common-dir")
+    except subprocess.CalledProcessError:
+        return candidate
+    common_dir_path = Path(common_dir)
+    if not common_dir_path.is_absolute():
+        common_dir_path = (candidate / common_dir_path).resolve()
+    else:
+        common_dir_path = common_dir_path.resolve()
+    return common_dir_path.parent if common_dir_path.name == ".git" else common_dir_path.parent
+
+
+def resolve_canonical_shared_path(repo_root: Path, relative_path: str) -> Path:
+    return resolve_canonical_checkout_root(repo_root) / relative_path
+
+
+def shared_overlay_root(worktree_path: Path) -> Path:
+    return worktree_path / DEFAULT_SHARED_OVERLAY_ROOT
+
+
+def recreate_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+        return
+    if path.exists():
+        shutil.rmtree(path)
+
+
+def ensure_relative_symlink(link_path: Path, target_path: Path) -> None:
+    link_path.parent.mkdir(parents=True, exist_ok=True)
+    link_parent = link_path.parent.resolve()
+    target_path = target_path.resolve()
+    desired_target = os.path.relpath(target_path, start=link_parent)
+    if link_path.is_symlink():
+        if os.readlink(link_path) == desired_target:
+            return
+        link_path.unlink()
+    elif link_path.exists():
+        recreate_path(link_path)
+    os.symlink(desired_target, link_path)
+
+
+def ensure_worktree_shared_overlay(canonical_root: Path, worktree_path: Path) -> Path:
+    canonical_root = canonical_root.resolve()
+    worktree_path = worktree_path.resolve()
+    overlay_root = shared_overlay_root(worktree_path)
+    overlay_root.mkdir(parents=True, exist_ok=True)
+    for relative_link, relative_target in SHARED_OVERLAY_LINK_TARGETS.items():
+        ensure_relative_symlink(overlay_root / relative_link, canonical_root / relative_target)
+    return overlay_root
+
+
+def validate_worktree_shared_overlay(
+    canonical_root: Path,
+    worktree_path: Path,
+    spec_key: str | None = None,
+) -> list[str]:
+    issues: list[str] = []
+    label = spec_key or "unknown-spec"
+    resolved_root = resolve_canonical_checkout_root(worktree_path)
+    if resolved_root != canonical_root:
+        issues.append(
+            f"{label}: worktree resolves canonical checkout {resolved_root} but expected {canonical_root}"
+        )
+    overlay_root = shared_overlay_root(worktree_path)
+    if not overlay_root.exists():
+        issues.append(f"{label}: missing generated shared overlay at {overlay_root.relative_to(worktree_path)}")
+        return issues
+    for relative_link, relative_target in SHARED_OVERLAY_LINK_TARGETS.items():
+        overlay_path = overlay_root / relative_link
+        target_path = canonical_root / relative_target
+        if not overlay_path.is_symlink():
+            issues.append(
+                f"{label}: shared overlay entry `{overlay_path.relative_to(worktree_path)}` must be a symlink to `{relative_target}`"
+            )
+            continue
+        try:
+            resolved_target = overlay_path.resolve(strict=True)
+        except FileNotFoundError:
+            issues.append(
+                f"{label}: shared overlay entry `{overlay_path.relative_to(worktree_path)}` points at a missing target"
+            )
+            continue
+        if resolved_target != target_path.resolve():
+            issues.append(
+                f"{label}: shared overlay entry `{overlay_path.relative_to(worktree_path)}` must resolve to `{relative_target}` in the canonical checkout"
+            )
+    return issues
+
+
+def shared_control_plane_status_entries(worktree_path: Path) -> list[str]:
+    try:
+        output = run_git(
+            worktree_path,
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+            "--",
+            *CANONICAL_SHARED_CONTROL_PLANE_PATHS,
+        )
+    except subprocess.CalledProcessError:
+        return []
+    return [line for line in output.splitlines() if line.strip()]
+
+
 def discover_remote_head_branch(repo_root: Path) -> tuple[str | None, str | None]:
     try:
         remote_head = run_git(repo_root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
@@ -853,6 +991,7 @@ def discover_canonical_base_branch(repo_root: Path, queue: dict[str, Any], workf
 
 
 def ensure_project_facts_file(repo_root: Path, queue: dict[str, Any], workflow: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     path = repo_root / ".ralph/context/project-facts.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -872,6 +1011,7 @@ def ensure_project_facts_file(repo_root: Path, queue: dict[str, Any], workflow: 
 
 
 def ensure_runtime_overrides_file(repo_root: Path) -> Path:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     target_path = repo_root / DEFAULT_RUNTIME_OVERRIDES_PATH
     if target_path.exists():
         return target_path
@@ -881,6 +1021,7 @@ def ensure_runtime_overrides_file(repo_root: Path) -> Path:
 
 
 def ensure_worker_claims_file(repo_root: Path, workflow: dict[str, Any]) -> Path:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     relative_path = workflow.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
     target_path = repo_root / relative_path
     if target_path.exists():
@@ -954,6 +1095,13 @@ def current_scaffold_tag() -> str | None:
     return tag if isinstance(tag, str) and tag else None
 
 
+def current_scaffold_runtime_contract_hash() -> str | None:
+    runtime_contract_path = SCAFFOLD_ROOT / "src/.ralph/runtime-contract.md"
+    if not runtime_contract_path.exists():
+        return None
+    return sha256_file(runtime_contract_path)
+
+
 def load_managed_runtime_skill_names() -> list[str]:
     registry_path = SCAFFOLD_ROOT / "src/.ralph/agent-registry.json"
     if not registry_path.exists():
@@ -966,6 +1114,15 @@ def load_managed_runtime_skill_names() -> list[str]:
 def canonical_src_paths_for_ref(ref: str, prefix: str) -> list[str] | None:
     if not ref:
         return None
+    if ref == CURRENT_SCAFFOLD_REF:
+        current_prefix = SCAFFOLD_ROOT / prefix
+        if not current_prefix.exists():
+            return []
+        return [
+            path.relative_to(SCAFFOLD_ROOT).as_posix()
+            for path in sorted(current_prefix.rglob("*"))
+            if path.is_file()
+        ]
     try:
         output = run_git(SCAFFOLD_ROOT, "ls-tree", "-r", "--name-only", ref, "--", prefix)
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -987,6 +1144,11 @@ def canonical_src_paths_for_ref(ref: str, prefix: str) -> list[str] | None:
 
 def canonical_src_text_for_ref(ref: str, relative_path: str) -> str | None:
     if not ref:
+        return None
+    if ref == CURRENT_SCAFFOLD_REF:
+        current_path = SCAFFOLD_ROOT / relative_path
+        if current_path.exists():
+            return current_path.read_text()
         return None
     try:
         return run_git(SCAFFOLD_ROOT, "show", f"{ref}:{relative_path}")
@@ -1015,7 +1177,27 @@ def validate_managed_runtime_skill_drift(repo_root: Path) -> list[str]:
 
     ref_for_skills: str | None = None
     canonical_files_by_skill: dict[str, list[str]] = {}
+    current_contract_hash = current_scaffold_runtime_contract_hash()
+    installed_contract_hash = expected_runtime_contract_baseline_hash(repo_root)
+    use_current_scaffold_baseline = bool(
+        current_contract_hash
+        and installed_contract_hash
+        and current_contract_hash == installed_contract_hash
+    )
+
+    if use_current_scaffold_baseline:
+        ref_for_skills = CURRENT_SCAFFOLD_REF
+        for skill_name in managed_skills:
+            current_prefix = SCAFFOLD_ROOT / f"src/.agents/skills/{skill_name}"
+            canonical_files_by_skill[skill_name] = [
+                path.relative_to(SCAFFOLD_ROOT).as_posix()
+                for path in sorted(current_prefix.rglob("*"))
+                if path.is_file()
+            ]
+
     for candidate_ref in candidate_refs:
+        if ref_for_skills is not None:
+            break
         missing = False
         current_files: dict[str, list[str]] = {}
         for skill_name in managed_skills:
@@ -1074,6 +1256,7 @@ def validate_managed_runtime_skill_drift(repo_root: Path) -> list[str]:
 
 
 def validate_upgrade_preflight(repo_root: Path) -> list[str]:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     issues: list[str] = []
     runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
     if not runtime_contract_path.exists():
@@ -1289,15 +1472,18 @@ def ensure_intent_log(repo_root: Path, workflow: dict[str, Any]) -> Path:
 
 
 def ensure_worktree_root(repo_root: Path) -> Path:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     worktree_root = repo_root / DEFAULT_WORKTREE_ROOT
     worktree_root.mkdir(parents=True, exist_ok=True)
     return worktree_root
 
 
 def ensure_spec_worktree(repo_root: Path, spec: dict[str, Any], project_facts: dict[str, Any] | None = None) -> Path:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     worktree_root = ensure_worktree_root(repo_root)
     worktree_path = repo_root / spec["worktree_path"]
     if worktree_path.exists() and is_git_worktree(worktree_path):
+        ensure_worktree_shared_overlay(repo_root, worktree_path)
         return worktree_path
     if worktree_path.exists() and worktree_path_is_obstructed(repo_root, spec["worktree_path"]):
         raise RuntimeStateError(
@@ -1329,6 +1515,7 @@ def ensure_spec_worktree(repo_root: Path, spec: dict[str, Any], project_facts: d
             capture_output=True,
             text=True,
         )
+    ensure_worktree_shared_overlay(repo_root, worktree_path)
     return worktree_path
 
 
@@ -1858,6 +2045,7 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
 
 
 def migrate_repo_state(repo_root: Path) -> None:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     merge_installed_codex_config(repo_root)
     merge_installed_codex_hooks(repo_root)
     merge_installed_claude_settings(repo_root)
@@ -2012,6 +2200,7 @@ def validate_task_state_alignment(
 
 
 def validate_installed_runtime(repo_root: Path) -> list[str]:
+    repo_root = resolve_canonical_checkout_root(repo_root)
     issues: list[str] = []
     parsed_agent_targets: dict[str, dict[str, Any]] = {}
     codex_hooks: dict[str, Any] = {}
@@ -2397,6 +2586,14 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
                     issues.append(f"{spec.get('spec_key', 'unknown-spec')}: active spec worktree is missing at {worktree_relpath}")
                 elif not is_git_worktree(worktree_path):
                     issues.append(f"{spec.get('spec_key', 'unknown-spec')}: worktree path is not a git worktree: {worktree_relpath}")
+                else:
+                    issues.extend(validate_worktree_shared_overlay(repo_root, worktree_path, spec.get("spec_key")))
+                    shared_status_entries = shared_control_plane_status_entries(worktree_path)
+                    if shared_status_entries:
+                        preview = ", ".join(shared_status_entries[:4])
+                        issues.append(
+                            f"{spec.get('spec_key', 'unknown-spec')}: spec worktree must not modify canonical shared-control-plane paths; found {preview}"
+                        )
 
     expected_workflow_md = render_workflow_state_markdown(workflow, queue)
     actual_workflow_md = workflow_md_path.read_text()

@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from runtime_state_helpers import RuntimeStateError, migrate_repo_state, validate_installed_runtime
+from runtime_state_helpers import RuntimeStateError, migrate_repo_state, resolve_canonical_checkout_root, validate_installed_runtime
 
 
 def main() -> int:
@@ -12,7 +12,7 @@ def main() -> int:
     parser.add_argument("--repo", default=".", help="Repository root to migrate.")
     args = parser.parse_args()
 
-    repo_root = Path(args.repo).resolve()
+    repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     try:
         migrate_repo_state(repo_root)
     except RuntimeStateError as exc:

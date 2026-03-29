@@ -71,6 +71,8 @@ for required in \
   '.cursor/hooks.json' \
   '.cursor/rules/' \
   '.ralph/hooks/' \
+  '.ralph/shared/' \
+  'canonical shared control plane' \
   'worker-claims' \
   'base_branch' \
   'validation_bootstrap_commands' \

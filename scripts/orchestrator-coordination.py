@@ -31,6 +31,7 @@ from runtime_state_helpers import (
     normalize_queue,
     normalize_workflow,
     parse_timestamp,
+    resolve_canonical_checkout_root,
     render_spec_index_markdown,
     render_workflow_state_markdown,
     worker_claim_is_healthy,
@@ -41,7 +42,8 @@ from runtime_state_helpers import (
 
 
 def load_workflow(repo_root: Path) -> dict:
-    return load_json(repo_root / ".ralph/state/workflow-state.json")
+    canonical_root = resolve_canonical_checkout_root(repo_root)
+    return load_json(canonical_root / ".ralph/state/workflow-state.json")
 
 
 def acquire_lock(lock_path: Path) -> int:
@@ -54,7 +56,7 @@ def release_lock(fd: int, lock_path: Path) -> None:
 
 
 def lease_cmd(args: argparse.Namespace) -> int:
-    repo_root = Path(args.repo).resolve()
+    repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
     lease = ensure_lease_file(repo_root, workflow)
     lease_path = repo_root / (workflow.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH)
@@ -123,7 +125,7 @@ def lease_cmd(args: argparse.Namespace) -> int:
 
 
 def intent_cmd(args: argparse.Namespace) -> int:
-    repo_root = Path(args.repo).resolve()
+    repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
     intents_path = ensure_intent_log(repo_root, workflow)
     intents = load_jsonl_records(intents_path)
@@ -160,7 +162,7 @@ def intent_cmd(args: argparse.Namespace) -> int:
 
 
 def worktree_cmd(args: argparse.Namespace) -> int:
-    repo_root = Path(args.repo).resolve()
+    repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
     queue = load_json(repo_root / ".ralph/state/spec-queue.json")
     _, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
@@ -174,7 +176,7 @@ def worktree_cmd(args: argparse.Namespace) -> int:
 
 
 def claim_cmd(args: argparse.Namespace) -> int:
-    repo_root = Path(args.repo).resolve()
+    repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
     claims_path = ensure_worker_claims_file(repo_root, workflow)
     payload = load_json(claims_path)
@@ -286,7 +288,7 @@ def claim_cmd(args: argparse.Namespace) -> int:
 
 
 def reconcile_cmd(args: argparse.Namespace) -> int:
-    repo_root = Path(args.repo).resolve()
+    repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
     lease = ensure_lease_file(repo_root, workflow)
     lease_path = repo_root / (workflow.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH)

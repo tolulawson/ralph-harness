@@ -59,7 +59,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
    - active interrupt spec
    - oldest ready interrupt spec by `created_at`
    - else oldest dependency-satisfied normal specs in FIFO order up to `queue_policy.normal_execution_limit`
-17. Ensure each admitted spec has a dedicated git worktree and branch before dispatching workers, but keep all execution inside those worktrees rather than the canonical checkout.
+17. Ensure each admitted spec has a dedicated git worktree, branch, and generated `.ralph/shared/` overlay before dispatching workers, but keep all execution inside those worktrees rather than the canonical checkout.
 18. For each admitted spec, choose the next task in this order:
    - first `in_progress`
    - else first `paused`
@@ -76,11 +76,11 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
    - analysis-heavy: `plan_check`, `review`, and optionally `research`
    - delivery-heavy: `prd`, `specify`, `plan`, `task_gen`, `bootstrap`, `implement`, `verify`, `release`
 24. Spawn bounded non-research workers only for admitted specs that do not already have a healthy worker claim in flight.
-25. Pass each worker or current session claim holder a single spec, a single worktree path, a single report path, and one execution mode.
+25. Pass each worker or current session claim holder a single spec, a single worktree path, a single canonical report path, and one execution mode. Shared-state reads must resolve to the canonical checkout directly or through `.ralph/shared/`.
 26. Require `bootstrap` before `implement`, and require a passed bootstrap claim with `validation_ready = true` before any non-bootstrap worker role begins in that session.
-27. Wait for completed workers or released claims, close that worker thread when one exists, and validate that the worker wrote only the required role-local artifacts from the assigned worktree, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Quality Gate`, `Commit Evidence`, and a clean worktree.
+27. Wait for completed workers or released claims, close that worker thread when one exists, and validate that the worker wrote only the required role-local artifacts from the assigned worktree, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Quality Gate`, `Commit Evidence`, a clean worktree, and no edits to tracked shared-control-plane paths inside the worktree.
 28. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Requeue the spec for the next fixing role unless the report names an explicit human-gated blocker.
-29. Synchronize validated control-plane artifacts from worker worktrees back into the canonical checkout before mutating shared state, but allow the finishing runtime session to acquire the brief lease and reconcile its own completed work.
+29. Treat worker outputs as spec-local only. Update canonical shared state directly in the canonical checkout instead of copying tracked control-plane files back from the worktree, but allow the finishing runtime session to acquire the brief lease and reconcile its own completed work there.
 30. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
 31. Append candidate learnings from worker reports to `.ralph/context/learning-log.jsonl`.
 32. Use the `learning` helper skill to classify and promote validated truths or facts when justified.

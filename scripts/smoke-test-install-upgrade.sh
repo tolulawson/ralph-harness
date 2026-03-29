@@ -1666,6 +1666,81 @@ write_atomic_report "$ATOMIC_PASS_TARGET" "None." "$ATOMIC_PASS_SHA"
 git -C "$ATOMIC_PASS_TARGET" add .ralph/reports/atomic-20260308/implement.md
 git -C "$ATOMIC_PASS_TARGET" commit -q -m "docs: record 001-T001 commit evidence"
 python3 scripts/check-installed-runtime-state.py --repo "$ATOMIC_PASS_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$ATOMIC_PASS_WORKTREE"
+ATOMIC_AUX_WORKTREE="$ATOMIC_PASS_TARGET/.ralph/worktrees/aux-canonical-overlay-check"
+git -C "$ATOMIC_PASS_TARGET" worktree add -q -b ralph/aux-canonical-overlay-check "$ATOMIC_AUX_WORKTREE" main
+python3 - <<'PY' "$ATOMIC_PASS_TARGET" "$ATOMIC_AUX_WORKTREE"
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path.cwd() / "scripts"))
+
+from runtime_state_helpers import ensure_worktree_shared_overlay
+
+root = Path(sys.argv[1])
+aux = Path(sys.argv[2])
+ensure_worktree_shared_overlay(root, aux)
+PY
+python3 - <<'PY' "$ATOMIC_PASS_TARGET" "$ATOMIC_PASS_WORKTREE" "$ATOMIC_AUX_WORKTREE"
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path.cwd() / "scripts"))
+
+from runtime_state_helpers import resolve_canonical_checkout_root
+
+root = Path(sys.argv[1]).resolve()
+worktrees = [Path(sys.argv[2]).resolve(), Path(sys.argv[3]).resolve()]
+expected_queue = json.loads((root / ".ralph/state/spec-queue.json").read_text())
+expected_lease = json.loads((root / ".ralph/state/orchestrator-lease.json").read_text())
+expected_claims = json.loads((root / ".ralph/state/worker-claims.json").read_text())
+expected_report = (root / ".ralph/reports/atomic-20260308/implement.md").read_text()
+for worktree in worktrees:
+    assert resolve_canonical_checkout_root(worktree) == root
+    assert (worktree / ".ralph/shared/state").is_symlink()
+    assert (worktree / ".ralph/shared/reports").is_symlink()
+    assert json.loads((worktree / ".ralph/shared/state/spec-queue.json").read_text()) == expected_queue
+    assert json.loads((worktree / ".ralph/shared/state/orchestrator-lease.json").read_text()) == expected_lease
+    assert json.loads((worktree / ".ralph/shared/state/worker-claims.json").read_text()) == expected_claims
+    assert (worktree / ".ralph/shared/reports/atomic-20260308/implement.md").read_text() == expected_report
+PY
+
+CANONICAL_RECONCILE_TARGET="$TMP_DIR/canonical-reconcile-target"
+mkdir -p "$CANONICAL_RECONCILE_TARGET"
+copy_manifest_paths src/install-manifest.txt "$CANONICAL_RECONCILE_TARGET"
+create_generated_runtime "$CANONICAL_RECONCILE_TARGET"
+sync_loader_files "$CANONICAL_RECONCILE_TARGET"
+init_git_repo "$CANONICAL_RECONCILE_TARGET"
+write_atomic_runtime "$CANONICAL_RECONCILE_TARGET"
+git -C "$CANONICAL_RECONCILE_TARGET" add .ralph/reports .ralph/state specs tasks
+git -C "$CANONICAL_RECONCILE_TARGET" commit -q -m "chore: seed canonical reconcile fixture"
+normalize_current_runtime_fixture "$CANONICAL_RECONCILE_TARGET"
+CANONICAL_RECONCILE_WORKTREE="$CANONICAL_RECONCILE_TARGET/.ralph/worktrees/001-atomic-commit-demo"
+python3 - <<'PY' "$CANONICAL_RECONCILE_WORKTREE/.ralph/state/spec-queue.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["specs"][0]["title"] = "WRONG WORKTREE TITLE"
+path.write_text(json.dumps(payload, indent=2) + "\n")
+PY
+python3 scripts/orchestrator-coordination.py reconcile \
+  --repo "$CANONICAL_RECONCILE_WORKTREE" \
+  --owner-token canonical-reconcile-owner \
+  --holder-thread canonical-reconcile-thread \
+  --run-id canonical-reconcile-run
+python3 - <<'PY' "$CANONICAL_RECONCILE_TARGET"
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+queue = json.loads((root / ".ralph/state/spec-queue.json").read_text())
+assert queue["specs"][0]["title"] != "WRONG WORKTREE TITLE"
+PY
 
 PARALLEL_RESEARCH_TARGET="$TMP_DIR/parallel-research-target"
 mkdir -p "$PARALLEL_RESEARCH_TARGET"
@@ -1719,6 +1794,31 @@ cp -R "$ATOMIC_PASS_TARGET" "$ATOMIC_DIRTY_TARGET"
 printf '\nUncommitted change.\n' >> "$ATOMIC_DIRTY_TARGET/.ralph/worktrees/001-atomic-commit-demo/specs/001-atomic-commit-demo/spec.md"
 if python3 scripts/check-installed-runtime-state.py --repo "$ATOMIC_DIRTY_TARGET"; then
   echo "smoke-test-install-upgrade: dirty worktree should have failed" >&2
+  exit 1
+fi
+
+CONTROL_PLANE_DIRTY_TARGET="$TMP_DIR/control-plane-dirty-target"
+mkdir -p "$CONTROL_PLANE_DIRTY_TARGET"
+copy_manifest_paths src/install-manifest.txt "$CONTROL_PLANE_DIRTY_TARGET"
+create_generated_runtime "$CONTROL_PLANE_DIRTY_TARGET"
+sync_loader_files "$CONTROL_PLANE_DIRTY_TARGET"
+init_git_repo "$CONTROL_PLANE_DIRTY_TARGET"
+write_atomic_runtime "$CONTROL_PLANE_DIRTY_TARGET"
+git -C "$CONTROL_PLANE_DIRTY_TARGET" add .ralph/reports .ralph/state specs tasks
+git -C "$CONTROL_PLANE_DIRTY_TARGET" commit -q -m "chore: seed control-plane dirty fixture"
+normalize_current_runtime_fixture "$CONTROL_PLANE_DIRTY_TARGET"
+python3 - <<'PY' "$CONTROL_PLANE_DIRTY_TARGET/.ralph/worktrees/001-atomic-commit-demo/.ralph/state/spec-queue.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["specs"][0]["title"] = "DIRTY SHARED STATE"
+path.write_text(json.dumps(payload, indent=2) + "\n")
+PY
+if python3 scripts/check-installed-runtime-state.py --repo "$CONTROL_PLANE_DIRTY_TARGET"; then
+  echo "smoke-test-install-upgrade: worktree-local shared-control-plane edits should have failed" >&2
   exit 1
 fi
 
