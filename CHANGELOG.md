@@ -4,6 +4,78 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.1 - 2026-04-01
+
+### Summary
+
+This release hardens the Ralph control plane around a strict launcher-to-orchestrator delegation model.
+
+It keeps public Ralph entry threads thin, moves substantive PRD, planning, and execution work into dedicated subagents, raises the managed Codex depth cap just enough to support that topology, and closes the remaining drift across generated adapters, install and upgrade guidance, and dogfood managed skills.
+
+### Highlights
+
+- Tightened public `ralph-execute`, `ralph-plan`, and `ralph-prd` entrypoints so the invoking thread immediately launches the dedicated Ralph subagent for that entrypoint instead of doing the work inline.
+- Updated the shipped runtime contract and project policy so thin launcher threads and dedicated orchestrator or role subagents are part of the control-plane doctrine rather than an optional prompt habit.
+- Raised the Ralph-managed Codex delegation topology to `agents.max_depth = 3`, allowing `entry thread -> orchestrator or role subagent -> worker subagents` while still forbidding deeper fan-out.
+- Fixed the runtime adapter generator so Claude and Cursor generated surfaces preserve the thin-thread launcher contract during regeneration.
+- Synced root dogfood managed skills back to the shipped `src/.agents/skills/` baselines so upgrade-surface validation no longer reports control-plane drift.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.1` as the default public install or upgrade reference.
+- Fresh installs now inherit the thin-launcher control-plane model, regenerated adapter guidance, and `agents.max_depth = 3`.
+- Existing installs can upgrade normally to pick up the launcher-binding and adapter-drift fixes; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified the full release surface with `bash scripts/validate-harness.sh`.
+- Re-ran the focused install, upgrade, and subagent-isolation checks after regenerating the adapter surfaces and resyncing managed skills.
+
+### Artifacts And References
+
+- Adapter generator: `scripts/generate-runtime-adapters.py`
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Install guide: `INSTALLATION.md`
+- Upgrade guide: `UPGRADING.md`
+- Release asset: `ralph-harness-v0.12.1.tar.gz`
+
+## v0.12.0 - 2026-04-01
+
+### Summary
+
+This release removes queue-head semantics from the shipped runtime contract and upgrade path.
+
+It replaces FIFO-head phrasing with explicit-first ready-set scheduling, raises the default parallel admission capacity through runtime-derived limits, and teaches migration plus validation to discard legacy queue-head fields instead of preserving them.
+
+### Highlights
+
+- Removed queue-head wording from shipped workflow templates, TODO templates, runtime doctrine, and execute-facing guidance.
+- Switched the scaffold and runtime helpers from `fifo_admission_window` to `explicit_first_ready_set`.
+- Made the default `normal_execution_limit` derive from the runtime thread budget, reserving one thread for the orchestrator.
+- Updated runtime migration and validation so legacy `queue_head_spec_id` fields are ignored or removed rather than normalized back into current state.
+- Added ordered `target_spec_ids` support to durable scheduling intents so explicit user requests survive lease contention.
+- Tightened public `ralph-execute`, `ralph-plan`, and `ralph-prd` entrypoints so the invoking thread stays thin and immediately launches the dedicated Ralph subagent for that entrypoint.
+- Raised the Ralph-managed Codex delegation depth contract to `agents.max_depth = 3` so entry-thread launchers can hand off to an orchestrator or role subagent, which may still launch worker subagents without allowing deeper nesting.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.0` as the default public install or upgrade reference.
+- Fresh installs now seed explicit-first ready-set scheduler metadata with a default normal-spec capacity of `3` from the shipped Codex thread budget.
+- Existing installs upgrade to `upgrade_contract_version` `11`, which removes queue-head dependence from migrated workflow state and validation.
+
+### Validation And Release Workflow
+
+- Verified helper, template, and doctrine changes through `scripts/validate-harness.sh`.
+- Expanded the install and upgrade smoke coverage to keep legacy queue-head fixtures only as migration inputs, not as current-runtime outputs.
+
+### Artifacts And References
+
+- Runtime helpers: `scripts/runtime_state_helpers.py`
+- Upgrade guide: `UPGRADING.md`
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Workflow templates: `src/.ralph/templates/`
+- Release asset: `ralph-harness-v0.12.0.tar.gz`
+
 ## v0.11.4 - 2026-03-28
 
 ### Summary

@@ -24,6 +24,7 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 - Permission model: `danger-full-access`
 - Native subagent delegation: `allowed`
 - Helper skills: reporting, state-sync, learning
+- Launch topology: thin Ralph entry thread -> dedicated orchestrator subagent -> worker subagents or claimed worker sessions
 
 ## Allowed Writes
 

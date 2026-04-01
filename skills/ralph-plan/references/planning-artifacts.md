@@ -12,7 +12,7 @@ The standard planning set is:
 Expectations:
 
 - the PRD frames ordered epochs
-- the queue records numbered specs in FIFO admission order plus `depends_on_spec_ids`
+- the queue records numbered specs plus `depends_on_spec_ids`, without inventing queue-head priority when dependencies are absent
 - `spec.md` explains behavior and constraints for one numbered spec
 - `plan.md` records the intended implementation approach for that spec
 - `tasks.md` is dependency-ordered and execution-ready

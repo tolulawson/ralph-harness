@@ -50,6 +50,7 @@ def render_loader_block(registry: dict) -> str:
             "Do not treat conversational memory as the source of truth when the Ralph runtime files already contain the needed state or policy.",
             "",
             "Treat the repository root as the harness work area after installation. Keep agent-specific instructions thin and route all substantive behavior back to the shared Ralph runtime contract.",
+            "When a public Ralph entrypoint is invoked, keep the entry thread thin and immediately launch the dedicated Ralph subagent for that entrypoint instead of doing the work inline.",
             "",
             "If this repository already has its own loader file, preserve non-Ralph content and replace only the managed Ralph block between the markers shown here.",
             registry["loaders"]["managed_block_end"],
@@ -63,8 +64,7 @@ def render_claude_agent(role: dict) -> str:
     helper = ", ".join(role["helper_skills"]) if role["helper_skills"] else "None"
     writes = "\n".join(f"- {item}" for item in role["allowed_writes"])
     native = "allowed" if role["native_subagent_delegation"] else "not allowed"
-    return "\n".join(
-        [
+    lines = [
             "---",
             f"name: {role['id']}",
             f"description: {role['purpose']}",
@@ -91,6 +91,11 @@ def render_claude_agent(role: dict) -> str:
             f"- Permission model: `{role['permission_model']}`",
             f"- Native subagent delegation: `{native}`",
             f"- Helper skills: {helper}",
+            (
+                "- Launch topology: thin Ralph entry thread -> dedicated orchestrator subagent -> worker subagents or claimed worker sessions"
+                if role["id"] == "orchestrator"
+                else None
+            ),
             "",
             "## Allowed Writes",
             "",
@@ -99,12 +104,11 @@ def render_claude_agent(role: dict) -> str:
             "Use the canonical `.agents/skills/` role instructions and the shared `.ralph/` runtime contract as the source of truth. Do not invent tool-specific workflow rules that diverge from Ralph.",
             "",
         ]
-    )
+    return "\n".join(line for line in lines if line is not None)
 
 
 def render_claude_command(entrypoint: dict) -> str:
-    return "\n".join(
-        [
+    lines = [
             "---",
             f"description: {entrypoint['purpose']}",
             "---",
@@ -112,9 +116,15 @@ def render_claude_command(entrypoint: dict) -> str:
             f"Run `{entrypoint['id']}` using the canonical Ralph source of truth at `{entrypoint['doc_path']}`.",
             "",
             "Read the shared Ralph runtime files first, preserve any existing managed Ralph loader blocks, and follow the canonical contract instead of rewriting it from memory.",
-            "",
-        ]
-    )
+    ]
+    if entrypoint["id"] == "ralph-execute":
+        lines.append("Keep the invoking thread thin: launch a dedicated Ralph orchestrator subagent immediately, then wait and relay its result instead of orchestrating inline on the command thread.")
+    elif entrypoint["id"] == "ralph-plan":
+        lines.append("Keep the invoking thread thin: launch a dedicated Ralph `plan` subagent immediately, then wait and relay its result instead of planning inline on the command thread.")
+    elif entrypoint["id"] == "ralph-prd":
+        lines.append("Keep the invoking thread thin: launch a dedicated Ralph `prd` subagent immediately, then wait and relay its result instead of writing the PRD inline on the command thread.")
+    lines.append("")
+    return "\n".join(line for line in lines if line is not None)
 
 
 def render_cursor_rule(rule_name: str, description: str, bullets: list[str], always_apply: bool) -> str:
@@ -150,6 +160,7 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
         [
             "Read the managed Ralph loader block in `AGENTS.md` before doing substantial work.",
             "Treat `.ralph/` as the canonical runtime doctrine and state surface.",
+            "Treat the invoking thread as a Ralph launcher only when a public `ralph-*` entrypoint is used. Keep that thread thin and move substantive Ralph work into the dedicated subagent for that entrypoint.",
             "Use `.ralph/state/worker-claims.json` as the shared worker-claims registry for cross-runtime execution.",
             "Execute numbered spec work only from assigned spec worktrees, never from the canonical checkout.",
             "Use `.cursor/rules/` only as Cursor-native wrappers around the shared Ralph contract, not as a divergent workflow definition.",
@@ -162,6 +173,7 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
         "How Cursor should resume an installed Ralph runtime.",
         [
             "Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/worker-claims.json` before execution.",
+            "Keep the invoking thread thin: immediately launch a dedicated Ralph orchestrator subagent for `ralph-execute`, then wait and relay its result instead of orchestrating inline.",
             "A Cursor session may act as the lease-holder for a brief reconciliation window or claim a runnable worker slot, and a finishing session may reconcile its own validated work after acquiring the lease.",
             "Use the canonical behavior from `skills/ralph-execute/SKILL.md` and `.agents/skills/orchestrator/SKILL.md`."
         ],

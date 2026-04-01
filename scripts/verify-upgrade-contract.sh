@@ -156,8 +156,8 @@ if payload.get("version") != version:
     raise SystemExit("verify-upgrade-contract: harness-version.json version mismatch")
 if payload.get("tag") != current_tag:
     raise SystemExit("verify-upgrade-contract: harness-version.json tag mismatch")
-if payload.get("upgrade_contract_version") != 10:
-    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 10")
+if payload.get("upgrade_contract_version") != 11:
+    raise SystemExit("verify-upgrade-contract: upgrade_contract_version must equal 11")
 if payload.get("runtime_contract_baseline_sha256") != runtime_contract_hash:
     raise SystemExit("verify-upgrade-contract: runtime_contract_baseline_sha256 must match src/.ralph/runtime-contract.md")
 if payload.get("runtime_overrides_path") != ".ralph/policy/runtime-overrides.md":

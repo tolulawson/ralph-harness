@@ -8,7 +8,7 @@ codex_hooks = true
 
 [agents]
 max_threads = 4
-max_depth = 2
+max_depth = 3
 
 [agents.orchestrator]
 config_file = "agents/orchestrator.toml"

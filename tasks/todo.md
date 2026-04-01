@@ -16,7 +16,7 @@
 - [x] Add four distributable source skills under `skills/` for installing, shaping PRDs, planning, and executing the Ralph harness, and document the distinction from `.agents/skills/`.
 - [x] Refactor the runtime control plane from a single active-feature model to an epoch-driven spec queue with numbered spec IDs and canonical spec state.
 - [x] Add queue-first state artifacts and templates: `.ralph/state/spec-queue.json`, `specs/INDEX.md`, and numbered spec directory templates.
-- [x] Update the orchestrator, planning, release, review, verify, and public `ralph-*` skills to operate on spec queue entries, active PR context, and FIFO execution.
+- [x] Update the orchestrator, planning, release, review, verify, and public `ralph-*` skills to operate on spec queue entries, active PR context, and ready-set execution.
 - [x] Migrate the example bootstrap artifacts to the new numbered-spec structure and refresh the sample workflow/event state to match.
 - [x] Refresh README and installation guidance so downstream projects install and operate the numbered spec queue and real PR loop correctly.
 - [x] Run structural verification for the updated TOML, JSON, queue, and reference artifacts, then record the results below.
@@ -59,9 +59,9 @@
 - Refactored the runtime model from one active feature to a queue-driven `PRD -> epochs -> numbered specs -> tasks -> branch/PR` workflow.
 - Added `.ralph/state/spec-queue.json`, `specs/INDEX.md`, and numbered spec templates so the queue has both machine-readable and human-readable projections.
 - Migrated the example artifacts to `tasks/prd-ralph-harness.md` plus `specs/001-self-bootstrap-harness/` and refreshed the sample event log and bootstrap reports to match the numbered spec model.
-- Updated the runtime and public skill surfaces so `orchestrator`, `plan`, `release`, `ralph-prd`, `ralph-plan`, and `ralph-execute` all understand epochs, numbered specs, FIFO queue selection, and PR context.
+- Updated the runtime and public skill surfaces so `orchestrator`, `plan`, `release`, `ralph-prd`, `ralph-plan`, and `ralph-execute` all understand epochs, numbered specs, ready-set selection, and PR context.
 - Verified `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and all 8 entries in `.ralph/logs/events.jsonl` parse successfully.
-- Verified `.ralph/state/workflow-state.md` matches the active spec and last report, and `specs/INDEX.md` matches the queue head spec and status semantically.
+- Verified `.ralph/state/workflow-state.md` matches the active-spec set and last report, and `specs/INDEX.md` matches the canonical queue status semantically.
 - Verified the scaffold now contains 12 repo-local skills and 8 bootstrap reports.
 - Added a Mermaid flow diagram to `README.md` that shows how the harness loop moves from project PRD through epochs, numbered specs, task execution, review, verification, release, and queue advancement.
 - Split the repository into a canonical scaffold under `src/` and a live dogfood runtime at the repo root.

@@ -138,7 +138,7 @@ queue_path = repo / ".ralph/state/spec-queue.json"
 workflow = load_json(workflow_path)
 queue = load_json(queue_path)
 project_facts_path, project_facts = ensure_project_facts_file(repo, queue, workflow)
-queue = normalize_queue(queue, workflow, project_facts)
+queue = normalize_queue(queue, workflow, project_facts, repo)
 workflow = normalize_workflow(workflow, queue)
 claims_path = ensure_worker_claims_file(repo, workflow)
 claims = load_json(claims_path)
@@ -186,14 +186,13 @@ write_atomic_runtime() {
   "current_run_id": "atomic-20260308",
   "active_pr_number": null,
   "active_pr_url": null,
-  "queue_head_spec_id": "001",
   "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
   "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
   "lease_owner_token": null,
   "lease_heartbeat_at": null,
   "lease_expires_at": null,
   "scheduler_summary": {
-    "normal_execution_limit": 2,
+    "normal_execution_limit": 3,
     "active_spec_count": 1,
     "pending_intent_count": 0,
     "dependency_blocked_count": 0
@@ -225,9 +224,9 @@ EOF
 {
   "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo_admission_window",
+    "selection": "explicit_first_ready_set",
     "preemption": "failing_out_of_scope_bug",
-    "normal_execution_limit": 2
+    "normal_execution_limit": 3
   },
   "active_spec_id": "001",
   "active_spec_ids": [
@@ -364,14 +363,13 @@ write_parallel_research_runtime() {
   "current_run_id": "research-batch-20260308",
   "active_pr_number": null,
   "active_pr_url": null,
-  "queue_head_spec_id": "001",
   "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
   "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
   "lease_owner_token": null,
   "lease_heartbeat_at": null,
   "lease_expires_at": null,
   "scheduler_summary": {
-    "normal_execution_limit": 2,
+    "normal_execution_limit": 3,
     "active_spec_count": 0,
     "pending_intent_count": 0,
     "dependency_blocked_count": 1
@@ -384,7 +382,7 @@ write_parallel_research_runtime() {
   "last_verified_at": null,
   "blocked_reason": null,
   "failure_count": 0,
-  "next_action": "Plan the queue head after joined research completes.",
+  "next_action": "Plan the explicit target or next ready spec after joined research completes.",
   "queue_snapshot": [
     {
       "spec_id": "001",
@@ -413,9 +411,9 @@ EOF
 {
   "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo_admission_window",
+    "selection": "explicit_first_ready_set",
     "preemption": "failing_out_of_scope_bug",
-    "normal_execution_limit": 2
+    "normal_execution_limit": 3
   },
   "active_spec_id": null,
   "active_spec_ids": [],
@@ -930,14 +928,13 @@ EOF
   "current_run_id": "collision-upgrade",
   "active_pr_number": null,
   "active_pr_url": null,
-  "queue_head_spec_id": null,
   "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
   "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
   "lease_owner_token": null,
   "lease_heartbeat_at": null,
   "lease_expires_at": null,
   "scheduler_summary": {
-    "normal_execution_limit": 2,
+    "normal_execution_limit": 3,
     "active_spec_count": 0,
     "pending_intent_count": 0,
     "dependency_blocked_count": 0
@@ -958,9 +955,9 @@ EOF
 {
   "schema_version": "3.0.0",
   "queue_policy": {
-    "selection": "fifo_admission_window",
+    "selection": "explicit_first_ready_set",
     "preemption": "failing_out_of_scope_bug",
-    "normal_execution_limit": 2
+    "normal_execution_limit": 3
   },
   "active_spec_id": null,
   "active_spec_ids": [],
@@ -1567,7 +1564,7 @@ assert config["sandbox_mode"] == "danger-full-access"
 assert config["features"]["multi_agent"] is True
 assert config["features"]["codex_hooks"] is True
 assert config["agents"]["max_threads"] == 9
-assert config["agents"]["max_depth"] == 2
+assert config["agents"]["max_depth"] == 3
 assert config["agents"]["orchestrator"]["config_file"] == "agents/orchestrator.toml"
 assert config["agents"]["research"]["config_file"] == "agents/research.toml"
 assert config["agents"]["plan_check"]["config_file"] == "agents/plan-check.toml"

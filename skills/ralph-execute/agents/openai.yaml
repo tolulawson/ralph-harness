@@ -1,7 +1,7 @@
 interface:
   display_name: "Ralph Execute"
-  short_description: "Resume an installed Ralph harness here"
-  default_prompt: "Use $ralph-execute to resume the installed Ralph harness in this repository and advance the next step."
+  short_description: "Launch Ralph orchestration for this repo"
+  default_prompt: "Use $ralph-execute to launch the dedicated Ralph orchestrator subagent for this repository and advance the next step."
 
 policy:
   allow_implicit_invocation: false

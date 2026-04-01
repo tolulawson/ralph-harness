@@ -1,9 +1,15 @@
 {
-  "version": "0.8.4",
-  "tag": "v0.8.4",
+  "version": "0.12.1",
+  "tag": "v0.12.1",
   "source_repo": "https://github.com/tolulawson/ralph-harness",
   "resolved_commit": null,
-  "upgrade_contract_version": 7,
-  "runtime_contract_baseline_sha256": "4f4f36ba877cf2cefe98d2c5af0b56f5b01dacc51fab78c76ab2925b8a66d904",
-  "runtime_overrides_path": ".ralph/policy/runtime-overrides.md"
+  "upgrade_contract_version": 11,
+  "runtime_contract_baseline_sha256": "2d5968ea276a97ac0083af7b0783f11e58a6ac3688685e97597bdd7e3f5c4765",
+  "runtime_overrides_path": ".ralph/policy/runtime-overrides.md",
+  "runtime_adapters": [
+    "codex",
+    "claude",
+    "cursor"
+  ],
+  "branch_prefix": "ralph"
 }

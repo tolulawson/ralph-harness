@@ -12,7 +12,8 @@
 - Run id: `{{current_run_id}}`
 - Active PR number: `{{active_pr_number}}`
 - Active PR URL: `{{active_pr_url}}`
-- Queue head spec: `{{queue_head_spec_id}}`
+- Admission policy: `{{admission_policy}}`
+- Normal spec capacity: `{{normal_execution_limit}}`
 - Active interrupt spec: `{{active_interrupt_spec_id}}`
 - Lease path: `{{orchestrator_lease_path}}`
 - Worker claims path: `{{worker_claims_path}}`

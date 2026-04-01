@@ -6,7 +6,7 @@
 - [ ] Create the project PRD with epoch framing.
 - [ ] Seed the numbered spec queue and `specs/INDEX.md`.
 - [ ] Prepare the first numbered spec, plan, and tasks.
-- [ ] Execute the queue head through review, verification, and PR completion.
+- [ ] Execute the explicit targets and remaining ready specs through review, verification, and PR completion.
 
 ## Review
 

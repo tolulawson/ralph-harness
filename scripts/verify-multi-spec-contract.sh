@@ -88,8 +88,11 @@ for key in ("active_spec_ids", "active_interrupt_spec_id", "worker_claims_path")
     if key not in queue:
         raise SystemExit(f"verify-multi-spec-contract: spec-queue missing {key}")
 
-if queue["queue_policy"].get("normal_execution_limit") != 2:
-    raise SystemExit("verify-multi-spec-contract: queue template default normal_execution_limit must be 2")
+if queue["queue_policy"].get("selection") != "explicit_first_ready_set":
+    raise SystemExit("verify-multi-spec-contract: queue state selection policy must be explicit_first_ready_set")
+
+if queue_template["queue_policy"].get("normal_execution_limit") != 3:
+    raise SystemExit("verify-multi-spec-contract: queue template default normal_execution_limit must be 3")
 
 sample = queue_template["specs"][0]
 for key in (

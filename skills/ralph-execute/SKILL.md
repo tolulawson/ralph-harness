@@ -7,7 +7,9 @@ description: Resume an already-installed Ralph harness in the current repository
 
 Resume and advance an already-installed Ralph harness in the current repository until the queue is empty, lease ownership must transfer, or a documented human-gated stop condition occurs.
 
-The default operating principle is to keep advancing every runnable spec in series or in bounded parallel when dependencies allow, rather than completing one spec and stopping while other runnable specs remain.
+The default operating principle is to keep advancing every runnable spec in bounded parallel when dependencies allow, rather than completing one spec and stopping while other runnable specs remain.
+
+This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand execution to a dedicated orchestrator subagent.
 
 This skill does not install the harness. It assumes the current repository already contains the Ralph harness scaffold.
 
@@ -48,9 +50,11 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 
 1. Verify the Ralph harness exists in the current repository.
 2. Read the constitution, runtime contract, runtime overrides, project policy, workflow state, spec queue, and worker claims.
-3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
-4. Treat the tracked `.ralph/` files that appear inside a spec worktree as checkout artifacts only. Shared-state reads and writes must resolve to the canonical checkout directly or through the generated `.ralph/shared/` overlay.
-5. Run a preflight consistency check before selecting the next role:
+3. Immediately spawn a dedicated orchestrator subagent with forked context semantics and the canonical Ralph orchestrator config.
+4. Keep the invoking thread thin after launch. It may pass the repo path or user request into the orchestrator, wait for completion, and relay the result, but it must not perform orchestration, planning, research, implementation, review, verification, or release inline.
+5. Inside the orchestrator subagent, treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
+6. Inside the orchestrator subagent, treat the tracked `.ralph/` files that appear inside a spec worktree as checkout artifacts only. Shared-state reads and writes must resolve to the canonical checkout directly or through the generated `.ralph/shared/` overlay.
+7. Run a preflight consistency check before selecting the next role:
    - the runtime must already be on the current multi-spec, lease-capable state shape
    - `.ralph/state/workflow-state.md` must match the canonical JSON projection
    - `specs/INDEX.md` must match the canonical queue projection
@@ -64,15 +68,15 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
    - the latest relevant worker report must include `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) before work advances past implementation
    - the latest relevant worker report must include `Commit Evidence` for the checkpoint under handoff before work advances past implementation
-6. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
-7. Read the latest report and admitted spec artifacts.
-8. Read a recent tail of the event log rather than the full history.
-9. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
-10. Guide the active runtime to use Ralph's lease-plus-claims execution model to:
+8. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
+9. Read the latest report and admitted spec artifacts.
+10. Read a recent tail of the event log rather than the full history.
+11. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
+12. Guide the active runtime to use Ralph's lease-plus-claims execution model to:
    - acquire a single-writer lease only for the current shared-state mutation window
    - append durable intents when another healthy lease-holder is already active
    - honor `depends_on_spec_ids` as hard admission blockers
-   - admit bounded normal specs in FIFO order up to `queue_policy.normal_execution_limit`
+   - admit explicit user-requested ready specs first, then fill the remaining admission window from the ready set up to `queue_policy.normal_execution_limit`
    - ensure admitted specs have dedicated git worktrees plus generated `.ralph/shared/` overlays
    - require `bootstrap` before `implement` or any other execution role begins in a claim that is not yet validation-ready
    - allow bounded same-batch `research` workers only before normal execution resumes across the admitted queue
@@ -89,7 +93,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - update shared state
    - treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops
    - continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs
-11. Stop with a concise summary of:
+13. Stop with a concise summary of:
    - what moved
    - what artifacts changed
    - why execution stopped
@@ -100,9 +104,12 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Do not install or reinstall the scaffold here.
 - If the harness files are missing, stop and tell the user to use `$ralph-install`.
 - Treat the constitution, runtime contract, policy, workflow state, and spec queue as source of truth.
+- The invoking thread is a Ralph launcher only. It must not perform orchestration or worker-role duties inline after it has enough context to launch the orchestrator subagent.
 - Do not continue execution from stale projections or mixed-version runtime state.
 - Do not rely on tracked worktree copies of shared-control-plane files when a spec worktree is active.
 - Keep all parallelism bounded to same-batch `research` plus the scheduler's admitted-spec execution window.
+- Require the Ralph launcher plus worker topology: entry thread -> orchestrator subagent -> worker subagents or claimed worker sessions.
+- Treat `active_spec_ids` as authoritative. Any singular active-spec fields are compatibility mirrors only and must not drive scheduling.
 - Keep all role configs at full permissions (`danger-full-access`).
 - Do not advance review, verification, or release from a report that lacks `Quality Gate` evidence.
 - Do not advance review, verification, or release from a dirty spec worktree or a report that lacks checkpoint traceability.

@@ -3,23 +3,25 @@
 - Project: `ralph-harness`
 - Active epoch: `null`
 - Active specs: `[]`
-- Active spec: `null`
+- Primary active spec (compatibility mirror): `null`
 - Active task: `null`
 - Phase: `complete`
 - Task status: `null`
 - Assigned role: `null`
-- Branch: `main`
+- Primary active branch (compatibility mirror): `main`
 - Run id: `spec002-20260307`
 - Active PR number: `null`
 - Active PR URL: `null`
-- Queue head spec: `null`
+- Admission policy: `explicit_first_ready_set`
+- Normal spec capacity: `3`
 - Active interrupt spec: `null`
 - Lease path: `.ralph/state/orchestrator-lease.json`
+- Worker claims path: `.ralph/state/worker-claims.json`
 - Intents path: `.ralph/state/orchestrator-intents.jsonl`
 - Lease owner token: `null`
 - Lease heartbeat: `null`
 - Lease expires: `null`
-- Scheduler summary: `{'normal_execution_limit': 2, 'active_spec_count': 0, 'pending_intent_count': 0, 'dependency_blocked_count': 0}`
+- Scheduler summary: `{'normal_execution_limit': 3, 'active_spec_count': 0, 'pending_intent_count': 0, 'dependency_blocked_count': 0, 'active_claim_count': 0}`
 - Resume spec id: `null`
 - Resume stack depth: `0`
 - Current interrupt spec: `null`

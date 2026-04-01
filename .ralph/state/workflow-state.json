@@ -1,5 +1,5 @@
 {
-  "schema_version": "3.0.0",
+  "schema_version": "6.0.0",
   "project_name": "ralph-harness",
   "active_epoch_id": null,
   "active_spec_id": null,
@@ -12,7 +12,6 @@
   "current_run_id": "spec002-20260307",
   "active_pr_number": null,
   "active_pr_url": null,
-  "queue_head_spec_id": null,
   "resume_spec_id": null,
   "interruption_state": null,
   "last_event_id": "evt-0016",
@@ -29,6 +28,7 @@
       "status": "done",
       "admission_status": "done",
       "slot_status": "inactive",
+      "bootstrap_status": "required",
       "branch_name": "codex/001-self-bootstrap-harness",
       "pr_number": null
     },
@@ -39,6 +39,7 @@
       "status": "done",
       "admission_status": "done",
       "slot_status": "inactive",
+      "bootstrap_status": "required",
       "branch_name": "codex/002-deterministic-orchestration-versioning-and-upgrades",
       "pr_number": null
     }
@@ -52,9 +53,11 @@
   "active_spec_ids": [],
   "active_interrupt_spec_id": null,
   "scheduler_summary": {
-    "normal_execution_limit": 2,
+    "normal_execution_limit": 3,
     "active_spec_count": 0,
     "pending_intent_count": 0,
-    "dependency_blocked_count": 0
-  }
+    "dependency_blocked_count": 0,
+    "active_claim_count": 0
+  },
+  "worker_claims_path": ".ralph/state/worker-claims.json"
 }

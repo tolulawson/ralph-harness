@@ -43,6 +43,7 @@ This loader is intentionally thin. It points the active coding agent at the cano
 Do not treat conversational memory as the source of truth when the Ralph runtime files already contain the needed state or policy.
 
 Treat the repository root as the harness work area after installation. Keep agent-specific instructions thin and route all substantive behavior back to the shared Ralph runtime contract.
+When a public Ralph entrypoint is invoked, keep the entry thread thin and immediately launch the dedicated Ralph subagent for that entrypoint instead of doing the work inline.
 
 If this repository already has its own loader file, preserve non-Ralph content and replace only the managed Ralph block between the markers shown here.
 <!-- RALPH-HARNESS:END -->

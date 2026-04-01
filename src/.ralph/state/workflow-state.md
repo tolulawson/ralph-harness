@@ -12,7 +12,8 @@
 - Run id: `null`
 - Active PR number: `null`
 - Active PR URL: `null`
-- Queue head spec: `null`
+- Admission policy: `explicit_first_ready_set`
+- Normal spec capacity: `3`
 - Active interrupt spec: `null`
 - Lease path: `.ralph/state/orchestrator-lease.json`
 - Worker claims path: `.ralph/state/worker-claims.json`
@@ -20,11 +21,11 @@
 - Lease owner token: `null`
 - Lease heartbeat: `null`
 - Lease expires: `null`
-- Scheduler summary: `{'normal_execution_limit': 2, 'active_spec_count': 0, 'active_claim_count': 0, 'pending_intent_count': 0, 'dependency_blocked_count': 0}`
+- Scheduler summary: `{'normal_execution_limit': 3, 'active_spec_count': 0, 'active_claim_count': 0, 'pending_intent_count': 0, 'dependency_blocked_count': 0}`
 - Resume spec id: `null`
 - Resume stack depth: `0`
 - Current interrupt spec: `null`
 - Resume pending: `no`
 - Last event id: `null`
 - Last report: `null`
-- Next action: Create the project PRD, decompose it into epochs and numbered specs, then seed the FIFO spec queue.
+- Next action: Create the project PRD, decompose it into epochs and numbered specs, then seed the explicit-first ready-set queue.

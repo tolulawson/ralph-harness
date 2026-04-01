@@ -93,7 +93,7 @@ Create a Codex-native repository pattern that lets a fresh Codex run resume work
 
 ## Success Metrics
 
-- A fresh Codex run can identify the current spec, next task, and queue head in under one minute by reading the canonical files.
+- A fresh Codex run can identify the active specs, next task, and ready-set admission posture in under one minute by reading the canonical files.
 - Each role has a single clear artifact contract and a matching report contract.
 - The reference repository leaves a complete, inspectable trail of state, logs, reports, spec index, review notes, and release metadata.
 

@@ -10,6 +10,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 - A fresh run needs to resume the harness.
 - A role has finished and the next role must be chosen.
 - Shared state, reports, the spec queue, lease, durable intents, and event history must be synchronized.
+- This skill is already running inside the dedicated orchestrator subagent for the current Ralph entrypoint, not inline on the public entry thread.
 
 ## Inputs
 
@@ -58,7 +59,8 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 16. Compute the admission window and prefer filling every open slot with a runnable spec:
    - active interrupt spec
    - oldest ready interrupt spec by `created_at`
-   - else oldest dependency-satisfied normal specs in FIFO order up to `queue_policy.normal_execution_limit`
+   - else explicit user-requested normal specs whose dependencies are satisfied, in requested order, up to `queue_policy.normal_execution_limit`
+   - then remaining dependency-satisfied normal specs by fairness order: `last_dispatch_at`, then `created_at`, then `spec_id`
 17. Ensure each admitted spec has a dedicated git worktree, branch, and generated `.ralph/shared/` overlay before dispatching workers, but keep all execution inside those worktrees rather than the canonical checkout.
 18. For each admitted spec, choose the next task in this order:
    - first `in_progress`
@@ -71,7 +73,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 19. After a PRD-to-spec pass creates or refreshes a planning batch, identify only the specs from that batch whose `spec.md` exists and whose `research_status` still needs work.
 20. For same-batch `research`, either dispatch bounded native subagents when the active runtime supports them or expose those slots for claim in `.ralph/state/worker-claims.json`.
 21. Join the research batch, close each completed research worker or released claim, validate each `research.md`, and then update shared queue metadata once.
-22. Outside that batch-scoped research step, decide the next role for each admitted spec from lifecycle state, dependency status, PR state, interruption state, next action, and bootstrap readiness, keeping queue-wide throughput as the default posture.
+22. Outside that batch-scoped research step, decide the next role for each admitted spec from lifecycle state, dependency status, PR state, interruption state, next action, bootstrap readiness, and any explicit scheduling targets, keeping queue-wide throughput as the default posture.
 23. Preserve the canonical role classification for every dispatch:
    - analysis-heavy: `plan_check`, `review`, and optionally `research`
    - delivery-heavy: `prd`, `specify`, `plan`, `task_gen`, `bootstrap`, `implement`, `verify`, `release`

@@ -9,6 +9,8 @@ Generate or update a Ralph-style project PRD for the current repository without 
 
 Use this as the direct public entry point for shaping work before planning or execution.
 
+This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand PRD work to a dedicated `prd` subagent.
+
 In this source repository, the root `tasks/` and `specs/` files are dogfood runtime artifacts. The installable scaffold lives under `src/`, and target runtime records are created after installation rather than copied from the scaffold history.
 
 ## Use When
@@ -20,14 +22,16 @@ In this source repository, the root `tasks/` and `specs/` files are dogfood runt
 ## Workflow
 
 1. Read the current project context, existing PRDs, and any active notes relevant to the requested work.
-2. Ask `3-5` high-value clarification questions if important ambiguity remains.
-3. Prefer short, lettered answer options where that will help the user answer quickly.
-4. Write or update `tasks/prd-<project>.md` using a consistent structure.
-5. Include an initial epoch map that groups likely specs into ordered milestones.
-6. Keep user stories small enough to hand off cleanly into numbered specs and execution.
-7. Write verifiable acceptance criteria for each story or requirement.
-8. Do not implement code or create downstream execution artifacts in this skill.
-9. Recommend the next entry point:
+2. Immediately spawn a dedicated `prd` subagent with forked context semantics and the canonical Ralph PRD config.
+3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the `prd` subagent, wait for completion, and relay the result, but it must not generate the PRD inline.
+4. Inside the `prd` subagent, ask `3-5` high-value clarification questions if important ambiguity remains.
+5. Prefer short, lettered answer options where that will help the user answer quickly.
+6. Write or update `tasks/prd-<project>.md` using a consistent structure.
+7. Include an initial epoch map that groups likely specs into ordered milestones.
+8. Keep user stories small enough to hand off cleanly into numbered specs and execution.
+9. Write verifiable acceptance criteria for each story or requirement.
+10. Do not implement code or create downstream execution artifacts in this skill.
+11. Recommend the next entry point:
    - `$ralph-plan` when the spec queue should be generated next
    - `$ralph-execute` when the installed harness should continue from state
 

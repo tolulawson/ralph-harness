@@ -4,7 +4,7 @@ Ralph turns a coding agent into a repo-resident engineering loop with durable st
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.11.4`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It can admit a bounded window of ready specs, isolate each admitted spec in its own git worktree, require a canonical bootstrap step before implementation begins, auto-continue safe stop boundaries through repo-local hooks in Codex, Claude Code, and Cursor, accept new user requests through a durable intent inbox while work is already running, coordinate concurrent threads through a short-lived single-writer lease, let different supported runtimes claim different admitted spec slots through a shared worker-claims file, and keep advancing all runnable specs instead of stopping after the first completed spec.
+As of `v0.12.1`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It admits an explicit-first ready set of dependency-satisfied specs, isolates each admitted spec in its own git worktree, requires a canonical bootstrap step before implementation begins, auto-continues safe stop boundaries through repo-local hooks in Codex, Claude Code, and Cursor, accepts new user requests through a durable intent inbox while work is already running, coordinates concurrent threads through a short-lived single-writer lease, lets different supported runtimes claim different admitted spec slots through a shared worker-claims file, and keeps advancing all runnable specs instead of stopping after the first completed spec.
 
 ## Why People Use Ralph
 
@@ -23,7 +23,7 @@ What you get:
 - role and adapter packs in `.codex/`, `.claude/`, `.cursor/`, and `.agents/skills/`
 - a canonical shared control plane on disk under `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `.ralph/context/`, `.ralph/policy/`, `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `specs/INDEX.md`
 - numbered specs, plans, tasks, reports, and logs that survive restarts
-- bounded parallel `research`, hard spec dependencies, durable intent intake, per-spec worktree execution, and generated `.ralph/shared/` overlays for admitted worktrees
+- bounded parallel `research`, explicit-first ready-set admission, hard spec dependencies, durable intent intake, per-spec worktree execution, and generated `.ralph/shared/` overlays for admitted worktrees
 - bootstrap-gated implementation, spec-scoped worker reports, conservative stop-boundary auto-continuation hooks, upgrade-safe state migration, and lease-aware cross-thread coordination
 
 ## Human Installation Instructions
@@ -114,7 +114,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.11.4` as the default public reference right now
+- use `v0.12.1` as the default public reference right now
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - keep the canonical shared control plane in the main checkout and use generated `.ralph/shared/` overlays inside admitted spec worktrees
@@ -147,7 +147,7 @@ The source-of-truth split in this repository is:
 
 ## Architectural Overview
 
-Ralph keeps shared state behind a single-writer lease, but lease ownership is brief and operation-scoped rather than tied to one immortal orchestrator thread. Normal specs enter a FIFO admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns the canonical shared control plane: `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `.ralph/context/`, `.ralph/policy/`, `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `specs/INDEX.md`. Admitted worktrees expose those shared artifacts through generated `.ralph/shared/` overlays, and tracked shared-state copies inside a worktree are checkout artifacts only, not authoritative runtime state. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec. Supported runtimes may use native subagents when available, but correctness comes from the lease plus worker-claims contract, not from any one tool's delegation primitive.
+Ralph keeps shared state behind a single-writer lease, but lease ownership is brief and operation-scoped rather than tied to one immortal orchestrator thread. Public Ralph entrypoints are thin launchers: `ralph-execute` should immediately hand off to a dedicated orchestrator subagent, while `ralph-prd` and `ralph-plan` should immediately hand off to dedicated role subagents. Normal specs enter an explicit-first ready-set admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns the canonical shared control plane: `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `.ralph/context/`, `.ralph/policy/`, `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `specs/INDEX.md`. Admitted worktrees expose those shared artifacts through generated `.ralph/shared/` overlays, and tracked shared-state copies inside a worktree are checkout artifacts only, not authoritative runtime state. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec. Supported runtimes may use native subagents when available, but correctness comes from the lease plus worker-claims contract, not from any one tool's delegation primitive.
 
 ```mermaid
 flowchart TD
@@ -158,7 +158,7 @@ flowchart TD
     E --> F["Plan"]
     F --> G["Task generation"]
     G --> H["Lease + durable intents"]
-    H --> I["Admit bounded normal specs"]
+    H --> I["Admit explicit targets + ready specs"]
     I --> J["Worker claims + per-spec git worktrees"]
     J --> K["Bootstrap"]
     K --> L["Implement / Review / Verify / Release"]
@@ -178,7 +178,9 @@ In practice, that means:
 - specs are the durable execution unit
 - `depends_on_spec_ids` are hard admission blockers
 - `task-state.json` is the canonical task lifecycle record
-- the orchestrator chooses the queue head, admitted spec window, and next task
+- `active_spec_ids` is the authoritative active-spec set
+- explicit user-requested specs outrank creation order when they are unblocked
+- remaining ready specs are admitted by fairness order: `last_dispatch_at`, then `created_at`, then `spec_id`
 - `.ralph/state/orchestrator-lease.json` elects a temporary single-writer leader
 - `.ralph/state/worker-claims.json` lets Codex, Claude, or Cursor claim different admitted slots safely
 - `.ralph/state/orchestrator-intents.jsonl` records cross-thread requests durably
@@ -206,15 +208,16 @@ Ralph now separates three concerns that used to get conflated in lighter-weight 
 - execution:
   every admitted spec gets one branch, one worktree, one active non-research worker at a time, must pass `bootstrap` before execution begins locally, and owns its own report path
 
-That means you can ask Ralph to start another spec while other work is already in progress, but the scheduler still decides when that spec becomes admissible. Hard dependencies are not bypassed, and later specs do not jump ahead of earlier eligible ones.
+That means you can ask Ralph to start another spec while other work is already in progress, and Ralph will honor that explicit target first if it is unblocked. Hard dependencies are not bypassed, and when no explicit target is waiting the scheduler falls back to deterministic fairness across the remaining ready set.
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.11.4`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.12.1`, the shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
 - runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
 - recovers stale held leases back to `idle`
+- removes legacy queue-head state instead of perpetuating it during migration
 - normalizes safely-derivable legacy worktree assignments into unique per-spec worktrees
 - regenerates `.ralph/shared/` overlays for admitted worktrees and validates canonical shared-state ownership
 - normalizes legacy worker report pointers into spec-scoped report paths when ownership is clear
@@ -292,4 +295,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.11.4`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `v0.12.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.

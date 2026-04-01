@@ -1,7 +1,7 @@
 interface:
   display_name: "Ralph PRD"
-  short_description: "Create a Ralph-style PRD for this repo"
-  default_prompt: "Use $ralph-prd to generate or update a Ralph-style PRD for the requested work in this repository."
+  short_description: "Launch Ralph PRD work for this repo"
+  default_prompt: "Use $ralph-prd to launch the dedicated Ralph PRD subagent for the requested work in this repository."
 
 policy:
   allow_implicit_invocation: false

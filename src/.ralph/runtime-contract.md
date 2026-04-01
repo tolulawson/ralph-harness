@@ -4,7 +4,7 @@ This file is the generic installed-runtime doctrine for the Ralph harness.
 
 It defines how an installed target repository should orchestrate worker roles, own shared runtime state, coordinate concurrent user threads, and stop safely while draining a dependency-aware multi-spec queue.
 
-The default operating principle is queue-wide throughput: once orchestration begins, Ralph should keep advancing every runnable spec in series or in bounded parallel when dependencies allow, rather than stopping after a single spec, task, or successful handoff.
+The default operating principle is queue-wide throughput: once orchestration begins, Ralph should keep advancing every runnable spec in bounded parallel when dependencies allow, rather than stopping after a single spec, task, or successful handoff.
 
 This base runtime contract is scaffold-owned. Project-specific runtime extensions belong in `.ralph/policy/runtime-overrides.md` rather than direct edits to this file.
 
@@ -29,8 +29,11 @@ Interpret an installed Ralph harness in this order:
 
 - The installed scaffold must ship all supported runtime adapter packs together: Codex, Claude Code, and Cursor local Agent/CLI/IDE surfaces.
 - The installed scaffold must also ship repo-local hook surfaces for all supported adapters: `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and the shared Ralph hook code under `.ralph/hooks/`.
+- Public Ralph entrypoints must keep the invoking thread thin and immediately hand off substantive Ralph work to a dedicated subagent instead of doing PRD, planning, research, orchestration, or implementation inline on the entry thread.
+- `ralph-execute` must launch a dedicated orchestrator subagent. `ralph-prd` and `ralph-plan` must launch dedicated role subagents for those entrypoints.
 - The orchestrator may delegate work through native runtime subagents when the active runtime supports them.
 - When the active runtime does not support native subagents for a role, the runtime may execute that role in the current session after claiming the assigned spec role slot in `.ralph/state/worker-claims.json`.
+- Ralph-managed Codex config must allow exactly one launcher-to-role nesting layer plus one worker layer (`agents.max_depth = 3`), and deeper fan-out remains forbidden.
 - The canonical role classification remains:
   - analysis-heavy roles: `research`, `plan_check`, `review`
   - delivery-heavy roles: `prd`, `specify`, `plan`, `task_gen`, `bootstrap`, `implement`, `verify`, `release`
@@ -39,6 +42,7 @@ Interpret an installed Ralph harness in this order:
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
 - At most one non-research worker role may be active per admitted spec at any time.
 - When multiple normal specs are dependency-satisfied, the orchestrator should prefer filling the bounded admission window before idling or stopping.
+- Explicit user-requested scheduling targets should outrank creation order whenever those targets are dependency-satisfied.
 - The scheduler must coordinate through a single-writer lease stored in `.ralph/state/orchestrator-lease.json`.
 - Cross-runtime worker execution must coordinate through `.ralph/state/worker-claims.json`.
 - A healthy held lease blocks concurrent shared-state mutation; expired or malformed held leases must be recovered to `idle` before mutation resumes.
@@ -98,7 +102,8 @@ Interpret an installed Ralph harness in this order:
 15. determine the admission window:
    - active interrupt spec
    - oldest ready interrupt spec by `created_at`
-   - else oldest normal specs whose dependencies are satisfied, in FIFO order, up to `queue_policy.normal_execution_limit`
+   - else explicit user-requested normal specs whose dependencies are satisfied, in requested order, up to `queue_policy.normal_execution_limit`
+   - then remaining dependency-satisfied normal specs, ordered for fairness by `last_dispatch_at`, then `created_at`, then `spec_id`, until the admission window is full
 16. prefer filling every open slot in that admission window with a runnable spec before considering any stop path
 17. ensure every admitted spec has a dedicated git worktree, branch, and generated `.ralph/shared/` overlay
 18. load admitted spec-local artifacts from the assigned worktrees, but load shared control-plane artifacts only from the canonical checkout or the generated overlay
@@ -127,7 +132,7 @@ Interpret an installed Ralph harness in this order:
 32. write the orchestrator report
 33. append one orchestrator-owned event
 34. update shared state and projections
-35. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in FIFO order
+35. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in ready-set order
 36. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
 
 ## Stop Conditions
@@ -217,7 +222,7 @@ Each spec queue entry must include:
 - `active_pr_url`
 - `last_dispatch_at`
 
-`active_spec_id`, `active_spec_key`, `active_task_id`, `task_status`, `assigned_role`, `current_branch`, `active_pr_number`, and `active_pr_url` are compatibility mirrors only. They may reflect slot `0` or the most recently dispatched spec, but `active_spec_ids` is the only authoritative active-spec set.
+`active_spec_id`, `active_spec_key`, `active_task_id`, `task_status`, `assigned_role`, `current_branch`, `active_pr_number`, and `active_pr_url` are compatibility mirrors only. They may reflect one admitted spec for legacy tooling, but `active_spec_ids` is the only authoritative active-spec set and those mirrors must never drive scheduling.
 
 `branch_name`, `worktree_name`, and `worktree_path` must remain unique across specs. Upgrade or migration steps may reassign safely-derivable worktree metadata, but duplicate branch ownership is a repair error.
 
@@ -311,8 +316,11 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 
 ## Queue Policy
 
-- Strict FIFO admission is the default rule for normal specs.
+- Explicit-first ready-set admission is the default rule for normal specs.
 - Interrupt specs preempt normal specs when they exist.
+- Scheduling intents may name one or more target spec ids; when those specs are dependency-satisfied, Ralph should honor the requested order before admitting other ready normal specs.
+- When no explicit target is waiting, remaining ready normal specs should be admitted by fairness order: `last_dispatch_at`, then `created_at`, then `spec_id`.
+- The default `queue_policy.normal_execution_limit` should be derived from the active runtime thread budget, reserving one thread for the orchestrator.
 - Normal specs may run concurrently only inside the bounded admission window.
 - The scheduler should keep that bounded admission window filled with every runnable spec before concluding that orchestration is done.
 - Hard dependencies block admission until every required spec is `released` or `done`.

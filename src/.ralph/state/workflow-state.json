@@ -1,5 +1,5 @@
 {
-  "schema_version": "5.0.0",
+  "schema_version": "6.0.0",
   "project_name": "replace-me",
   "active_epoch_id": null,
   "active_spec_ids": [],
@@ -14,7 +14,6 @@
   "current_run_id": null,
   "active_pr_number": null,
   "active_pr_url": null,
-  "queue_head_spec_id": null,
   "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
   "worker_claims_path": ".ralph/state/worker-claims.json",
   "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
@@ -22,7 +21,7 @@
   "lease_heartbeat_at": null,
   "lease_expires_at": null,
   "scheduler_summary": {
-    "normal_execution_limit": 2,
+    "normal_execution_limit": 3,
     "active_spec_count": 0,
     "active_claim_count": 0,
     "pending_intent_count": 0,
@@ -36,6 +35,6 @@
   "last_verified_at": null,
   "blocked_reason": null,
   "failure_count": 0,
-  "next_action": "Create the project PRD, decompose it into epochs and numbered specs, then seed the FIFO spec queue.",
+  "next_action": "Create the project PRD, decompose it into epochs and numbered specs, then seed the explicit-first ready-set queue.",
   "queue_snapshot": []
 }

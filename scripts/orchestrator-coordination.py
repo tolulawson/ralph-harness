@@ -150,6 +150,7 @@ def intent_cmd(args: argparse.Namespace) -> int:
         "type": args.intent_type,
         "status": "pending",
         "target_spec_id": args.target_spec_id,
+        "target_spec_ids": args.target_spec_id_order or ([] if args.target_spec_id is None else [args.target_spec_id]),
         "spec_payload": payload,
         "dependency_hints": args.dependency_hint or [],
         "priority_note": args.priority_note,
@@ -326,7 +327,7 @@ def reconcile_cmd(args: argparse.Namespace) -> int:
         queue = load_json(queue_path)
         workflow = load_json(workflow_path)
         project_facts_path, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
-        queue = normalize_queue(queue, workflow, project_facts)
+        queue = normalize_queue(queue, workflow, project_facts, repo_root)
         worker_claims_path = ensure_worker_claims_file(repo_root, workflow)
         worker_claims = load_json(worker_claims_path)
         merge_bootstrap_summary_from_claims(queue, worker_claims)
@@ -376,6 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
     intent.add_argument("--requested-by")
     intent.add_argument("--intent-type")
     intent.add_argument("--target-spec-id")
+    intent.add_argument("--target-spec-id-order", action="append")
     intent.add_argument("--spec-payload-json")
     intent.add_argument("--dependency-hint", action="append")
     intent.add_argument("--priority-note")

@@ -16,14 +16,15 @@ except ModuleNotFoundError:
     from pip._vendor import tomli as tomllib  # type: ignore
 
 
-CURRENT_QUEUE_SCHEMA_VERSION = "5.0.0"
-CURRENT_WORKFLOW_SCHEMA_VERSION = "5.0.0"
+CURRENT_QUEUE_SCHEMA_VERSION = "6.0.0"
+CURRENT_WORKFLOW_SCHEMA_VERSION = "6.0.0"
 CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
 CURRENT_PROJECT_FACTS_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
-CURRENT_QUEUE_SELECTION = "fifo_admission_window"
-CURRENT_NORMAL_EXECUTION_LIMIT = 2
-CURRENT_UPGRADE_CONTRACT_VERSION = 10
+CURRENT_QUEUE_SELECTION = "explicit_first_ready_set"
+DEFAULT_MAX_THREADS = 4
+ORCHESTRATOR_THREAD_RESERVE = 1
+CURRENT_UPGRADE_CONTRACT_VERSION = 11
 CURRENT_LEASE_SCHEMA_VERSION = "1.0.0"
 CURRENT_WORKER_CLAIMS_SCHEMA_VERSION = "1.1.0"
 CURRENT_SCAFFOLD_REF = "__current_scaffold__"
@@ -84,7 +85,7 @@ MANAGED_AGENT_SANDBOX_MODES = {
     "verify": "danger-full-access",
     "release": "danger-full-access",
 }
-MAX_AGENT_DEPTH = 2
+MAX_AGENT_DEPTH = 3
 RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     "supported runtime adapter packs together",
     "native runtime subagents",
@@ -180,7 +181,6 @@ WORKFLOW_REQUIRED_KEYS = (
     "current_run_id",
     "active_pr_number",
     "active_pr_url",
-    "queue_head_spec_id",
     "orchestrator_lease_path",
     "worker_claims_path",
     "orchestrator_intents_path",
@@ -390,6 +390,15 @@ def default_branch_name(spec_key: str) -> str:
     return f"ralph/{spec_key}"
 
 
+def derive_default_normal_execution_limit(repo_root: Path | None = None) -> int:
+    config_path = (repo_root / ".codex/config.toml") if repo_root is not None else (SCAFFOLD_ROOT / "src/.codex/config.toml")
+    max_threads = DEFAULT_MAX_THREADS
+    if config_path.exists():
+        config = load_toml(config_path)
+        max_threads = int((config.get("agents") or {}).get("max_threads") or DEFAULT_MAX_THREADS)
+    return max(1, max_threads - ORCHESTRATOR_THREAD_RESERVE)
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -522,11 +531,7 @@ def merge_codex_config(installed: dict[str, Any], scaffold: dict[str, Any]) -> d
             merged_agents[key] = existing
         else:
             if key == "max_depth" and isinstance(value, int):
-                existing_depth = merged_agents.get(key)
-                if isinstance(existing_depth, int):
-                    merged_agents[key] = min(existing_depth, value)
-                else:
-                    merged_agents[key] = value
+                merged_agents[key] = value
             else:
                 merged_agents.setdefault(key, value)
     merged["agents"] = merged_agents
@@ -701,13 +706,6 @@ def derive_active_spec_ids(queue: dict[str, Any], workflow: dict[str, Any] | Non
     return derived
 
 
-def derive_queue_head_spec_id(queue: dict[str, Any]) -> Any:
-    for spec in queue.get("specs", []):
-        if spec.get("status") not in {"done", "superseded"}:
-            return spec.get("spec_id")
-    return None
-
-
 def count_dependency_blocked_specs(queue: dict[str, Any]) -> int:
     count = 0
     statuses = {spec.get("spec_id"): spec.get("status") for spec in queue.get("specs", [])}
@@ -739,7 +737,8 @@ def render_workflow_state_markdown(workflow: dict[str, Any], queue: dict[str, An
         f"- Run id: `{format_code(workflow.get('current_run_id'))}`",
         f"- Active PR number: `{format_code(workflow.get('active_pr_number'))}`",
         f"- Active PR URL: `{format_code(workflow.get('active_pr_url'))}`",
-        f"- Queue head spec: `{format_code(workflow.get('queue_head_spec_id'))}`",
+        f"- Admission policy: `{format_code(queue.get('queue_policy', {}).get('selection'))}`",
+        f"- Normal spec capacity: `{format_code(queue.get('queue_policy', {}).get('normal_execution_limit'))}`",
         f"- Active interrupt spec: `{format_code(workflow.get('active_interrupt_spec_id'))}`",
         f"- Lease path: `{format_code(workflow.get('orchestrator_lease_path'))}`",
         f"- Worker claims path: `{format_code(workflow.get('worker_claims_path'))}`",
@@ -1973,13 +1972,22 @@ def normalize_spec_entry(spec: dict[str, Any], default_base_branch: str | None =
     return normalized
 
 
-def normalize_queue(queue: dict[str, Any], workflow: dict[str, Any], project_facts: dict[str, Any] | None = None) -> dict[str, Any]:
+def normalize_queue(
+    queue: dict[str, Any],
+    workflow: dict[str, Any],
+    project_facts: dict[str, Any] | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
     normalized = dict(queue)
     normalized["schema_version"] = CURRENT_QUEUE_SCHEMA_VERSION
     queue_policy = dict(normalized.get("queue_policy") or {})
     queue_policy["selection"] = CURRENT_QUEUE_SELECTION
     queue_policy["preemption"] = CURRENT_PREEMPTION_POLICY
-    queue_policy["normal_execution_limit"] = int(queue_policy.get("normal_execution_limit") or CURRENT_NORMAL_EXECUTION_LIMIT)
+    normal_execution_limit = queue_policy.get("normal_execution_limit")
+    if isinstance(normal_execution_limit, int) and normal_execution_limit > 0:
+        queue_policy["normal_execution_limit"] = normal_execution_limit
+    else:
+        queue_policy["normal_execution_limit"] = derive_default_normal_execution_limit(repo_root)
     normalized["queue_policy"] = queue_policy
     normalized["worker_claims_path"] = normalized.get("worker_claims_path") or workflow.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
     project_facts = normalize_project_facts(project_facts or default_project_facts())
@@ -1999,7 +2007,7 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
     normalized["schema_version"] = CURRENT_WORKFLOW_SCHEMA_VERSION
     normalized["resume_spec_stack"] = list(normalized.get("resume_spec_stack") or [])
     normalized["interruption_state"] = normalized.get("interruption_state")
-    normalized["queue_head_spec_id"] = derive_queue_head_spec_id(queue)
+    normalized.pop("queue_head_spec_id", None)
     normalized["queue_snapshot"] = derive_queue_snapshot(queue)
     normalized["orchestrator_lease_path"] = normalized.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH
     normalized["worker_claims_path"] = normalized.get("worker_claims_path") or queue.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
@@ -2026,16 +2034,16 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
     normalized["active_epoch_id"] = active_spec.get("epoch_id") if active_spec else normalized.get("active_epoch_id")
     if active_spec and not normalized.get("current_branch"):
         normalized["current_branch"] = active_spec.get("branch_name")
-    normalized["scheduler_summary"] = dict(
-        normalized.get("scheduler_summary")
-        or {
-            "normal_execution_limit": queue.get("queue_policy", {}).get("normal_execution_limit", CURRENT_NORMAL_EXECUTION_LIMIT),
-            "active_spec_count": len(active_spec_ids),
-            "active_claim_count": 0,
-            "pending_intent_count": 0,
-            "dependency_blocked_count": count_dependency_blocked_specs(queue),
-        }
+    scheduler_summary = dict(normalized.get("scheduler_summary") or {})
+    scheduler_summary["normal_execution_limit"] = queue.get("queue_policy", {}).get(
+        "normal_execution_limit",
+        derive_default_normal_execution_limit(),
     )
+    scheduler_summary["active_spec_count"] = len(active_spec_ids)
+    scheduler_summary.setdefault("active_claim_count", 0)
+    scheduler_summary.setdefault("pending_intent_count", 0)
+    scheduler_summary["dependency_blocked_count"] = count_dependency_blocked_specs(queue)
+    normalized["scheduler_summary"] = scheduler_summary
     if active_spec is None:
         normalized["active_task_id"] = None
         if normalized.get("current_phase") == "complete":
@@ -2058,7 +2066,7 @@ def migrate_repo_state(repo_root: Path) -> None:
     workflow = load_json(workflow_path)
     queue = load_json(queue_path)
     project_facts_path, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
-    queue = normalize_queue(queue, workflow, project_facts)
+    queue = normalize_queue(queue, workflow, project_facts, repo_root)
     workflow = normalize_workflow(workflow, queue)
     lease = ensure_lease_file(repo_root, workflow)
     worker_claims_path = ensure_worker_claims_file(repo_root, workflow)
@@ -2126,7 +2134,6 @@ def migrate_repo_state(repo_root: Path) -> None:
     )
 
     workflow["queue_snapshot"] = derive_queue_snapshot(queue)
-    workflow["queue_head_spec_id"] = derive_queue_head_spec_id(queue)
     workflow["active_spec_ids"] = derive_active_spec_ids(queue, workflow)
     workflow["active_spec_id"] = workflow["active_spec_ids"][0] if workflow["active_spec_ids"] else None
     workflow["active_interrupt_spec_id"] = derive_interrupt_spec_id(workflow, queue)
@@ -2135,7 +2142,10 @@ def migrate_repo_state(repo_root: Path) -> None:
     workflow["lease_expires_at"] = lease.get("expires_at")
     workflow["worker_claims_path"] = queue.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
     workflow["scheduler_summary"] = {
-        "normal_execution_limit": queue.get("queue_policy", {}).get("normal_execution_limit", CURRENT_NORMAL_EXECUTION_LIMIT),
+        "normal_execution_limit": queue.get("queue_policy", {}).get(
+            "normal_execution_limit",
+            derive_default_normal_execution_limit(repo_root),
+        ),
         "active_spec_count": len(workflow["active_spec_ids"]),
         "active_claim_count": count_active_claims(worker_claims),
         "pending_intent_count": len(load_jsonl_records(intents_path)),
@@ -2216,9 +2226,9 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         max_depth = config.get("agents", {}).get("max_depth")
         if not isinstance(max_depth, int):
             issues.append(".codex/config.toml agents.max_depth must be an integer")
-        elif max_depth > MAX_AGENT_DEPTH:
+        elif max_depth != MAX_AGENT_DEPTH:
             issues.append(
-                f".codex/config.toml agents.max_depth must be <= {MAX_AGENT_DEPTH} to enforce no nested worker fan-out"
+                f".codex/config.toml agents.max_depth must equal {MAX_AGENT_DEPTH} so a thin Ralph entry thread can launch one orchestrator or role subagent, which may launch worker subagents without allowing deeper fan-out"
             )
         for role, target in configured_targets.items():
             rel_target = target.relative_to(repo_root) if target.is_relative_to(repo_root) else target
@@ -2355,11 +2365,12 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     if queue.get("schema_version") != CURRENT_QUEUE_SCHEMA_VERSION:
         issues.append(".ralph/state/spec-queue.json schema_version is not current")
     if queue.get("queue_policy", {}).get("selection") != CURRENT_QUEUE_SELECTION:
-        issues.append(".ralph/state/spec-queue.json selection policy is not the current FIFO admission window mode")
+        issues.append(".ralph/state/spec-queue.json selection policy is not the current explicit-first ready-set mode")
     if queue.get("queue_policy", {}).get("preemption") != CURRENT_PREEMPTION_POLICY:
         issues.append(".ralph/state/spec-queue.json still uses a pre-interrupt preemption policy")
-    if queue.get("queue_policy", {}).get("normal_execution_limit") != CURRENT_NORMAL_EXECUTION_LIMIT:
-        issues.append(".ralph/state/spec-queue.json normal_execution_limit does not match the current default")
+    normal_execution_limit = queue.get("queue_policy", {}).get("normal_execution_limit")
+    if not isinstance(normal_execution_limit, int) or normal_execution_limit < 1:
+        issues.append(".ralph/state/spec-queue.json normal_execution_limit must be a positive integer")
     if queue.get("worker_claims_path") != DEFAULT_WORKER_CLAIMS_PATH:
         issues.append(".ralph/state/spec-queue.json worker_claims_path must point at .ralph/state/worker-claims.json")
     if workflow.get("worker_claims_path") != DEFAULT_WORKER_CLAIMS_PATH:
@@ -2532,6 +2543,8 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             issues.append(f".ralph/state/orchestrator-intents.jsonl has unsupported status `{record.get('status')}`")
         if not isinstance(record.get("dependency_hints"), list):
             issues.append(".ralph/state/orchestrator-intents.jsonl dependency_hints must be a list")
+        if "target_spec_ids" in record and not isinstance(record.get("target_spec_ids"), list):
+            issues.append(".ralph/state/orchestrator-intents.jsonl target_spec_ids must be a list when present")
 
     if detect_dependency_cycle(queue):
         issues.append(".ralph/state/spec-queue.json contains a dependency cycle")
@@ -2628,8 +2641,8 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     if workflow.get("orchestrator_intents_path") != DEFAULT_INTENTS_PATH:
         issues.append(".ralph/state/workflow-state.json orchestrator_intents_path does not match the canonical intents path")
     scheduler_summary = workflow.get("scheduler_summary") or {}
-    if scheduler_summary.get("normal_execution_limit") != CURRENT_NORMAL_EXECUTION_LIMIT:
-        issues.append(".ralph/state/workflow-state.json scheduler_summary normal_execution_limit is not current")
+    if scheduler_summary.get("normal_execution_limit") != queue.get("queue_policy", {}).get("normal_execution_limit"):
+        issues.append(".ralph/state/workflow-state.json scheduler_summary normal_execution_limit does not match spec-queue.json")
     if scheduler_summary.get("active_spec_count") != len(workflow.get("active_spec_ids") or []):
         issues.append(".ralph/state/workflow-state.json scheduler_summary active_spec_count does not match active_spec_ids")
     if scheduler_summary.get("pending_intent_count") != len(intents):

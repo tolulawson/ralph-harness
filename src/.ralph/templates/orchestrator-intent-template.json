@@ -6,6 +6,7 @@
   "type": "{{type}}",
   "status": "pending",
   "target_spec_id": null,
+  "target_spec_ids": [],
   "spec_payload": null,
   "dependency_hints": [],
   "priority_note": null,

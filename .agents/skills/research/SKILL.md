@@ -13,19 +13,19 @@ description: Research one numbered spec using project-global and spec-local cont
 
 ## Inputs
 
-- `.ralph/constitution.md`
-- `.ralph/runtime-contract.md`
-- `.ralph/policy/project-policy.md`
-- `.ralph/context/project-truths.md`
-- `.ralph/context/project-facts.json`
-- `.ralph/context/learning-summary.md`
+- `.ralph/shared/constitution.md` or the resolved canonical `.ralph/constitution.md`
+- `.ralph/shared/runtime-contract.md` or the resolved canonical `.ralph/runtime-contract.md`
+- `.ralph/shared/policy/project-policy.md` or the resolved canonical `.ralph/policy/project-policy.md`
+- `.ralph/shared/context/project-truths.md` or the resolved canonical `.ralph/context/project-truths.md`
+- `.ralph/shared/context/project-facts.json` or the resolved canonical `.ralph/context/project-facts.json`
+- `.ralph/shared/context/learning-summary.md` or the resolved canonical `.ralph/context/learning-summary.md`
 - `specs/<spec-key>/spec.md`
 - optional repo files that materially constrain the implementation
 - official documentation or other primary sources when current technical behavior matters
 
 ## Workflow
 
-1. Read the project-global doctrine and the assigned `spec.md`.
+1. Read the project-global doctrine and the assigned `spec.md`. When the role runs from a spec worktree, resolve shared doctrine files to the canonical checkout directly or through `.ralph/shared/`.
 2. Treat `Spec Constraints` and `Deferred Scope` in the spec as binding research boundaries.
 3. Gather the smallest set of repo-local and external evidence needed to support implementation planning.
 4. Prefer primary sources and official documentation when technical behavior could have changed.
@@ -40,14 +40,14 @@ description: Research one numbered spec using project-global and spec-local cont
    - `Open Questions`
    - `Sources and Confidence`
 6. Label findings as `confirmed`, `recommended`, or `open question`.
-7. Write only spec-local artifacts and the role report.
+7. Write only spec-local artifacts and the role report. Write the report to the canonical `.ralph/reports/<run-id>/<spec-key>/research.md`, typically via `.ralph/shared/reports/`.
 8. Do not spawn nested workers.
 9. Do not update shared queue state, workflow state, projections, event logs, truths, facts, or promoted learning summaries.
 
 ## Outputs
 
 - `specs/<spec-key>/research.md`
-- the assigned role report path, typically `.ralph/reports/<run-id>/<spec-key>/research.md`
+- the canonical role report path, typically `.ralph/reports/<run-id>/<spec-key>/research.md`
 
 ## Stop Condition
 

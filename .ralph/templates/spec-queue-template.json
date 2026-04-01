@@ -1,8 +1,9 @@
 {
   "schema_version": "2.1.0",
   "queue_policy": {
-    "selection": "fifo",
-    "preemption": "failing_out_of_scope_bug"
+    "selection": "explicit_first_ready_set",
+    "preemption": "failing_out_of_scope_bug",
+    "normal_execution_limit": 3
   },
   "active_spec_id": "{{active_spec_id}}",
   "resume_spec_id": "{{resume_spec_id}}",

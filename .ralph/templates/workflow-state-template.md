@@ -11,7 +11,8 @@
 - Run id: `{{current_run_id}}`
 - Active PR number: `{{active_pr_number}}`
 - Active PR URL: `{{active_pr_url}}`
-- Queue head spec: `{{queue_head_spec_id}}`
+- Admission policy: `{{admission_policy}}`
+- Normal spec capacity: `{{normal_execution_limit}}`
 - Resume spec id: `{{resume_spec_id}}`
 - Resume stack depth: `{{resume_spec_stack_depth}}`
 - Current interrupt spec: `{{interrupt_spec_id}}`

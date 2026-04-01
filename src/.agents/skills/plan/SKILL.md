@@ -38,7 +38,7 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - default worktree metadata
    - canonical `base_branch` from `.ralph/context/project-facts.json` unless a spec explicitly overrides it
    - compatibility mirrors only when needed
-5. Reject dependency cycles or missing dependency targets instead of guessing.
+5. Reject dependency cycles or missing dependency targets instead of guessing. Do not invent implicit dependencies or queue-head priority.
 6. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
 7. For the active spec, require `research.md` when the queue entry says `research_status = done`.
 8. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.

@@ -16,9 +16,14 @@ for path in \
   src/CLAUDE.md \
   src/.claude/agents/orchestrator.md \
   src/.claude/commands/ralph-execute.md \
+  src/.claude/commands/ralph-plan.md \
+  src/.claude/commands/ralph-prd.md \
   src/.cursor/rules/ralph-core.mdc \
   src/.codex/config.toml \
-  src/.codex/agents/orchestrator.toml
+  src/.codex/agents/orchestrator.toml \
+  skills/ralph-execute/SKILL.md \
+  skills/ralph-plan/SKILL.md \
+  skills/ralph-prd/SKILL.md
 do
   [[ -f "$path" ]] || fail "missing required file $path"
 done
@@ -28,6 +33,9 @@ grep -Fq -- '.ralph/state/worker-claims.json' src/.ralph/runtime-contract.md \
 
 grep -Fq -- 'native runtime subagents' src/.ralph/runtime-contract.md \
   || fail "runtime contract must describe native runtime subagents"
+
+grep -Fq -- 'thin and immediately hand off substantive Ralph work to a dedicated subagent' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must require thin entry-thread delegation"
 
 grep -Fq -- 'Child roles must not spawn nested workers' src/.ralph/runtime-contract.md \
   || fail "runtime contract must forbid nested worker fan-out"
@@ -43,6 +51,24 @@ grep -Fq -- '.ralph/state/worker-claims.json' src/CLAUDE.md \
 
 grep -Fq -- 'close that worker thread' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must close worker threads after wait"
+
+grep -Fq -- 'dedicated orchestrator subagent' skills/ralph-execute/SKILL.md \
+  || fail "public execute skill must launch a dedicated orchestrator subagent"
+
+grep -Fq -- 'dedicated `plan` subagent' skills/ralph-plan/SKILL.md \
+  || fail "public plan skill must launch a dedicated plan subagent"
+
+grep -Fq -- 'dedicated `prd` subagent' skills/ralph-prd/SKILL.md \
+  || fail "public PRD skill must launch a dedicated PRD subagent"
+
+grep -Fq -- 'dedicated Ralph orchestrator subagent' src/.claude/commands/ralph-execute.md \
+  || fail "Claude execute command must keep the command thread thin"
+
+grep -Fq -- 'dedicated Ralph `plan` subagent' src/.claude/commands/ralph-plan.md \
+  || fail "Claude plan command must keep the command thread thin"
+
+grep -Fq -- 'dedicated Ralph `prd` subagent' src/.claude/commands/ralph-prd.md \
+  || fail "Claude PRD command must keep the command thread thin"
 
 grep -Fq -- '.ralph/state/worker-claims.json' src/.claude/agents/orchestrator.md \
   || fail "Claude orchestrator agent must include worker claims in canonical inputs"
@@ -63,8 +89,8 @@ if not config.get("features", {}).get("multi_agent"):
     raise SystemExit("verify-subagent-isolation-contract: multi_agent must be enabled")
 
 max_depth = config.get("agents", {}).get("max_depth")
-if not isinstance(max_depth, int) or max_depth > 2:
-    raise SystemExit("verify-subagent-isolation-contract: agents.max_depth must be an integer <= 2")
+if not isinstance(max_depth, int) or max_depth != 3:
+    raise SystemExit("verify-subagent-isolation-contract: agents.max_depth must be the integer 3")
 
 targets = {}
 for role, entry in (config.get("agents") or {}).items():
