@@ -28,13 +28,20 @@ What you get:
 
 ## Installation
 
-Ralph is meant to be installed by an LLM, not by hand. Use one prompt:
+The quickest way to install Ralph is to point your LLM at this repository:
 
 ```text
 Set up my project with Ralph using https://github.com/tolulawson/ralph-harness. Install Ralph into this project, keep my existing project files, and prepare the project so I can use Ralph right away.
 ```
 
-For the full install contract, read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md).
+If you want to install Ralph manually instead, follow [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md).
+
+In short, manual install means:
+
+1. Copy the scaffold from `src/` using the paths listed in `src/install-manifest.txt`.
+2. Generate the runtime-owned files listed in `src/generated-runtime-manifest.txt`.
+3. Preserve your project files and let the target repository own its runtime state after install.
+4. Use `skills/`, `AGENTS.md`, and `CLAUDE.md` as the public entry surface once setup is complete.
 
 ## Skills Section
 
