@@ -81,7 +81,7 @@ changelog_text = changelog_path.read_text()
 if f"## {current_tag}" not in changelog_text:
     raise SystemExit(f"CHANGELOG.md must contain a section for {current_tag}")
 
-for path in [root / "README.md", root / "INSTALLATION.md", root / "UPGRADING.md"]:
+for path in [root / "INSTALLATION.md", root / "UPGRADING.md"]:
     if current_tag not in path.read_text():
         raise SystemExit(f"{path} must reference current tag {current_tag}")
 PY

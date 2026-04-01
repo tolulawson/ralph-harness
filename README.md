@@ -4,7 +4,7 @@ Ralph turns a coding agent into a repo-resident engineering loop with durable st
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-As of `v0.12.1`, Ralph is a dependency-aware multi-spec scheduler, not a single active-spec queue. It admits an explicit-first ready set of dependency-satisfied specs, isolates each admitted spec in its own git worktree, requires a canonical bootstrap step before implementation begins, auto-continues safe stop boundaries through repo-local hooks in Codex, Claude Code, and Cursor, accepts new user requests through a durable intent inbox while work is already running, coordinates concurrent threads through a short-lived single-writer lease, lets different supported runtimes claim different admitted spec slots through a shared worker-claims file, and keeps advancing all runnable specs instead of stopping after the first completed spec.
+Ralph is a dependency-aware multi-spec scheduler, not a one-spec-at-a-time chat loop. It admits an explicit-first ready set of dependency-satisfied specs, isolates admitted work in per-spec git worktrees, requires a canonical bootstrap step before execution roles begin, accepts new user requests through a durable intent inbox while work is already running, coordinates concurrent threads through a short-lived single-writer lease, lets supported runtimes claim admitted spec slots through a shared worker-claims file, and keeps advancing runnable work instead of stopping after the first successful handoff.
 
 ## Why People Use Ralph
 
@@ -26,29 +26,15 @@ What you get:
 - bounded parallel `research`, explicit-first ready-set admission, hard spec dependencies, durable intent intake, per-spec worktree execution, and generated `.ralph/shared/` overlays for admitted worktrees
 - bootstrap-gated implementation, spec-scoped worker reports, conservative stop-boundary auto-continuation hooks, upgrade-safe state migration, and lease-aware cross-thread coordination
 
-## Human Installation Instructions
+## Installation
 
-Keep this simple.
-
-Tell your LLM:
+Ralph is meant to be installed by an LLM, not by hand. Use one prompt:
 
 ```text
-Set up my project with Ralph using this repository:
-https://github.com/tolulawson/ralph-harness
-
-Install the required Ralph components into this project and prepare it for use.
+Set up my project with Ralph using https://github.com/tolulawson/ralph-harness. Install Ralph into this project, keep my existing project files, and prepare the project so I can use Ralph right away.
 ```
 
-If you want to be a little more explicit, say:
-
-```text
-Set up my project with Ralph using this repository:
-https://github.com/tolulawson/ralph-harness
-
-Install Ralph into this project, keep my existing project files, and prepare the project so I can use Ralph right away.
-```
-
-For the full installation contract, read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md).
+For the full install contract, read [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/main/INSTALLATION.md).
 
 ## Skills Section
 
@@ -83,18 +69,6 @@ Use ralph-plan to turn the existing PRD into numbered specs, planning artifacts,
 
 These prompts are intentionally plain. Ralph is meant to be easy to point at real work quickly.
 
-## Simple Installation Instructions
-
-If you just want the shortest path:
-
-1. Send your LLM this repo URL:
-   `https://github.com/tolulawson/ralph-harness`
-2. Tell it:
-
-```text
-Set up my project with Ralph using this repository and prepare it for use.
-```
-
 Step-by-step usage after install:
 
 1. Use `ralph-prd` if the project still needs a PRD.
@@ -114,7 +88,7 @@ Read the full guides:
 The short version:
 
 - install or upgrade from tagged releases, not arbitrary root snapshots
-- use `v0.12.1` as the default public reference right now
+- use the latest stable tag unless you intentionally want to pin an older release
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
 - keep the canonical shared control plane in the main checkout and use generated `.ralph/shared/` overlays inside admitted spec worktrees
@@ -212,7 +186,7 @@ That means you can ask Ralph to start another spec while other work is already i
 
 ## Upgrade Safety
 
-Upgrade behavior is part of the runtime model now, not an afterthought. In `v0.12.1`, the shipped upgrade path:
+Upgrade behavior is part of the runtime model, not an afterthought. The shipped upgrade path:
 
 - blocks upgrades over a healthy live orchestrator lease
 - runs a preflight check that blocks upgrade when `.ralph/runtime-contract.md` was edited directly
@@ -295,4 +269,4 @@ Those are reference records, not the files target repos should copy directly.
 
 ## Versioning
 
-Ralph ships via semver tags. The human-facing release reference is a tag like `v0.12.1`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
+Ralph ships via semver tags. The human-facing release reference is a tag like `vX.Y.Z`, while installed repos also record the resolved commit for reproducibility in `.ralph/harness-version.json`.
