@@ -11,6 +11,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 - A role has finished and the next role must be chosen.
 - Shared state, reports, the spec queue, lease, durable intents, and event history must be synchronized.
 - This skill is already running inside the dedicated orchestrator subagent for the current Ralph entrypoint, not inline on the public entry thread.
+- This invocation owns one orchestrator. Parallelism comes from worker fan-out across admitted specs, not from spawning multiple orchestrators.
 
 ## Inputs
 
@@ -77,25 +78,27 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 23. Preserve the canonical role classification for every dispatch:
    - analysis-heavy: `plan_check`, `review`, and optionally `research`
    - delivery-heavy: `prd`, `specify`, `plan`, `task_gen`, `bootstrap`, `implement`, `verify`, `release`
-24. Spawn bounded non-research workers only for admitted specs that do not already have a healthy worker claim in flight.
-25. Pass each worker or current session claim holder a single spec, a single worktree path, a single canonical report path, and one execution mode. Shared-state reads must resolve to the canonical checkout directly or through `.ralph/shared/`.
-26. Require `bootstrap` before `implement`, and require a passed bootstrap claim with `validation_ready = true` before any non-bootstrap worker role begins in that session.
-27. Wait for completed workers or released claims, close that worker thread when one exists, and validate that the worker wrote only the required role-local artifacts from the assigned worktree, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Quality Gate`, `Commit Evidence`, a clean worktree, and no edits to tracked shared-control-plane paths inside the worktree.
-28. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Requeue the spec for the next fixing role unless the report names an explicit human-gated blocker.
-29. Treat worker outputs as spec-local only. Update canonical shared state directly in the canonical checkout instead of copying tracked control-plane files back from the worktree, but allow the finishing runtime session to acquire the brief lease and reconcile its own completed work there.
-30. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
-31. Append candidate learnings from worker reports to `.ralph/context/learning-log.jsonl`.
-32. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
-33. Write `.ralph/reports/<run-id>/orchestrator.md`.
-34. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
-35. Update `.ralph/state/workflow-state.json`.
-36. Update `.ralph/state/spec-queue.json`.
-37. Update `.ralph/state/orchestrator-lease.json` heartbeat or release state as needed.
-38. Regenerate `.ralph/state/workflow-state.md`.
-39. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
-40. After an interrupt spec is released, pop `resume_spec_stack`, thaw normal admissions, restore paused specs and tasks, and continue dispatching.
-41. Continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated stop condition occurs.
-42. If the active runtime ships the Ralph stop-boundary hook, treat it as a conservative backstop only. The orchestrator should still avoid stopping just because it hit a self-resolvable objection.
+24. When the active runtime supports native subagents, spawn bounded non-research workers across the full admitted ready set up to the admission window and worker-thread budget, keeping at most one non-research worker per admitted spec.
+25. As workers finish, refill freed slots from the remaining admitted ready set before considering any stop path.
+26. Use a current session claim holder only as a compatibility path when native worker delegation is unavailable or another supported runtime is already participating.
+27. Pass each worker or current session claim holder a single spec, a single worktree path, a single canonical report path, and one execution mode. Shared-state reads must resolve to the canonical checkout directly or through `.ralph/shared/`.
+28. Require `bootstrap` before `implement`, and require a passed bootstrap claim with `validation_ready = true` before any non-bootstrap worker role begins in that session.
+29. Wait for completed workers or released claims, close that worker thread when one exists, and validate that the worker wrote only the required role-local artifacts from the assigned worktree, that any failure report includes an `Interruption Assessment`, and that any handoff past implementation includes `Quality Gate`, `Commit Evidence`, a clean worktree, and no edits to tracked shared-control-plane paths inside the worktree.
+30. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Requeue the spec for the next fixing role unless the report names an explicit human-gated blocker.
+31. Treat worker outputs as spec-local only. Update canonical shared state directly in the canonical checkout instead of copying tracked control-plane files back from the worktree, but allow the finishing runtime session to acquire the brief lease and reconcile its own completed work there.
+32. If a worker failed or blocked with `Scope: interrupt`, create a new interrupt spec using the next numeric `spec_id`, freeze new normal admissions, mark the in-flight normal specs `paused` at role boundaries, and update or create `specs/<origin-spec-key>/amendments.md` when an origin spec exists.
+33. Append candidate learnings from worker reports to `.ralph/context/learning-log.jsonl`.
+34. Use the `learning` helper skill to classify and promote validated truths or facts when justified.
+35. Write `.ralph/reports/<run-id>/orchestrator.md`.
+36. Append one orchestrator-owned event to `.ralph/logs/events.jsonl`.
+37. Update `.ralph/state/workflow-state.json`.
+38. Update `.ralph/state/spec-queue.json`.
+39. Update `.ralph/state/orchestrator-lease.json` heartbeat or release state as needed.
+40. Regenerate `.ralph/state/workflow-state.md`.
+41. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
+42. After an interrupt spec is released, pop `resume_spec_stack`, thaw normal admissions, restore paused specs and tasks, and continue dispatching.
+43. Continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated stop condition occurs.
+44. If the active runtime ships the Ralph stop-boundary hook, treat it as a conservative backstop only. The orchestrator should still avoid stopping just because it hit a self-resolvable objection.
 
 ## Outputs
 
@@ -112,4 +115,4 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 
 ## Stop Condition
 
-Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec finished or one worker handed off successfully while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state. The shipped stop hook may prompt one extra self-check, but it must not replace deliberate stop-boundary reasoning inside the orchestrator itself.
+Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec finished, one worker handed off successfully, or one local compatibility claim completed while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state. The shipped stop hook may prompt one extra self-check, but it must not replace deliberate stop-boundary reasoning inside the orchestrator itself.

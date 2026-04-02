@@ -7,5 +7,6 @@ alwaysApply: false
 
 - Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/worker-claims.json` before execution.
 - Keep the invoking thread thin: immediately launch a dedicated Ralph orchestrator subagent for `ralph-execute`, then wait and relay its result instead of orchestrating inline.
+- That orchestrator should fill the admitted-spec execution window with bounded worker subagents, keeping at most one non-research worker per admitted spec and refilling freed slots while runnable work remains.
 - A Cursor session may act as the lease-holder for a brief reconciliation window or claim a runnable worker slot, and a finishing session may reconcile its own validated work after acquiring the lease.
 - Use the canonical behavior from `skills/ralph-execute/SKILL.md` and `.agents/skills/orchestrator/SKILL.md`.

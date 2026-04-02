@@ -22,7 +22,7 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 - Canonical role skill: `.agents/skills/bootstrap/SKILL.md`
 - Classification: `delivery`
 - Permission model: `danger-full-access`
-- Native subagent delegation: `not allowed`
+- Native subagent delegation: `allowed`
 - Helper skills: reporting, learning
 
 ## Allowed Writes

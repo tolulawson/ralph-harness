@@ -4,6 +4,42 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.2 - 2026-04-02
+
+### Summary
+
+This release restores Ralph's intended parallel execution topology under one orchestrator.
+
+It keeps the public `ralph-execute` entry thread thin, but makes the shipped Codex runtime explicitly fill the admitted-spec execution window with bounded worker fan-out instead of collapsing into one-role-at-a-time local execution.
+
+### Highlights
+
+- Tightened the shipped runtime contract and project policy so each `ralph-execute` invocation owns exactly one orchestrator, and parallelism comes from worker subagents across admitted specs.
+- Promoted `bootstrap`, `implement`, `review`, `verify`, and `release` to native-subagent-delegatable roles in the shipped capability registry and regenerated the Claude and Cursor adapter surfaces to match.
+- Updated the Codex orchestrator adapter and orchestrator skill so they refill freed worker slots while runnable admitted work remains instead of treating a single completed handoff as a valid stop.
+- Clarified the public `ralph-execute` and README surfaces so Codex defaults to one-orchestrator, many-workers behavior, while claim-holder execution remains a compatibility fallback for non-native or cross-runtime cases.
+- Added smoke coverage for multi-spec active execution, mixed bootstrap-plus-implement admitted work, and dependency-limited serial behavior.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.2` as the default public install or upgrade reference.
+- Fresh installs now inherit the corrected one-orchestrator/many-workers execution doctrine and regenerated adapter guidance.
+- Existing installs can upgrade normally to pick up the parallel worker fan-out fix; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified the focused contract suite with `scripts/verify-subagent-isolation-contract.sh`, `scripts/verify-multi-spec-contract.sh`, `scripts/verify-human-stop-boundaries.sh`, `scripts/verify-canonical-control-plane-contract.sh`, and `scripts/verify-upgrade-contract.sh`.
+- Verified the install and upgrade smoke coverage with `scripts/smoke-test-install-upgrade.sh`.
+- Verified the full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Capability registry: `src/.ralph/agent-registry.json`
+- Codex orchestrator adapter: `src/.codex/agents/orchestrator.toml`
+- Public execute entrypoint: `skills/ralph-execute/SKILL.md`
+- Release asset: `ralph-harness-v0.12.2.tar.gz`
+
 ## v0.12.1 - 2026-04-01
 
 ### Summary

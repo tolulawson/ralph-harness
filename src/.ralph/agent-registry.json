@@ -181,7 +181,7 @@
         "learning"
       ],
       "permission_model": "danger-full-access",
-      "native_subagent_delegation": false
+      "native_subagent_delegation": true
     },
     {
       "id": "implement",
@@ -200,7 +200,7 @@
         "deslopify-lite"
       ],
       "permission_model": "danger-full-access",
-      "native_subagent_delegation": false
+      "native_subagent_delegation": true
     },
     {
       "id": "review",
@@ -215,7 +215,7 @@
         "learning"
       ],
       "permission_model": "danger-full-access",
-      "native_subagent_delegation": false
+      "native_subagent_delegation": true
     },
     {
       "id": "verify",
@@ -230,7 +230,7 @@
         "learning"
       ],
       "permission_model": "danger-full-access",
-      "native_subagent_delegation": false
+      "native_subagent_delegation": true
     },
     {
       "id": "release",
@@ -245,7 +245,7 @@
         "learning"
       ],
       "permission_model": "danger-full-access",
-      "native_subagent_delegation": false
+      "native_subagent_delegation": true
     }
   ],
   "entrypoints": [

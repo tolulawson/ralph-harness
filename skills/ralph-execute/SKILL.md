@@ -9,7 +9,7 @@ Resume and advance an already-installed Ralph harness in the current repository 
 
 The default operating principle is to keep advancing every runnable spec in bounded parallel when dependencies allow, rather than completing one spec and stopping while other runnable specs remain.
 
-This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand execution to a dedicated orchestrator subagent.
+This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand execution to exactly one dedicated orchestrator subagent.
 
 This skill does not install the harness. It assumes the current repository already contains the Ralph harness scaffold.
 
@@ -80,9 +80,11 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - ensure admitted specs have dedicated git worktrees plus generated `.ralph/shared/` overlays
    - require `bootstrap` before `implement` or any other execution role begins in a claim that is not yet validation-ready
    - allow bounded same-batch `research` workers only before normal execution resumes across the admitted queue
-   - either dispatch native subagents when the current runtime supports them or expose admitted slots for claim in `.ralph/state/worker-claims.json`
+   - run one orchestrator with many workers: do not spawn multiple orchestrators to get parallelism
+   - for Codex-installed runtimes, dispatch native worker subagents across the admitted ready set by default
+   - keep at most one non-research worker per admitted spec and refill freed slots as workers finish
+   - expose admitted slots for claim in `.ralph/state/worker-claims.json` only for cross-runtime coordination or when native worker delegation is unavailable
    - preserve the canonical analysis-heavy and delivery-heavy role classification
-   - spawn at most one non-research worker per admitted spec at a time
    - wait for completed workers or released claims
    - close completed worker threads before mutating shared state when native subagents were used
    - update canonical shared state directly in the canonical checkout instead of copying tracked control-plane files back from the worktree
@@ -108,7 +110,8 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Do not continue execution from stale projections or mixed-version runtime state.
 - Do not rely on tracked worktree copies of shared-control-plane files when a spec worktree is active.
 - Keep all parallelism bounded to same-batch `research` plus the scheduler's admitted-spec execution window.
-- Require the Ralph launcher plus worker topology: entry thread -> orchestrator subagent -> worker subagents or claimed worker sessions.
+- Require the Ralph launcher plus worker topology: entry thread -> one orchestrator subagent -> worker subagents or claimed worker sessions.
+- Do not accept one-role-at-a-time claim execution as the default Codex posture while runnable admitted specs remain.
 - Treat `active_spec_ids` as authoritative. Any singular active-spec fields are compatibility mirrors only and must not drive scheduling.
 - Keep all role configs at full permissions (`danger-full-access`).
 - Do not advance review, verification, or release from a report that lacks `Quality Gate` evidence.

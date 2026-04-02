@@ -96,6 +96,11 @@ def render_claude_agent(role: dict) -> str:
                 if role["id"] == "orchestrator"
                 else None
             ),
+            (
+                "- Worker fan-out: exactly one orchestrator per `ralph-execute` invocation, filling the bounded admission window with worker subagents when dependencies allow"
+                if role["id"] == "orchestrator"
+                else None
+            ),
             "",
             "## Allowed Writes",
             "",
@@ -119,6 +124,7 @@ def render_claude_command(entrypoint: dict) -> str:
     ]
     if entrypoint["id"] == "ralph-execute":
         lines.append("Keep the invoking thread thin: launch a dedicated Ralph orchestrator subagent immediately, then wait and relay its result instead of orchestrating inline on the command thread.")
+        lines.append("That orchestrator should fill the admitted-spec execution window with worker subagents up to the bounded thread budget, rather than spawning multiple orchestrators or settling for one-role-at-a-time execution while runnable specs remain.")
     elif entrypoint["id"] == "ralph-plan":
         lines.append("Keep the invoking thread thin: launch a dedicated Ralph `plan` subagent immediately, then wait and relay its result instead of planning inline on the command thread.")
     elif entrypoint["id"] == "ralph-prd":
@@ -174,6 +180,7 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
         [
             "Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/worker-claims.json` before execution.",
             "Keep the invoking thread thin: immediately launch a dedicated Ralph orchestrator subagent for `ralph-execute`, then wait and relay its result instead of orchestrating inline.",
+            "That orchestrator should fill the admitted-spec execution window with bounded worker subagents, keeping at most one non-research worker per admitted spec and refilling freed slots while runnable work remains.",
             "A Cursor session may act as the lease-holder for a brief reconciliation window or claim a runnable worker slot, and a finishing session may reconcile its own validated work after acquiring the lease.",
             "Use the canonical behavior from `skills/ralph-execute/SKILL.md` and `.agents/skills/orchestrator/SKILL.md`."
         ],

@@ -15,6 +15,11 @@ for path in \
   src/.ralph/state/worker-claims.json \
   src/CLAUDE.md \
   src/.claude/agents/orchestrator.md \
+  src/.claude/agents/bootstrap.md \
+  src/.claude/agents/implement.md \
+  src/.claude/agents/review.md \
+  src/.claude/agents/verify.md \
+  src/.claude/agents/release.md \
   src/.claude/commands/ralph-execute.md \
   src/.claude/commands/ralph-plan.md \
   src/.claude/commands/ralph-prd.md \
@@ -64,6 +69,9 @@ grep -Fq -- 'dedicated `prd` subagent' skills/ralph-prd/SKILL.md \
 grep -Fq -- 'dedicated Ralph orchestrator subagent' src/.claude/commands/ralph-execute.md \
   || fail "Claude execute command must keep the command thread thin"
 
+grep -Fq -- 'fill the admitted-spec execution window with worker subagents' src/.claude/commands/ralph-execute.md \
+  || fail "Claude execute command must describe one-orchestrator worker fan-out"
+
 grep -Fq -- 'dedicated Ralph `plan` subagent' src/.claude/commands/ralph-plan.md \
   || fail "Claude plan command must keep the command thread thin"
 
@@ -77,6 +85,7 @@ grep -Fq -- 'worker-claims' src/.cursor/rules/ralph-core.mdc \
   || fail "Cursor core rule must mention the shared Ralph claim contract"
 
 python3 - <<'PY'
+import json
 from pathlib import Path
 
 try:
@@ -138,6 +147,25 @@ for role, expected in expected_sandbox.items():
     if actual != expected:
         raise SystemExit(
             f"verify-subagent-isolation-contract: role {role} must use sandbox_mode={expected!r}, got {actual!r}"
+        )
+
+registry = json.loads(Path("src/.ralph/agent-registry.json").read_text())
+delegation_by_role = {
+    entry["id"]: entry["native_subagent_delegation"]
+    for entry in registry["roles"]
+}
+required_native_roles = {"bootstrap", "implement", "review", "verify", "release"}
+for role in required_native_roles:
+    if delegation_by_role.get(role) is not True:
+        raise SystemExit(
+            f"verify-subagent-isolation-contract: role {role} must allow native subagent delegation"
+        )
+
+for role in sorted(required_native_roles):
+    agent_doc = Path("src/.claude/agents") / f"{role}.md"
+    if "Native subagent delegation: `allowed`" not in agent_doc.read_text():
+        raise SystemExit(
+            f"verify-subagent-isolation-contract: generated Claude agent for {role} must advertise native delegation"
         )
 
 PY

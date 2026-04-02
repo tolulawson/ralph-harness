@@ -44,6 +44,12 @@ grep -Fq -- 'git worktree' src/.ralph/runtime-contract.md \
 grep -Fq -- 'bootstrap' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention bootstrap"
 
+grep -Fq -- 'exactly one dedicated orchestrator subagent per invocation' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must require exactly one orchestrator per execute invocation"
+
+grep -Fq -- 'fill the admitted-spec execution window with bounded worker subagents' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must require worker fan-out across the admitted window"
+
 grep -Fq -- 'single-writer lease' src/.ralph/policy/project-policy.md \
   || fail "project policy must describe the single-writer lease"
 
@@ -62,6 +68,9 @@ grep -Fq -- 'bootstrap' src/.agents/skills/orchestrator/SKILL.md \
 grep -Fq -- '.ralph/shared/' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must mention the generated shared overlay"
 
+grep -Fq -- 'refill freed slots' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must refill freed worker slots while runnable work remains"
+
 grep -Fq -- 'depends_on_spec_ids' src/.agents/skills/plan/SKILL.md \
   || fail "plan skill must seed depends_on_spec_ids"
 
@@ -70,6 +79,9 @@ grep -Fq -- 'lease' skills/ralph-execute/SKILL.md \
 
 grep -Fq -- '.ralph/shared/' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must mention the generated shared overlay"
+
+grep -Fq -- 'one orchestrator with many workers' skills/ralph-execute/SKILL.md \
+  || fail "ralph-execute must describe the one-orchestrator/many-workers topology"
 
 python3 - <<'PY'
 import json

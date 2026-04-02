@@ -30,9 +30,10 @@ Interpret an installed Ralph harness in this order:
 - The installed scaffold must ship all supported runtime adapter packs together: Codex, Claude Code, and Cursor local Agent/CLI/IDE surfaces.
 - The installed scaffold must also ship repo-local hook surfaces for all supported adapters: `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and the shared Ralph hook code under `.ralph/hooks/`.
 - Public Ralph entrypoints must keep the invoking thread thin and immediately hand off substantive Ralph work to a dedicated subagent instead of doing PRD, planning, research, orchestration, or implementation inline on the entry thread.
-- `ralph-execute` must launch a dedicated orchestrator subagent. `ralph-prd` and `ralph-plan` must launch dedicated role subagents for those entrypoints.
-- The orchestrator may delegate work through native runtime subagents when the active runtime supports them.
-- When the active runtime does not support native subagents for a role, the runtime may execute that role in the current session after claiming the assigned spec role slot in `.ralph/state/worker-claims.json`.
+- `ralph-execute` must launch exactly one dedicated orchestrator subagent per invocation. `ralph-prd` and `ralph-plan` must launch dedicated role subagents for those entrypoints.
+- When the active runtime supports native runtime subagents for worker roles, the orchestrator must fill the admitted-spec execution window with bounded worker subagents rather than collapsing into one claimed role at a time.
+- When the active runtime does not support native subagents for a role, the runtime may execute that role in the current session only as a compatibility fallback after claiming the assigned spec role slot in `.ralph/state/worker-claims.json`.
+- Compatibility fallback execution must remain queue-draining: after a local role finishes, the same `ralph-execute` invocation must return to orchestrator selection and continue while runnable admitted work remains.
 - Ralph-managed Codex config must allow exactly one launcher-to-role nesting layer plus one worker layer (`agents.max_depth = 3`), and deeper fan-out remains forbidden.
 - The canonical role classification remains:
   - analysis-heavy roles: `research`, `plan_check`, `review`
@@ -42,6 +43,7 @@ Interpret an installed Ralph harness in this order:
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
 - At most one non-research worker role may be active per admitted spec at any time.
 - When multiple normal specs are dependency-satisfied, the orchestrator should prefer filling the bounded admission window before idling or stopping.
+- For Codex-installed runtimes with official multi-agent support, native worker spawning is the default execution posture for `bootstrap`, `implement`, `review`, `verify`, and `release`.
 - Explicit user-requested scheduling targets should outrank creation order whenever those targets are dependency-satisfied.
 - The scheduler must coordinate through a single-writer lease stored in `.ralph/state/orchestrator-lease.json`.
 - Cross-runtime worker execution must coordinate through `.ralph/state/worker-claims.json`.
@@ -121,19 +123,21 @@ Interpret an installed Ralph harness in this order:
    - let independent runtime sessions claim those admitted `research` slots through `.ralph/state/worker-claims.json`
 22. wait for the research batch to finish, close or release the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
 23. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, next action, and bootstrap readiness
-24. make each runnable spec role slot claimable through `.ralph/state/worker-claims.json`
-25. if the next execution role for a claim has not yet passed `bootstrap`, dispatch or claim `bootstrap` first
-26. if the active runtime supports native delegation, it may dispatch bounded workers directly for claimable slots; otherwise the current runtime session may acquire one claim and execute that role locally
-27. ensure every worker or claiming runtime session receives one spec, one worktree path, one report path, one execution mode, and one claim heartbeat window
-28. wait for completed workers or released claims, and validate outputs from the assigned spec worktrees, including bootstrap evidence, `Quality Gate`, `Commit Evidence`, clean-worktree handoff requirements, and absence of worktree-local shared-control-plane edits
-29. treat worker outputs as spec-local only; the orchestrator or finishing runtime session must mutate canonical shared state directly in the canonical checkout rather than copying tracked control-plane files back from the worktree
-30. if review, verification, or release reports a fixable failure without an explicit human-gated blocker, update the task lifecycle, route the spec back to the next remediation role, and keep draining the queue
-31. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
-32. write the orchestrator report
-33. append one orchestrator-owned event
-34. update shared state and projections
-35. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in ready-set order
-36. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
+24. make each runnable spec role slot visible through `.ralph/state/worker-claims.json` for cross-runtime coordination, but keep one orchestrator responsible for the whole invocation
+25. if the next execution role for a spec has not yet passed `bootstrap`, dispatch or claim `bootstrap` first
+26. when the active runtime supports native worker delegation, spawn bounded worker subagents across the full admitted ready set up to the admission window and available worker-thread budget, keeping at most one non-research worker per admitted spec
+27. as workers finish, refill freed execution slots from the remaining admitted ready set before considering any stop path
+28. only when native worker delegation is unavailable or another supported runtime is already participating should independent runtime sessions or the current session execute a claimed slot directly
+29. ensure every worker or claiming runtime session receives one spec, one worktree path, one report path, one execution mode, and one claim heartbeat window
+30. wait for completed workers or released claims, and validate outputs from the assigned spec worktrees, including bootstrap evidence, `Quality Gate`, `Commit Evidence`, clean-worktree handoff requirements, and absence of worktree-local shared-control-plane edits
+31. treat worker outputs as spec-local only; the orchestrator or finishing runtime session must mutate canonical shared state directly in the canonical checkout rather than copying tracked control-plane files back from the worktree
+32. if review, verification, or release reports a fixable failure without an explicit human-gated blocker, update the task lifecycle, route the spec back to the next remediation role, and keep draining the queue
+33. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
+34. write the orchestrator report
+35. append one orchestrator-owned event
+36. update shared state and projections
+37. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in ready-set order
+38. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
 
 ## Stop Conditions
 
@@ -144,6 +148,8 @@ The orchestrator may stop only when one of these is true:
 - a credential, approval, or external human decision is required
 - another healthy lease-holder should take over
 - the orchestration safety cap is reached and a human should decide whether to resume with a fresh run
+
+The orchestrator must not stop merely because one local fallback claim finished, one worker handed off successfully, or the next role is now clear while other runnable admitted work remains.
 
 The default orchestration safety cap is `200` role handoffs in one invocation.
 

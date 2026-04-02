@@ -4,7 +4,7 @@ Ralph turns a coding agent into a repo-resident engineering loop with durable st
 
 If you want an LLM to keep working from files instead of chat memory, this project is built for that.
 
-Ralph is a dependency-aware multi-spec scheduler, not a one-spec-at-a-time chat loop. It admits an explicit-first ready set of dependency-satisfied specs, isolates admitted work in per-spec git worktrees, requires a canonical bootstrap step before execution roles begin, accepts new user requests through a durable intent inbox while work is already running, coordinates concurrent threads through a short-lived single-writer lease, lets supported runtimes claim admitted spec slots through a shared worker-claims file, and keeps advancing runnable work instead of stopping after the first successful handoff.
+Ralph is a dependency-aware multi-spec scheduler, not a one-spec-at-a-time chat loop. It admits an explicit-first ready set of dependency-satisfied specs, isolates admitted work in per-spec git worktrees, requires a canonical bootstrap step before execution roles begin, accepts new user requests through a durable intent inbox while work is already running, coordinates concurrent threads through a short-lived single-writer lease, uses one orchestrator plus bounded worker fan-out across admitted specs, and keeps advancing runnable work instead of stopping after the first successful handoff.
 
 ## Why People Use Ralph
 
@@ -128,7 +128,7 @@ The source-of-truth split in this repository is:
 
 ## Architectural Overview
 
-Ralph keeps shared state behind a single-writer lease, but lease ownership is brief and operation-scoped rather than tied to one immortal orchestrator thread. Public Ralph entrypoints are thin launchers: `ralph-execute` should immediately hand off to a dedicated orchestrator subagent, while `ralph-prd` and `ralph-plan` should immediately hand off to dedicated role subagents. Normal specs enter an explicit-first ready-set admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns the canonical shared control plane: `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `.ralph/context/`, `.ralph/policy/`, `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `specs/INDEX.md`. Admitted worktrees expose those shared artifacts through generated `.ralph/shared/` overlays, and tracked shared-state copies inside a worktree are checkout artifacts only, not authoritative runtime state. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec. Supported runtimes may use native subagents when available, but correctness comes from the lease plus worker-claims contract, not from any one tool's delegation primitive.
+Ralph keeps shared state behind a single-writer lease, but lease ownership is brief and operation-scoped rather than tied to one immortal orchestrator thread. Public Ralph entrypoints are thin launchers: `ralph-execute` should immediately hand off to one dedicated orchestrator subagent, while `ralph-prd` and `ralph-plan` should immediately hand off to dedicated role subagents. Normal specs enter an explicit-first ready-set admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns the canonical shared control plane: `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `.ralph/context/`, `.ralph/policy/`, `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `specs/INDEX.md`. Admitted worktrees expose those shared artifacts through generated `.ralph/shared/` overlays, and tracked shared-state copies inside a worktree are checkout artifacts only, not authoritative runtime state. The default Codex posture is one orchestrator with bounded worker fan-out across admitted specs up to the admission window and worker-thread budget. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec. Worker claims still matter for cross-runtime coordination and fallback, but they are not the default reason Codex should serialize execution.
 
 ```mermaid
 flowchart TD
@@ -171,7 +171,7 @@ In practice, that means:
 - worker reports live at `.ralph/reports/<run-id>/<spec-key>/<role>.md`, while the orchestrator report stays at `.ralph/reports/<run-id>/orchestrator.md`
 - project-specific runtime additions belong in `.ralph/policy/runtime-overrides.md`, while `.ralph/runtime-contract.md` stays scaffold-owned
 - tracked shared-control-plane files that appear inside a spec worktree are not authoritative and must not be used as the source of truth when the canonical checkout or `.ralph/shared/` overlay is available
-- supported runtimes may use native subagents, but a plain runtime session may also execute a claimed slot directly
+- Codex should use native worker subagents by default, while claim-holder execution remains a cross-runtime or non-native fallback
 - bootstrap, implementation, review, verification, and release run at most one worker per admitted spec
 - all role configs run with `sandbox_mode = "danger-full-access"`
 - if an out-of-scope failing bug appears, Ralph can spin out an interrupt spec, push the paused work onto `resume_spec_stack`, and resume it later
@@ -187,7 +187,7 @@ Ralph now separates three concerns that used to get conflated in lighter-weight 
 - coordination:
   `.ralph/state/orchestrator-lease.json` prevents multiple threads from mutating shared state at the same time, while `.ralph/state/orchestrator-intents.jsonl` lets new work requests land durably even when another orchestrator run is active
 - execution:
-  every admitted spec gets one branch, one worktree, one active non-research worker at a time, must pass `bootstrap` before execution begins locally, and owns its own report path
+  one `ralph-execute` run owns one orchestrator, and that orchestrator fills the admitted-spec execution window with at most one active non-research worker per admitted spec, must pass `bootstrap` before execution begins locally, and owns spec-scoped report paths
 
 That means you can ask Ralph to start another spec while other work is already in progress, and Ralph will honor that explicit target first if it is unblocked. Hard dependencies are not bypassed, and when no explicit target is waiting the scheduler falls back to deterministic fairness across the remaining ready set.
 

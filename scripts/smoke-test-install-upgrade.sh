@@ -579,6 +579,383 @@ EOF
   render_state_projections "$target"
 }
 
+write_parallel_execution_runtime() {
+  local target="$1"
+  python3 - "$target" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+target = Path(sys.argv[1])
+(target / ".ralph/reports/parallel-execution-20260402").mkdir(parents=True, exist_ok=True)
+
+workflow = {
+    "schema_version": "6.0.0",
+    "project_name": "parallel-execution-target",
+    "active_epoch_id": "E200",
+    "active_spec_ids": ["001", "002", "003"],
+    "active_interrupt_spec_id": None,
+    "active_spec_id": "001",
+    "active_spec_key": "001-parallel-head",
+    "active_task_id": "001-T001",
+    "current_phase": "implementation",
+    "task_status": "in_progress",
+    "assigned_role": "implement",
+    "current_branch": "main",
+    "current_run_id": "parallel-execution-20260402",
+    "active_pr_number": None,
+    "active_pr_url": None,
+    "resume_spec_id": None,
+    "interruption_state": None,
+    "last_event_id": "evt-0200",
+    "last_report_path": ".ralph/reports/parallel-execution-20260402/orchestrator.md",
+    "last_verified_at": None,
+    "blocked_reason": None,
+    "failure_count": 0,
+    "next_action": "Keep the admission window full while 001, 002, and 003 are runnable.",
+    "queue_snapshot": [
+        {"spec_id": "001", "spec_key": "001-parallel-head", "epoch_id": "E200", "status": "in_progress", "admission_status": "admitted", "slot_status": "running", "bootstrap_status": "required", "branch_name": "ralph/001-parallel-head", "pr_number": None},
+        {"spec_id": "002", "spec_key": "002-bootstrap-next", "epoch_id": "E200", "status": "in_progress", "admission_status": "admitted", "slot_status": "running", "bootstrap_status": "required", "branch_name": "ralph/002-bootstrap-next", "pr_number": None},
+        {"spec_id": "003", "spec_key": "003-implement-ready", "epoch_id": "E200", "status": "in_progress", "admission_status": "admitted", "slot_status": "running", "bootstrap_status": "passed", "branch_name": "ralph/003-implement-ready", "pr_number": None},
+    ],
+    "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+    "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
+    "worker_claims_path": ".ralph/state/worker-claims.json",
+    "lease_owner_token": None,
+    "lease_heartbeat_at": None,
+    "lease_expires_at": None,
+    "scheduler_summary": {
+        "normal_execution_limit": 3,
+        "active_spec_count": 3,
+        "pending_intent_count": 0,
+        "dependency_blocked_count": 0,
+        "active_claim_count": 0,
+    },
+}
+
+queue = {
+    "schema_version": "6.0.0",
+    "queue_policy": {
+        "selection": "explicit_first_ready_set",
+        "preemption": "failing_out_of_scope_bug",
+        "normal_execution_limit": 3,
+    },
+    "active_spec_id": "001",
+    "active_spec_ids": ["001", "002", "003"],
+    "active_interrupt_spec_id": None,
+    "resume_spec_id": None,
+    "worker_claims_path": ".ralph/state/worker-claims.json",
+    "specs": [],
+}
+
+spec_rows = [
+    {
+        "spec_id": "001",
+        "spec_slug": "parallel-head",
+        "spec_key": "001-parallel-head",
+        "title": "Parallel head",
+        "active_task_id": "001-T001",
+        "task_status": "in_progress",
+        "assigned_role": "implement",
+        "bootstrap_status": "required",
+        "bootstrap_last_claim_id": None,
+        "bootstrap_last_report_path": None,
+        "bootstrap_last_completed_at": None,
+    },
+    {
+        "spec_id": "002",
+        "spec_slug": "bootstrap-next",
+        "spec_key": "002-bootstrap-next",
+        "title": "Bootstrap next",
+        "active_task_id": "002-T001",
+        "task_status": "ready",
+        "assigned_role": "bootstrap",
+        "bootstrap_status": "required",
+        "bootstrap_last_claim_id": None,
+        "bootstrap_last_report_path": None,
+        "bootstrap_last_completed_at": None,
+    },
+    {
+        "spec_id": "003",
+        "spec_slug": "implement-ready",
+        "spec_key": "003-implement-ready",
+        "title": "Implement ready",
+        "active_task_id": "003-T001",
+        "task_status": "ready",
+        "assigned_role": "implement",
+        "bootstrap_status": "passed",
+        "bootstrap_last_claim_id": "003:bootstrap",
+        "bootstrap_last_report_path": ".ralph/reports/parallel-execution-20260402/003-implement-ready/bootstrap.md",
+        "bootstrap_last_completed_at": "2026-04-02T08:05:00-07:00",
+    },
+]
+
+for offset, spec in enumerate(spec_rows):
+    spec_key = spec["spec_key"]
+    spec_dir = target / "specs" / spec_key
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(f"# {spec['title']}\n")
+    (spec_dir / "plan.md").write_text(f"# Plan: {spec_key}\n")
+    (spec_dir / "research.md").write_text(f"# Research: {spec_key}\n")
+    (spec_dir / "tasks.md").write_text(
+        f"# Tasks: {spec_key}\n\n- [ ] {spec['spec_id']}-T001 Primary task\n"
+    )
+    (spec_dir / "task-state.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.1.0",
+                "spec_id": spec["spec_id"],
+                "spec_key": spec_key,
+                "tasks": [
+                    {
+                        "task_id": f"{spec['spec_id']}-T001",
+                        "status": spec["task_status"],
+                        "last_role": None,
+                        "last_report_path": None,
+                        "updated_at": "2026-04-02T08:00:00-07:00",
+                        "requirement_ids": ["R1"],
+                        "verification_commands": ["python3 scripts/check-installed-runtime-state.py --repo ."],
+                        "planned_artifacts": [f"specs/{spec_key}/spec.md"],
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+    queue["specs"].append(
+        {
+            "spec_id": spec["spec_id"],
+            "spec_slug": spec["spec_slug"],
+            "spec_key": spec_key,
+            "title": spec["title"],
+            "epoch_id": "E200",
+            "created_at": f"2026-04-02T08:0{offset}:00-07:00",
+            "last_worked_at": f"2026-04-02T08:1{offset}:00-07:00",
+            "status": "in_progress",
+            "kind": "normal",
+            "origin_spec_key": None,
+            "origin_task_id": None,
+            "triggered_by_role": None,
+            "trigger_report_path": None,
+            "trigger_summary": None,
+            "priority_override": None,
+            "blocked_reason": None,
+            "research_status": "done",
+            "research_artifact_path": f"specs/{spec_key}/research.md",
+            "research_report_path": None,
+            "research_updated_at": "2026-04-02T08:00:00-07:00",
+            "planning_batch_id": "parallel-batch-20260402",
+            "prd_path": "tasks/prd-demo.md",
+            "spec_path": f"specs/{spec_key}/spec.md",
+            "plan_path": f"specs/{spec_key}/plan.md",
+            "tasks_path": f"specs/{spec_key}/tasks.md",
+            "task_state_path": f"specs/{spec_key}/task-state.json",
+            "latest_report_path": ".ralph/reports/parallel-execution-20260402/orchestrator.md",
+            "branch_name": f"ralph/{spec_key}",
+            "base_branch": "main",
+            "pr_number": None,
+            "pr_url": None,
+            "pr_state": None,
+            "merge_commit": None,
+            "task_summary": {"total": 1, "done": 0, "in_progress": 1 if spec['task_status'] == 'in_progress' else 0, "blocked": 0},
+            "next_task_id": spec["active_task_id"],
+            "depends_on_spec_ids": [],
+            "admission_status": "admitted",
+            "admitted_at": "2026-04-02T08:20:00-07:00",
+            "worktree_name": f"ralph-{spec_key}",
+            "worktree_path": f".ralph/worktrees/{spec_key}",
+            "slot_status": "running",
+            "active_task_id": spec["active_task_id"],
+            "task_status": spec["task_status"],
+            "assigned_role": spec["assigned_role"],
+            "active_pr_number": None,
+            "active_pr_url": None,
+            "last_dispatch_at": "2026-04-02T08:20:00-07:00",
+            "bootstrap_status": spec["bootstrap_status"],
+            "bootstrap_last_claim_id": spec["bootstrap_last_claim_id"],
+            "bootstrap_last_report_path": spec["bootstrap_last_report_path"],
+            "bootstrap_last_completed_at": spec["bootstrap_last_completed_at"],
+        }
+    )
+
+(target / ".ralph/state/workflow-state.json").write_text(json.dumps(workflow, indent=2) + "\n")
+(target / ".ralph/state/spec-queue.json").write_text(json.dumps(queue, indent=2) + "\n")
+(target / ".ralph/reports/parallel-execution-20260402/orchestrator.md").write_text("# Orchestrator Report\n")
+(target / ".ralph/reports/parallel-execution-20260402/003-implement-ready").mkdir(parents=True, exist_ok=True)
+(target / ".ralph/reports/parallel-execution-20260402/003-implement-ready/bootstrap.md").write_text("# Bootstrap Report\n")
+PY
+  render_state_projections "$target"
+}
+
+write_dependency_limited_execution_runtime() {
+  local target="$1"
+  python3 - "$target" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+target = Path(sys.argv[1])
+(target / ".ralph/reports/dependency-limited-20260402").mkdir(parents=True, exist_ok=True)
+
+workflow = {
+    "schema_version": "6.0.0",
+    "project_name": "dependency-limited-target",
+    "active_epoch_id": "E201",
+    "active_spec_ids": ["001"],
+    "active_interrupt_spec_id": None,
+    "active_spec_id": "001",
+    "active_spec_key": "001-dependency-head",
+    "active_task_id": "001-T001",
+    "current_phase": "implementation",
+    "task_status": "in_progress",
+    "assigned_role": "implement",
+    "current_branch": "main",
+    "current_run_id": "dependency-limited-20260402",
+    "active_pr_number": None,
+    "active_pr_url": None,
+    "resume_spec_id": None,
+    "interruption_state": None,
+    "last_event_id": "evt-0201",
+    "last_report_path": ".ralph/reports/dependency-limited-20260402/orchestrator.md",
+    "last_verified_at": None,
+    "blocked_reason": None,
+    "failure_count": 0,
+    "next_action": "003 remains inactive because 002 depends on 001 completing first.",
+    "queue_snapshot": [
+        {"spec_id": "001", "spec_key": "001-dependency-head", "epoch_id": "E201", "status": "in_progress", "admission_status": "admitted", "slot_status": "running", "bootstrap_status": "required", "branch_name": "ralph/001-dependency-head", "pr_number": None},
+        {"spec_id": "002", "spec_key": "002-blocked-follow-on", "epoch_id": "E201", "status": "ready", "admission_status": "pending", "slot_status": "inactive", "bootstrap_status": "required", "branch_name": "ralph/002-blocked-follow-on", "pr_number": None},
+    ],
+    "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+    "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
+    "worker_claims_path": ".ralph/state/worker-claims.json",
+    "lease_owner_token": None,
+    "lease_heartbeat_at": None,
+    "lease_expires_at": None,
+    "scheduler_summary": {
+        "normal_execution_limit": 3,
+        "active_spec_count": 1,
+        "pending_intent_count": 0,
+        "dependency_blocked_count": 1,
+        "active_claim_count": 0,
+    },
+}
+
+queue = {
+    "schema_version": "6.0.0",
+    "queue_policy": {
+        "selection": "explicit_first_ready_set",
+        "preemption": "failing_out_of_scope_bug",
+        "normal_execution_limit": 3,
+    },
+    "active_spec_id": "001",
+    "active_spec_ids": ["001"],
+    "active_interrupt_spec_id": None,
+    "resume_spec_id": None,
+    "worker_claims_path": ".ralph/state/worker-claims.json",
+    "specs": [],
+}
+
+spec_rows = [
+    ("001", "dependency-head", "Dependency head", [], "admitted", "running"),
+    ("002", "blocked-follow-on", "Blocked follow-on", ["001"], "pending", "inactive"),
+]
+
+for spec_id, slug, title, deps, admission_status, slot_status in spec_rows:
+    spec_key = f"{spec_id}-{slug}"
+    spec_dir = target / "specs" / spec_key
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "spec.md").write_text(f"# {title}\n")
+    (spec_dir / "plan.md").write_text(f"# Plan: {spec_key}\n")
+    (spec_dir / "research.md").write_text(f"# Research: {spec_key}\n")
+    (spec_dir / "tasks.md").write_text(f"# Tasks: {spec_key}\n\n- [ ] {spec_id}-T001 Primary task\n")
+    (spec_dir / "task-state.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.1.0",
+                "spec_id": spec_id,
+                "spec_key": spec_key,
+                "tasks": [
+                    {
+                        "task_id": f"{spec_id}-T001",
+                        "status": "in_progress" if spec_id == "001" else "ready",
+                        "last_role": None,
+                        "last_report_path": None,
+                        "updated_at": "2026-04-02T09:00:00-07:00",
+                        "requirement_ids": ["R1"],
+                        "verification_commands": ["python3 scripts/check-installed-runtime-state.py --repo ."],
+                        "planned_artifacts": [f"specs/{spec_key}/spec.md"],
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    queue["specs"].append(
+        {
+            "spec_id": spec_id,
+            "spec_slug": slug,
+            "spec_key": spec_key,
+            "title": title,
+            "epoch_id": "E201",
+            "created_at": "2026-04-02T09:00:00-07:00",
+            "last_worked_at": "2026-04-02T09:05:00-07:00",
+            "status": "in_progress" if spec_id == "001" else "ready",
+            "kind": "normal",
+            "origin_spec_key": None,
+            "origin_task_id": None,
+            "triggered_by_role": None,
+            "trigger_report_path": None,
+            "trigger_summary": None,
+            "priority_override": None,
+            "blocked_reason": None,
+            "research_status": "done",
+            "research_artifact_path": f"specs/{spec_key}/research.md",
+            "research_report_path": None,
+            "research_updated_at": "2026-04-02T09:00:00-07:00",
+            "planning_batch_id": "dependency-batch-20260402",
+            "prd_path": "tasks/prd-demo.md",
+            "spec_path": f"specs/{spec_key}/spec.md",
+            "plan_path": f"specs/{spec_key}/plan.md",
+            "tasks_path": f"specs/{spec_key}/tasks.md",
+            "task_state_path": f"specs/{spec_key}/task-state.json",
+            "latest_report_path": ".ralph/reports/dependency-limited-20260402/orchestrator.md",
+            "branch_name": f"ralph/{spec_key}",
+            "base_branch": "main",
+            "pr_number": None,
+            "pr_url": None,
+            "pr_state": None,
+            "merge_commit": None,
+            "task_summary": {"total": 1, "done": 0, "in_progress": 1 if spec_id == '001' else 0, "blocked": 0},
+            "next_task_id": f"{spec_id}-T001",
+            "depends_on_spec_ids": deps,
+            "admission_status": admission_status,
+            "admitted_at": "2026-04-02T09:10:00-07:00" if spec_id == "001" else None,
+            "worktree_name": f"ralph-{spec_key}",
+            "worktree_path": f".ralph/worktrees/{spec_key}",
+            "slot_status": slot_status,
+            "active_task_id": f"{spec_id}-T001" if spec_id == "001" else None,
+            "task_status": "in_progress" if spec_id == "001" else None,
+            "assigned_role": "implement" if spec_id == "001" else None,
+            "active_pr_number": None,
+            "active_pr_url": None,
+            "last_dispatch_at": "2026-04-02T09:10:00-07:00" if spec_id == "001" else None,
+            "bootstrap_status": "required",
+            "bootstrap_last_claim_id": None,
+            "bootstrap_last_report_path": None,
+            "bootstrap_last_completed_at": None,
+        }
+    )
+
+(target / ".ralph/state/workflow-state.json").write_text(json.dumps(workflow, indent=2) + "\n")
+(target / ".ralph/state/spec-queue.json").write_text(json.dumps(queue, indent=2) + "\n")
+(target / ".ralph/reports/dependency-limited-20260402/orchestrator.md").write_text("# Orchestrator Report\n")
+PY
+  render_state_projections "$target"
+}
+
 write_atomic_report() {
   local target="$1"
   local additional="$2"
@@ -1758,6 +2135,51 @@ research_statuses = {spec["research_status"] for spec in queue["specs"]}
 assert batch_ids == {"batch-20260308-demo"}
 assert research_statuses == {"done", "in_progress"}
 assert queue["active_spec_id"] is None
+PY
+
+PARALLEL_EXECUTION_TARGET="$TMP_DIR/parallel-execution-target"
+mkdir -p "$PARALLEL_EXECUTION_TARGET"
+copy_manifest_paths src/install-manifest.txt "$PARALLEL_EXECUTION_TARGET"
+create_generated_runtime "$PARALLEL_EXECUTION_TARGET"
+sync_loader_files "$PARALLEL_EXECUTION_TARGET"
+init_git_repo "$PARALLEL_EXECUTION_TARGET"
+write_parallel_execution_runtime "$PARALLEL_EXECUTION_TARGET"
+normalize_current_runtime_fixture "$PARALLEL_EXECUTION_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$PARALLEL_EXECUTION_TARGET"
+python3 - <<'PY' "$PARALLEL_EXECUTION_TARGET"
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+queue = json.loads((root / ".ralph/state/spec-queue.json").read_text())
+assert queue["active_spec_ids"] == ["001", "002", "003"]
+for spec_key in ("001-parallel-head", "002-bootstrap-next", "003-implement-ready"):
+    assert (root / ".ralph/worktrees" / spec_key).exists()
+assert queue["specs"][1]["assigned_role"] == "bootstrap"
+assert queue["specs"][2]["assigned_role"] == "implement"
+PY
+
+DEPENDENCY_LIMITED_TARGET="$TMP_DIR/dependency-limited-target"
+mkdir -p "$DEPENDENCY_LIMITED_TARGET"
+copy_manifest_paths src/install-manifest.txt "$DEPENDENCY_LIMITED_TARGET"
+create_generated_runtime "$DEPENDENCY_LIMITED_TARGET"
+sync_loader_files "$DEPENDENCY_LIMITED_TARGET"
+init_git_repo "$DEPENDENCY_LIMITED_TARGET"
+write_dependency_limited_execution_runtime "$DEPENDENCY_LIMITED_TARGET"
+normalize_current_runtime_fixture "$DEPENDENCY_LIMITED_TARGET"
+python3 scripts/check-installed-runtime-state.py --repo "$DEPENDENCY_LIMITED_TARGET"
+python3 - <<'PY' "$DEPENDENCY_LIMITED_TARGET"
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+queue = json.loads((root / ".ralph/state/spec-queue.json").read_text())
+assert queue["active_spec_ids"] == ["001"]
+assert (root / ".ralph/worktrees" / "001-dependency-head").exists()
+assert not (root / ".ralph/worktrees" / "002-blocked-follow-on").exists()
+assert queue["specs"][1]["depends_on_spec_ids"] == ["001"]
 PY
 
 ATOMIC_MULTI_TARGET="$TMP_DIR/atomic-multi-target"

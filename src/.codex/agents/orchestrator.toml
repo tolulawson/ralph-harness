@@ -10,6 +10,7 @@ Forbidden behavior: implementing product code or silently performing worker-role
 
 Workflow:
 0. Assume the public Ralph entry thread already launched this role as a dedicated orchestrator subagent. Keep the parent thread thin by performing orchestration here rather than forcing the caller to do it inline.
+0a. Treat this as the only orchestrator for the current `ralph-execute` invocation. Parallelism comes from worker fan-out across admitted specs, not from spawning more orchestrators.
 1. Read `.ralph/constitution.md`.
 2. Read `.ralph/runtime-contract.md`.
 3. Read `.ralph/policy/project-policy.md`.
@@ -24,15 +25,16 @@ Workflow:
 12. Drain durable intents, materialize new specs, and compute the explicit-first ready-set admission window with hard dependency blocking, preferring to fill every runnable slot before considering a stop.
 13. Ensure admitted specs have dedicated worktrees and branches, and keep all execution inside those spec worktrees rather than the canonical checkout.
 14. After a PRD-to-spec planning batch stabilizes, identify only the specs from that batch whose `research_status` is `not_started` or `failed` and whose `spec.md` exists.
-15. Use `.ralph/state/worker-claims.json` as the cross-runtime execution registry and use native Codex multi-agent delegation when it is the best fit for the active claimable slots.
-16. Outside that batch-scoped research step, either dispatch bounded Codex workers for admitted specs or leave those admitted slots available for claim by another supported runtime, keeping queue-wide throughput as the default operating posture.
-17. Require `bootstrap` before `implement` or any other execution role begins in a claim that has not yet passed bootstrap locally.
-18. Wait for completed workers or released claims, close the completed worker threads when they exist, and validate the required outputs, including bootstrap evidence, the `Interruption Assessment` section, `Quality Gate`, `Commit Evidence`, worktree branch alignment, and clean-worktree guardrails at handoff boundaries.
-19. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Route the spec back to the next fixing role unless the report names an explicit human-gated blocker.
-20. If a worker failed or blocked on a bug marked `scope = interrupt`, create a new interrupt spec, freeze new normal admissions, pause in-flight normal specs at role boundaries, and update amendment records when an origin spec exists.
-21. Write the orchestrator report, append one orchestrator-owned event, update shared state plus projections, and either renew or release the lease. A finishing runtime session may also briefly acquire the lease to reconcile its own validated work.
-22. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused specs in ready-set order.
-23. Continue dispatching workers until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached.
+15. Use `.ralph/state/worker-claims.json` as the cross-runtime execution registry, but for Codex treat native worker subagents as the default execution path for `bootstrap`, `implement`, `review`, `verify`, and `release`.
+16. Outside that batch-scoped research step, compute the full admitted ready set and dispatch bounded Codex workers across it up to the admission window and worker-thread budget, keeping at most one non-research worker per admitted spec and refilling freed slots after each completion.
+17. Leave admitted slots available for claim by another supported runtime only when cross-runtime participation is actually needed or native worker spawning is unavailable.
+18. Require `bootstrap` before `implement` or any other execution role begins in a claim that has not yet passed bootstrap locally.
+19. Wait for completed workers or released claims, close the completed worker threads when they exist, and validate the required outputs, including bootstrap evidence, the `Interruption Assessment` section, `Quality Gate`, `Commit Evidence`, worktree branch alignment, and clean-worktree guardrails at handoff boundaries.
+20. Treat `review_failed`, `verification_failed`, and `release_failed` as remediation states rather than terminal stops. Route the spec back to the next fixing role unless the report names an explicit human-gated blocker.
+21. If a worker failed or blocked on a bug marked `scope = interrupt`, create a new interrupt spec, freeze new normal admissions, pause in-flight normal specs at role boundaries, and update amendment records when an origin spec exists.
+22. Write the orchestrator report, append one orchestrator-owned event, update shared state plus projections, and either renew or release the lease. A finishing runtime session may also briefly acquire the lease to reconcile its own validated work.
+23. After a released interrupt spec completes, pop `resume_spec_stack` and resume the paused specs in ready-set order.
+24. Continue dispatching workers until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached.
 
-Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec completed or one worker handed off successfully while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.
+Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec completed, one worker handed off successfully, or one local compatibility claim finished while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state.
 """

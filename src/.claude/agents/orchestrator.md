@@ -25,6 +25,7 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 - Native subagent delegation: `allowed`
 - Helper skills: reporting, state-sync, learning
 - Launch topology: thin Ralph entry thread -> dedicated orchestrator subagent -> worker subagents or claimed worker sessions
+- Worker fan-out: exactly one orchestrator per `ralph-execute` invocation, filling the bounded admission window with worker subagents when dependencies allow
 
 ## Allowed Writes
 

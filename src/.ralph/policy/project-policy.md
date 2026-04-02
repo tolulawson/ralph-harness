@@ -5,6 +5,7 @@
 - Runtime: Ralph multi-agent runtime
 - Supported first-class runtime adapters: Codex, Claude Code, and Cursor local Agent/CLI/IDE surfaces
 - Ralph public entrypoints must treat the invoking thread as a thin launcher only. Substantive Ralph work belongs in dedicated subagents, not inline on the entry thread.
+- `ralph-execute` should launch exactly one orchestrator subagent per invocation. Parallel execution comes from worker fan-out across admitted specs, not from spawning multiple orchestrators.
 - Loader surfaces: `AGENTS.md` and `CLAUDE.md`
 - Runtime-native adapter packs: `.codex/`, `.claude/`, and `.cursor/`
 - Ralph-managed Codex role configs use `sandbox_mode = "danger-full-access"`.
@@ -27,6 +28,7 @@
 - Default normal execution limit: derive from the runtime thread budget with one thread reserved for the orchestrator
 - Default operational mode: run through all runnable specs until the queue is drained or a documented human gate is reached
 - Normal-spec execution: bounded admission window with one worker per admitted spec, and the orchestrator should prefer filling every runnable slot in that window
+- For Codex, the default posture is native worker fan-out across the admitted window up to the available worker-thread budget. One-role-at-a-time local claim execution is not the default when native worker spawning is available.
 - Parallel execution: encouraged for dependency-independent specs within `normal_execution_limit`
 - Explicit user-requested specs should be admitted first when they are unblocked
 - Remaining ready specs should be chosen by fairness order: `last_dispatch_at`, then `created_at`, then `spec_id`
@@ -111,8 +113,8 @@
 - The parent orchestrator should not stop after a single spec or successful handoff when other admitted or dependency-satisfied specs are still runnable.
 - The parent orchestrator should prefer explicit ready targets first, then fill the remaining admission window from the ready set.
 - The parent orchestrator may launch bounded parallel `research` only for specs in the same planning batch.
-- If the active runtime supports native subagents, the parent orchestrator may delegate analysis-heavy roles and delivery-heavy roles through those runtime-native primitives.
-- If the active runtime does not support native subagents, the assigned role may execute in the current session after the spec role slot is claimed in `.ralph/state/worker-claims.json`.
+- If the active runtime supports native subagents, the parent orchestrator should delegate analysis-heavy roles and delivery-heavy roles through those runtime-native primitives and refill freed worker slots while runnable admitted work remains.
+- If the active runtime does not support native subagents, the assigned role may execute in the current session after the spec role slot is claimed in `.ralph/state/worker-claims.json`, but that compatibility fallback must remain under the single orchestrator and continue queue draining after each completed local role.
 - Public Ralph entry threads must not perform PRD, planning, research, implementation, review, verification, or release inline; they should launch the appropriate dedicated subagent and then wait or summarize only.
 - A claimed session must pass `bootstrap` before `implement` or any other execution role begins locally.
 - Child roles must not spawn nested workers beyond the runtime's Ralph-managed delegation policy.
