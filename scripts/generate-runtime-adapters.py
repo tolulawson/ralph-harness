@@ -126,7 +126,7 @@ def render_claude_command(entrypoint: dict) -> str:
         lines.append("Keep the invoking thread thin: launch a dedicated Ralph orchestrator subagent immediately, then wait and relay its result instead of orchestrating inline on the command thread.")
         lines.append("That orchestrator should fill the admitted-spec execution window with worker subagents up to the bounded thread budget, rather than spawning multiple orchestrators or settling for one-role-at-a-time execution while runnable specs remain.")
     elif entrypoint["id"] == "ralph-plan":
-        lines.append("Keep the invoking thread thin: launch a dedicated Ralph `plan` subagent immediately, then wait and relay its result instead of planning inline on the command thread.")
+        lines.append("Keep the invoking thread thin: launch a dedicated Ralph planning coordinator subagent immediately, let that coordinator sequence `specify`, same-batch `research`, `plan`, `task-gen`, and `plan-check` as needed, then wait and relay its result instead of planning inline on the command thread.")
     elif entrypoint["id"] == "ralph-prd":
         lines.append("Keep the invoking thread thin: launch a dedicated Ralph `prd` subagent immediately, then wait and relay its result instead of writing the PRD inline on the command thread.")
     lines.append("")

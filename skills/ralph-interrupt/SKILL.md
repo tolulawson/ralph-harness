@@ -23,12 +23,16 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 2. Read the constitution, runtime contract, runtime overrides, project policy, workflow state, and spec queue.
 3. Treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as canonical. Treat `workflow-state.md` and `specs/INDEX.md` as projections that must be regenerated from machine state.
 4. Run a preflight consistency check before seeding any interrupt:
-   - current runtime shape must already be interrupt-capable
-   - `.ralph/state/workflow-state.md` must match the canonical JSON projection
-   - `specs/INDEX.md` must match the canonical queue projection
-   - the origin spec `tasks.md` and `task-state.json` must agree semantically
+   - current runtime shape must already be interrupt-capable or clearly require upgrade
+   - read canonical JSON first and treat `.ralph/state/workflow-state.md` plus `specs/INDEX.md` as derived projections
+   - if projections drift from canonical JSON, regenerate them under the lease instead of routing to upgrade
+   - the origin spec `task-state.json` is required only when that spec is already execution-ready; if it is missing or drifted, route back through planning or `task-gen`
    - `.ralph/state/orchestrator-lease.json` and `.ralph/state/orchestrator-intents.jsonl` must exist and parse
-5. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` instead of creating an interrupt.
+5. Classify any preflight issues before creating the interrupt:
+   - self-heal safely derivable projections or admitted worktree state first
+   - route to `$ralph-plan` when planning artifacts or `task-state.json` still need to be generated or refreshed
+   - route to `$ralph-upgrade` only for actual scaffold drift, mixed-version state, or recorded-baseline mismatch
+   - stop and report a hard repair requirement when the runtime state is ambiguous enough that Ralph cannot repair it safely
 6. Acquire the single-writer lease before mutating canonical shared state. If another healthy lease-holder is active, append a durable interrupt request to `.ralph/state/orchestrator-intents.jsonl` and stop instead of mutating the queue concurrently.
 7. Confirm the bug is out of scope for the currently executing or otherwise affected normal spec.
 8. Create a new numbered spec with `kind = interrupt`.
@@ -64,7 +68,8 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 ## Guardrails
 
 - Do not use this for defects that still belong to the current spec's own scope.
-- Do not create an interrupt from mixed-version or drifted runtime state.
+- Do not create an interrupt from mixed-version runtime state or unresolved hard-repair conditions.
+- Do not treat derived projection drift or safely derivable worktree state as an upgrade-only failure.
 - Do not mutate canonical shared state while another healthy lease-holder is active.
 - Do not rewrite the original spec, plan, or tasks in place as part of the canonical interrupt flow.
 - Keep earlier specs historically immutable and record corrected guidance through linked amendments.

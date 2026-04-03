@@ -21,7 +21,7 @@
 - Lease owner token: `null`
 - Lease heartbeat: `null`
 - Lease expires: `null`
-- Scheduler summary: `{'normal_execution_limit': 3, 'active_spec_count': 0, 'pending_intent_count': 0, 'dependency_blocked_count': 0, 'active_claim_count': 0}`
+- Scheduler summary: `{'normal_execution_limit': 3, 'active_spec_count': 0, 'active_claim_count': 0, 'pending_intent_count': 0, 'dependency_blocked_count': 0}`
 - Resume spec id: `null`
 - Resume stack depth: `0`
 - Current interrupt spec: `null`

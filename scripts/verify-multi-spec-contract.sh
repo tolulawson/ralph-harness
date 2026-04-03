@@ -15,6 +15,8 @@ for path in \
   src/.agents/skills/orchestrator/SKILL.md \
   src/.agents/skills/plan/SKILL.md \
   skills/ralph-execute/SKILL.md \
+  skills/ralph-plan/SKILL.md \
+  scripts/check-installed-runtime-state.py \
   scripts/runtime_state_helpers.py
 do
   [[ -f "$path" ]] || fail "missing required file $path"
@@ -82,6 +84,27 @@ grep -Fq -- '.ralph/shared/' skills/ralph-execute/SKILL.md \
 
 grep -Fq -- 'one orchestrator with many workers' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must describe the one-orchestrator/many-workers topology"
+
+grep -Fq -- 'route to `$ralph-plan`' skills/ralph-execute/SKILL.md \
+  || fail "ralph-execute must route planning gaps back to ralph-plan"
+
+grep -Fq -- 'execution-ready specs, but planned specs that still need `task-gen` may legitimately lack it' skills/ralph-execute/SKILL.md \
+  || fail "ralph-execute must distinguish execution-ready task registries from planned specs"
+
+grep -Fq -- 'task-state.json' skills/ralph-plan/SKILL.md \
+  || fail "ralph-plan must mention task-state.json outputs"
+
+grep -Fq -- 'plan-check' skills/ralph-plan/SKILL.md \
+  || fail "ralph-plan must mention the plan-check handoff"
+
+grep -Fq -- 'check_runtime_preflight' scripts/check-installed-runtime-state.py \
+  || fail "check-installed-runtime-state.py must use the shared runtime preflight classifier"
+
+grep -Fq -- 'route_to_planning_task_gen' scripts/runtime_state_helpers.py \
+  || fail "runtime helpers must classify planning/task-gen preflight gaps explicitly"
+
+grep -Fq -- 'spec_requires_task_state' scripts/runtime_state_helpers.py \
+  || fail "runtime helpers must gate task-state requirements by execution readiness"
 
 python3 - <<'PY'
 import json

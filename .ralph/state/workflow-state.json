@@ -55,9 +55,9 @@
   "scheduler_summary": {
     "normal_execution_limit": 3,
     "active_spec_count": 0,
+    "active_claim_count": 0,
     "pending_intent_count": 0,
-    "dependency_blocked_count": 0,
-    "active_claim_count": 0
+    "dependency_blocked_count": 0
   },
   "worker_claims_path": ".ralph/state/worker-claims.json"
 }

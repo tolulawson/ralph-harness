@@ -54,7 +54,8 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - `quickstart.md`
 11. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established, including the canonical `base_branch` and any `validation_bootstrap_commands` that bootstrap should run before implementation.
 12. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
-13. Write the role report to the canonical report path and recommend the next role.
+13. Stop before generating `tasks.md` or `task-state.json`; `task-gen` owns those execution-ready artifacts.
+14. Write the role report to the canonical report path and recommend the next role.
 
 ## Outputs
 

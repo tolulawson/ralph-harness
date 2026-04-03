@@ -1,9 +1,10 @@
 model = "gpt-5.4"
 model_reasoning_effort = "high"
-sandbox_mode = "workspace-write"
+sandbox_mode = "danger-full-access"
 
 [features]
 multi_agent = true
+codex_hooks = true
 
 [agents]
 max_threads = 4
@@ -29,6 +30,9 @@ config_file = "agents/task-gen.toml"
 
 [agents.plan_check]
 config_file = "agents/plan-check.toml"
+
+[agents.bootstrap]
+config_file = "agents/bootstrap.toml"
 
 [agents.implement]
 config_file = "agents/implement.toml"

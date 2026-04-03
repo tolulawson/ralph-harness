@@ -122,11 +122,20 @@
     {
       "id": "plan",
       "skill": "plan",
-      "purpose": "Produce the implementation plan for a numbered spec.",
+      "purpose": "Produce queue-visible planning artifacts for a numbered spec.",
       "classification": "delivery",
       "allowed_writes": [
+        ".ralph/state/spec-queue.json",
+        "specs/INDEX.md",
         "specs/<spec-key>/plan.md",
-        ".ralph/reports/<run-id>/<spec-key>/plan.md"
+        "specs/<spec-key>/research.md",
+        "specs/<spec-key>/data-model.md",
+        "specs/<spec-key>/contracts/",
+        "specs/<spec-key>/quickstart.md",
+        ".ralph/context/project-truths.md",
+        ".ralph/context/project-facts.json",
+        ".ralph/reports/<run-id>/<spec-key>/plan.md",
+        ".ralph/reports/<run-id>/plan.md"
       ],
       "helper_skills": [
         "reporting",
@@ -270,7 +279,7 @@
     {
       "id": "ralph-plan",
       "doc_path": "skills/ralph-plan/SKILL.md",
-      "purpose": "Produce numbered specs, plans, and tasks.",
+      "purpose": "Produce numbered specs, synchronized planning artifacts, and execution-ready task registries.",
       "scope": "public"
     },
     {

@@ -4,6 +4,44 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.3 - 2026-04-02
+
+### Summary
+
+This release repairs Ralph's control-plane preflight so execution no longer blocks on state the orchestrator is supposed to create or regenerate itself.
+
+It teaches the runtime to self-heal derived projections and admitted worktrees, routes incomplete task registries back through planning instead of misclassifying them as upgrade failures, and aligns the public planning entrypoint with the actual `specify -> research -> plan -> task-gen -> plan-check` handoff needed to leave a repo execution-ready.
+
+### Highlights
+
+- Reworked installed-runtime preflight classification so `check-installed-runtime-state.py` distinguishes self-healable drift, planning or `task-gen` gaps, genuine upgrade drift, and hard repair conditions.
+- Added runtime helpers that regenerate stale `workflow-state.md` and `specs/INDEX.md`, refresh derived workflow mirrors, and materialize missing admitted worktrees plus `.ralph/shared/` overlays when queue ownership is unambiguous.
+- Replaced the unconditional `task-state.json` requirement with execution-readiness-aware gating, so planned specs can exist before `task-gen` while admitted or active specs still require canonical task registries.
+- Updated public `ralph-execute`, `ralph-interrupt`, and `ralph-plan` doctrine plus generated adapter surfaces so they all describe the same repaired control-plane lifecycle.
+- Synced the source repo's dogfood runtime, adapter pack, and managed role docs back to the shipped scaffold so release validation no longer depends on stale local doctrine.
+- Added regression coverage for the reproduced failure modes: planned specs without `task-state.json`, admitted specs without worktrees, stale Markdown projections, and real baseline-drift upgrade failures.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.3` as the default public install or upgrade reference.
+- Fresh installs now inherit the repaired preflight model, the planning-coordinator handoff, and the new regression coverage.
+- Existing installs can upgrade normally to pick up the preflight repair and planning-alignment fixes; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified the new targeted regression coverage with `python3 scripts/test-runtime-preflight-repairs.py`.
+- Verified the installed-runtime preflight behavior locally with `python3 scripts/check-installed-runtime-state.py --repo .`.
+- Verified the full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime helpers: `scripts/runtime_state_helpers.py`
+- Installed-runtime validator: `scripts/check-installed-runtime-state.py`
+- Public execute entrypoint: `skills/ralph-execute/SKILL.md`
+- Public planning entrypoint: `skills/ralph-plan/SKILL.md`
+- Capability registry: `src/.ralph/agent-registry.json`
+- Release asset: `ralph-harness-v0.12.3.tar.gz`
+
 ## v0.12.2 - 2026-04-02
 
 ### Summary

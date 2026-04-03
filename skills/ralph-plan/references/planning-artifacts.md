@@ -6,8 +6,10 @@ The standard planning set is:
 2. `.ralph/state/spec-queue.json`
 3. `specs/INDEX.md`
 4. `specs/<spec-id>-<slug>/spec.md`
-5. `specs/<spec-id>-<slug>/plan.md`
-6. `specs/<spec-id>-<slug>/tasks.md`
+5. `specs/<spec-id>-<slug>/research.md` when research completed for that spec
+6. `specs/<spec-id>-<slug>/plan.md`
+7. `specs/<spec-id>-<slug>/tasks.md`
+8. `specs/<spec-id>-<slug>/task-state.json` when the spec is meant to leave planning execution-ready
 
 Expectations:
 
@@ -16,4 +18,6 @@ Expectations:
 - `spec.md` explains behavior and constraints for one numbered spec
 - `plan.md` records the intended implementation approach for that spec
 - `tasks.md` is dependency-ordered and execution-ready
+- `task-state.json` is the canonical machine-readable task registry for the generated tasks
+- public `ralph-plan` should coordinate `specify` -> same-batch `research` -> `plan` -> `task-gen` -> `plan-check` when the goal is a direct handoff to execution
 - planning should stop before code changes begin

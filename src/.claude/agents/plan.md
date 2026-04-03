@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Produce the implementation plan for a numbered spec.
+description: Produce queue-visible planning artifacts for a numbered spec.
 ---
 
 # Ralph Plan Agent
@@ -27,7 +27,16 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 
 ## Allowed Writes
 
+- .ralph/state/spec-queue.json
+- specs/INDEX.md
 - specs/<spec-key>/plan.md
+- specs/<spec-key>/research.md
+- specs/<spec-key>/data-model.md
+- specs/<spec-key>/contracts/
+- specs/<spec-key>/quickstart.md
+- .ralph/context/project-truths.md
+- .ralph/context/project-facts.json
 - .ralph/reports/<run-id>/<spec-key>/plan.md
+- .ralph/reports/<run-id>/plan.md
 
 Use the canonical `.agents/skills/` role instructions and the shared `.ralph/` runtime contract as the source of truth. Do not invent tool-specific workflow rules that diverge from Ralph.

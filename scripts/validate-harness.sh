@@ -99,6 +99,7 @@ scripts/verify-parallel-research-contract.sh
 scripts/verify-subagent-isolation-contract.sh
 scripts/verify-upgrade-contract.sh
 python3 scripts/check-upgrade-surface.py --repo .
+python3 scripts/test-runtime-preflight-repairs.py
 
 if grep -Fq -- '--generate-notes' .github/workflows/release.yml; then
   echo "validate-harness: release workflow must not use --generate-notes" >&2

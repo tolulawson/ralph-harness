@@ -60,8 +60,8 @@ grep -Fq -- 'close that worker thread' src/.agents/skills/orchestrator/SKILL.md 
 grep -Fq -- 'dedicated orchestrator subagent' skills/ralph-execute/SKILL.md \
   || fail "public execute skill must launch a dedicated orchestrator subagent"
 
-grep -Fq -- 'dedicated `plan` subagent' skills/ralph-plan/SKILL.md \
-  || fail "public plan skill must launch a dedicated plan subagent"
+grep -Fq -- 'dedicated Ralph planning coordinator subagent' skills/ralph-plan/SKILL.md \
+  || fail "public plan skill must launch a dedicated planning coordinator subagent"
 
 grep -Fq -- 'dedicated `prd` subagent' skills/ralph-prd/SKILL.md \
   || fail "public PRD skill must launch a dedicated PRD subagent"
@@ -72,7 +72,7 @@ grep -Fq -- 'dedicated Ralph orchestrator subagent' src/.claude/commands/ralph-e
 grep -Fq -- 'fill the admitted-spec execution window with worker subagents' src/.claude/commands/ralph-execute.md \
   || fail "Claude execute command must describe one-orchestrator worker fan-out"
 
-grep -Fq -- 'dedicated Ralph `plan` subagent' src/.claude/commands/ralph-plan.md \
+grep -Fq -- 'dedicated Ralph planning coordinator subagent' src/.claude/commands/ralph-plan.md \
   || fail "Claude plan command must keep the command thread thin"
 
 grep -Fq -- 'dedicated Ralph `prd` subagent' src/.claude/commands/ralph-prd.md \

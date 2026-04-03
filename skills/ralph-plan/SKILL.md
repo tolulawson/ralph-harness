@@ -1,43 +1,42 @@
 ---
 name: ralph-plan
-description: Turn a Ralph project PRD into queue-ready planning artifacts by producing epochs, numbered specs, implementation plans, and dependency-ordered tasks, then stop before implementation.
+description: Turn a Ralph project PRD into execution-ready planning artifacts by sequencing specification, research, planning, task generation, and plan-check before implementation begins.
 ---
 
 # Ralph Plan
 
-Generate queue-ready planning artifacts for a Ralph-managed project without starting implementation.
+Generate execution-ready planning artifacts for a Ralph-managed project without starting implementation.
 
 Use this as the public planning entry point after requirements are understood.
 
-This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand planning work to a dedicated `plan` subagent.
+This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand planning work to a dedicated Ralph planning coordinator subagent.
 
 In this source repository, the root runtime artifacts are dogfood examples. Installed target repos should use their own copied scaffold from `src/` and generate their own runtime records after installation.
 
 ## Use When
 
 - A project PRD already exists and needs to become execution-ready.
-- The user wants a numbered spec queue, `spec.md`, `plan.md`, and `tasks.md` artifacts without starting implementation.
+- The user wants a numbered spec queue, synchronized `spec.md`, `plan.md`, `tasks.md`, and `task-state.json` artifacts without starting implementation.
 - The installed harness exists and the next useful step is planning rather than execution.
 
 ## Workflow
 
 1. Read the project PRD, project policy, and any related artifacts.
-2. Immediately spawn a dedicated `plan` subagent with forked context semantics and the canonical Ralph plan config.
-3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the `plan` subagent, wait for completion, and relay the result, but it must not produce planning artifacts inline.
-4. Inside the `plan` subagent, decompose the PRD into ordered epochs and numbered specs.
-5. Produce or update `.ralph/state/spec-queue.json`.
-6. Produce or update `specs/INDEX.md`.
-7. Produce or update `specs/<spec-id>-<slug>/spec.md`.
-8. Produce or update spec-local `research.md` artifacts when the planning batch is ready for research.
-9. Produce or update `specs/<spec-id>-<slug>/plan.md`.
-10. Produce or update `specs/<spec-id>-<slug>/tasks.md` when enough information exists.
-11. Seed or refresh scheduler metadata such as `depends_on_spec_ids`, admission state, and default worktree metadata for each spec.
-12. Reject dependency cycles or missing dependency references instead of guessing.
-13. Keep the tasks dependency-ordered and small enough for focused implementation passes.
-14. Do not invent implicit dependencies or queue-head priority. Later execution should honor explicit scheduling targets first, then fill the remaining ready set.
-15. Keep any planning-time parallelism bounded to same-batch `research` only; later execution uses the scheduler admission window and hard dependencies.
-16. Stop before code changes or implementation begin.
-17. Recommend the next entry point:
+2. Immediately spawn a dedicated Ralph planning coordinator subagent with forked context semantics and the canonical Ralph plan config.
+3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the planning coordinator, wait for completion, and relay the result, but it must not produce planning artifacts inline.
+4. Inside the planning coordinator, decompose the PRD into ordered epochs and numbered specs.
+5. Run `specify` for any seeded or refreshed spec that still needs a decision-complete `spec.md`.
+6. Run same-batch `research` only when the refreshed planning batch needs research before implementation planning can settle.
+7. Run `plan` to produce or refresh `.ralph/state/spec-queue.json`, `specs/INDEX.md`, `specs/<spec-id>-<slug>/plan.md`, and any plan-owned supporting artifacts.
+8. Run `task-gen` for every spec that should leave planning execution-ready so `specs/<spec-id>-<slug>/tasks.md` and `specs/<spec-id>-<slug>/task-state.json` are synchronized.
+9. Run `plan-check` before finishing whenever the intent is to hand the repo to `$ralph-execute`.
+10. Seed or refresh scheduler metadata such as `depends_on_spec_ids`, admission state, and default worktree metadata for each spec.
+11. Reject dependency cycles or missing dependency references instead of guessing.
+12. Keep tasks dependency-ordered and small enough for focused implementation passes.
+13. Do not invent implicit dependencies or queue-head priority. Later execution should honor explicit scheduling targets first, then fill the remaining ready set.
+14. Keep any planning-time parallelism bounded to same-batch `research` only; later execution uses the scheduler admission window and hard dependencies.
+15. Stop before code changes or implementation begin.
+16. Recommend the next entry point:
    - `$ralph-execute` when the installed harness should take over execution
    - `$ralph-prd` when requirements are still too unclear and need reshaping
 
@@ -49,6 +48,8 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 - `specs/<spec-id>-<slug>/research.md` when research is complete for that spec
 - `specs/<spec-id>-<slug>/plan.md`
 - `specs/<spec-id>-<slug>/tasks.md` when planning is sufficiently complete
+- `specs/<spec-id>-<slug>/task-state.json` when the spec is meant to leave planning execution-ready
+- a `plan-check` outcome or equivalent confirmation when the spec is meant to hand off directly to execution
 - a concise recommendation for the next public entry point
 
 ## References
@@ -57,4 +58,4 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 
 ## Completion
 
-Stop once the queue-ready planning artifacts are written or updated and the next recommended entry point is clear.
+Stop once the planning coordinator has written or updated the intended planning artifacts, every execution-ready spec has synchronized `tasks.md` plus `task-state.json`, and the next recommended entry point is clear.

@@ -50,7 +50,7 @@ Ralph exposes a small public entry surface under `skills/`. These are the main w
 - `ralph-install` installs the harness into a repository that does not have it yet
 - `ralph-upgrade` refreshes an existing install without clobbering project-owned runtime data
 - `ralph-prd` creates the project PRD
-- `ralph-plan` turns requirements into numbered specs, plans, and tasks
+- `ralph-plan` turns requirements into numbered specs, synchronized planning artifacts, task registries, and a plan-check handoff
 - `ralph-execute` resumes the harness from disk and advances the queue
 - `ralph-interrupt` splits a failing out-of-scope bug into an interrupt spec
 
@@ -71,15 +71,17 @@ Use ralph-execute to resume the installed Ralph harness, run the next verificati
 3. Planning
 
 ```text
-Use ralph-plan to turn the existing PRD into numbered specs, planning artifacts, and dependency-ordered tasks without starting implementation.
+Use ralph-plan to turn the existing PRD into numbered specs, synchronized planning artifacts, dependency-ordered tasks, and task-state registries without starting implementation.
 ```
 
 These prompts are intentionally plain. Ralph is meant to be easy to point at real work quickly.
 
+`ralph-execute` preflight should self-heal derived projections and safely derivable admitted worktrees, route incomplete task registries back through planning or `task-gen`, and reserve `ralph-upgrade` for actual scaffold drift or mixed-version runtime state.
+
 Step-by-step usage after install:
 
 1. Use `ralph-prd` if the project still needs a PRD.
-2. Use `ralph-plan` once the requirements are clear and you want numbered specs plus tasks.
+2. Use `ralph-plan` once the requirements are clear and you want numbered specs plus execution-ready task registries.
 3. Use `ralph-execute` once the harness is installed and ready to resume from disk.
 4. Use `ralph-interrupt` when a failing out-of-scope bug should become its own interrupt spec.
 5. Use `ralph-upgrade` when you want a newer scaffold release.

@@ -55,20 +55,26 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 5. Inside the orchestrator subagent, treat `workflow-state.json`, `spec-queue.json`, and `task-state.json` as the canonical machine state. Treat `workflow-state.md` and `specs/INDEX.md` as projections only.
 6. Inside the orchestrator subagent, treat the tracked `.ralph/` files that appear inside a spec worktree as checkout artifacts only. Shared-state reads and writes must resolve to the canonical checkout directly or through the generated `.ralph/shared/` overlay.
 7. Run a preflight consistency check before selecting the next role:
-   - the runtime must already be on the current multi-spec, lease-capable state shape
-   - `.ralph/state/workflow-state.md` must match the canonical JSON projection
-   - `specs/INDEX.md` must match the canonical queue projection
-   - `tasks.md` and `task-state.json` must agree semantically
+   - read canonical JSON first and treat `.ralph/state/workflow-state.md` plus `specs/INDEX.md` as derived projections only
+   - the runtime must already be on the current multi-spec, lease-capable state shape or clearly require upgrade
+   - if `.ralph/state/workflow-state.md` or `specs/INDEX.md` drift from canonical JSON, regenerate them under the lease instead of routing to upgrade
    - the lease file, worker claims file, and durable intents file must exist and parse
    - the canonical base branch must be resolved in `.ralph/context/project-facts.json` or safely derivable for queued specs
-   - admitted specs must have valid worktrees whose branches match the active queue entries
-   - admitted spec worktrees must expose a valid `.ralph/shared/` overlay back to the canonical checkout
+   - `task-state.json` is required for admitted, active, or otherwise execution-ready specs, but planned specs that still need `task-gen` may legitimately lack it
+   - if a required `task-state.json` is missing, or `tasks.md` and `task-state.json` disagree semantically, stop and route back to planning or `task-gen` instead of routing to upgrade
+   - if an admitted spec is missing its worktree or `.ralph/shared/` overlay and branch ownership is unambiguous, materialize or repair that worktree state under the lease instead of failing preflight
+   - admitted specs must have valid worktrees whose branches match the active queue entries after any safe repairs complete
+   - admitted spec worktrees must expose a valid `.ralph/shared/` overlay back to the canonical checkout after any safe repairs complete
    - admitted spec worktrees must not carry tracked or untracked edits under canonical shared-control-plane paths
    - active non-bootstrap claims must already show `bootstrap_status = passed` and `validation_ready = true`
    - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
    - the latest relevant worker report must include `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) before work advances past implementation
    - the latest relevant worker report must include `Commit Evidence` for the checkpoint under handoff before work advances past implementation
-8. If preflight fails or the repo is in mixed-version state, stop and route to `$ralph-upgrade` before continuing.
+8. Classify any preflight issues before continuing:
+   - self-heal derived projections, queue mirrors, queue bootstrap summaries, and admitted worktree or overlay drift when ownership is safe and deterministic
+   - stop and route to `$ralph-plan` when planning artifacts or `task-state.json` still need to be generated or refreshed
+   - stop and route to `$ralph-upgrade` only for actual scaffold drift, mixed-version state, or recorded-baseline mismatch
+   - stop and report a hard repair requirement when ownership, branch selection, or lifecycle state is ambiguous enough that Ralph cannot repair it safely
 9. Read the latest report and admitted spec artifacts.
 10. Read a recent tail of the event log rather than the full history.
 11. Determine the next role from current phase, spec status, task lifecycle state, and PR state.
@@ -107,7 +113,9 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - If the harness files are missing, stop and tell the user to use `$ralph-install`.
 - Treat the constitution, runtime contract, policy, workflow state, and spec queue as source of truth.
 - The invoking thread is a Ralph launcher only. It must not perform orchestration or worker-role duties inline after it has enough context to launch the orchestrator subagent.
-- Do not continue execution from stale projections or mixed-version runtime state.
+- Do not continue execution from mixed-version runtime state or unresolved hard-repair conditions.
+- Do not treat stale projections, missing admitted worktrees, or missing `.ralph/shared/` overlays as upgrade blockers when they are safely derivable from canonical queue state.
+- Do not route missing or drifted task registries to `$ralph-upgrade`; send those back through planning or `task-gen`.
 - Do not rely on tracked worktree copies of shared-control-plane files when a spec worktree is active.
 - Keep all parallelism bounded to same-batch `research` plus the scheduler's admitted-spec execution window.
 - Require the Ralph launcher plus worker topology: entry thread -> one orchestrator subagent -> worker subagents or claimed worker sessions.

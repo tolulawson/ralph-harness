@@ -298,6 +298,7 @@ ACTIVE_SPEC_STATUSES = {
     "blocked",
     "paused",
 }
+TASK_STATE_OPTIONAL_SPEC_STATUSES = {"draft", "planned"}
 ADMISSION_ACTIVE_STATUSES = {"admitted", "running", "paused"}
 WORKTREE_REQUIRED_SLOT_STATUSES = {"admitted", "running", "paused"}
 HANDOFF_PHASES = {"review", "verification", "release"}
@@ -1440,6 +1441,137 @@ def normalize_queue_worktree_metadata(repo_root: Path, queue: dict[str, Any]) ->
 
         used_names.add(spec["worktree_name"])
         used_paths.add(spec["worktree_path"])
+
+
+def spec_has_numbered_tasks(repo_root: Path, spec: dict[str, Any]) -> bool:
+    tasks_relpath = spec.get("tasks_path")
+    if not isinstance(tasks_relpath, str) or not tasks_relpath:
+        return False
+    tasks_path = repo_root / tasks_relpath
+    if not tasks_path.exists():
+        return False
+    return bool(parse_tasks_markdown(tasks_path))
+
+
+def spec_requires_task_state(
+    repo_root: Path,
+    spec: dict[str, Any],
+    active_spec_ids: list[Any] | None = None,
+) -> bool:
+    active_ids = set(active_spec_ids or [])
+    if spec.get("spec_id") in active_ids:
+        return True
+    if spec.get("admission_status") in ADMISSION_ACTIVE_STATUSES:
+        return True
+    status = spec.get("status")
+    if isinstance(status, str) and status not in TASK_STATE_OPTIONAL_SPEC_STATUSES:
+        return True
+    return spec_has_numbered_tasks(repo_root, spec)
+
+
+def refresh_runtime_derived_state(
+    repo_root: Path,
+    workflow: dict[str, Any],
+    queue: dict[str, Any],
+    worker_claims: dict[str, Any],
+    lease: dict[str, Any],
+    pending_intent_count: int,
+) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
+    refreshed_queue = json.loads(json.dumps(queue))
+    refreshed_workflow = json.loads(json.dumps(workflow))
+    self_healed: list[str] = []
+    queue_path = repo_root / ".ralph/state/spec-queue.json"
+    workflow_path = repo_root / ".ralph/state/workflow-state.json"
+
+    merge_bootstrap_summary_from_claims(refreshed_queue, worker_claims)
+    rendered_queue = json.dumps(refreshed_queue, indent=2) + "\n"
+    actual_queue = queue_path.read_text() if queue_path.exists() else None
+    if actual_queue != rendered_queue:
+        write_json(queue_path, refreshed_queue)
+        self_healed.append("refreshed queue bootstrap summary fields from worker claims")
+
+    refreshed_workflow = normalize_workflow(refreshed_workflow, refreshed_queue)
+    refreshed_workflow["queue_snapshot"] = derive_queue_snapshot(refreshed_queue)
+    refreshed_workflow["active_spec_ids"] = derive_active_spec_ids(refreshed_queue, refreshed_workflow)
+    refreshed_workflow["active_spec_id"] = (
+        refreshed_workflow["active_spec_ids"][0] if refreshed_workflow["active_spec_ids"] else None
+    )
+    refreshed_workflow["active_interrupt_spec_id"] = derive_interrupt_spec_id(refreshed_workflow, refreshed_queue)
+    refreshed_workflow["worker_claims_path"] = (
+        refreshed_queue.get("worker_claims_path") or refreshed_workflow.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
+    )
+    refreshed_workflow["lease_owner_token"] = lease.get("owner_token")
+    refreshed_workflow["lease_heartbeat_at"] = lease.get("heartbeat_at")
+    refreshed_workflow["lease_expires_at"] = lease.get("expires_at")
+    refreshed_workflow["scheduler_summary"] = {
+        "normal_execution_limit": refreshed_queue.get("queue_policy", {}).get(
+            "normal_execution_limit",
+            derive_default_normal_execution_limit(repo_root),
+        ),
+        "active_spec_count": len(refreshed_workflow["active_spec_ids"]),
+        "active_claim_count": count_active_claims(worker_claims),
+        "pending_intent_count": pending_intent_count,
+        "dependency_blocked_count": count_dependency_blocked_specs(refreshed_queue),
+    }
+    rendered_workflow = json.dumps(refreshed_workflow, indent=2) + "\n"
+    actual_workflow = workflow_path.read_text() if workflow_path.exists() else None
+    if actual_workflow != rendered_workflow:
+        write_json(workflow_path, refreshed_workflow)
+        self_healed.append("refreshed workflow-state.json derived scheduler and lease mirror fields")
+
+    expected_workflow_md = render_workflow_state_markdown(refreshed_workflow, refreshed_queue)
+    workflow_md_path = repo_root / ".ralph/state/workflow-state.md"
+    actual_workflow_md = workflow_md_path.read_text() if workflow_md_path.exists() else None
+    if actual_workflow_md != expected_workflow_md:
+        workflow_md_path.write_text(expected_workflow_md)
+        self_healed.append("regenerated .ralph/state/workflow-state.md from canonical JSON")
+
+    expected_spec_index = render_spec_index_markdown(refreshed_queue)
+    spec_index_path = repo_root / "specs/INDEX.md"
+    actual_spec_index = spec_index_path.read_text() if spec_index_path.exists() else None
+    if actual_spec_index != expected_spec_index:
+        spec_index_path.write_text(expected_spec_index)
+        self_healed.append("regenerated specs/INDEX.md from canonical queue state")
+
+    return refreshed_workflow, refreshed_queue, self_healed
+
+
+def repair_active_spec_worktrees(
+    repo_root: Path,
+    queue: dict[str, Any],
+    project_facts: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    self_healed: list[str] = []
+    hard_repairs: list[str] = []
+    active_spec_ids = set(queue.get("active_spec_ids") or [])
+
+    for spec in queue.get("specs", []):
+        if spec.get("admission_status") not in ADMISSION_ACTIVE_STATUSES and spec.get("spec_id") not in active_spec_ids:
+            continue
+
+        worktree_relpath = spec.get("worktree_path")
+        if not isinstance(worktree_relpath, str) or not worktree_relpath:
+            hard_repairs.append(f"{spec.get('spec_key', 'unknown-spec')}: active spec is missing worktree_path")
+            continue
+
+        worktree_path = repo_root / worktree_relpath
+        had_worktree = worktree_path.exists() and is_git_worktree(worktree_path)
+        overlay_issues = validate_worktree_shared_overlay(repo_root, worktree_path, spec.get("spec_key")) if had_worktree else []
+        if had_worktree and not overlay_issues:
+            continue
+
+        try:
+            ensure_spec_worktree(repo_root, spec, project_facts)
+        except (RuntimeStateError, subprocess.CalledProcessError) as exc:
+            hard_repairs.append(str(exc))
+            continue
+
+        if not had_worktree:
+            self_healed.append(f"{spec['spec_key']}: materialized admitted worktree at {worktree_relpath}")
+        elif overlay_issues:
+            self_healed.append(f"{spec['spec_key']}: refreshed .ralph/shared overlay in {worktree_relpath}")
+
+    return self_healed, hard_repairs
 
 
 def ensure_lease_file(repo_root: Path, workflow: dict[str, Any]) -> dict[str, Any]:
@@ -2674,6 +2806,8 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         if isinstance(repo_branch, str) and repo_branch in active_branches:
             issues.append("canonical control-plane checkout must not execute from an active spec branch")
 
+    active_spec_ids = list(queue.get("active_spec_ids") or [])
+
     for spec in queue.get("specs", []):
         task_state_relpath = spec.get("task_state_path")
         if not task_state_relpath:
@@ -2681,6 +2815,8 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             continue
         task_state_path = repo_root / task_state_relpath
         if not task_state_path.exists():
+            if not spec_requires_task_state(repo_root, spec, active_spec_ids):
+                continue
             issues.append(f"{spec['spec_key']}: missing {task_state_relpath}")
             continue
         tasks_relpath = spec.get("tasks_path")
@@ -2786,3 +2922,120 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
                         issues.append(f"{report_path}: `Validation run` must record real checkpoint evidence")
 
     return issues
+
+
+def dedupe_messages(messages: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for message in messages:
+        if message in seen:
+            continue
+        seen.add(message)
+        ordered.append(message)
+    return ordered
+
+
+def classify_preflight_issue(
+    repo_root: Path,
+    queue: dict[str, Any],
+    issue: str,
+) -> tuple[str, str] | None:
+    if "differs from its recorded canonical baseline" in issue or "managed Ralph runtime skill baseline" in issue:
+        return "upgrade_required", issue
+
+    missing_task_state = re.match(r"^(?P<spec_key>[^:]+): missing (?P<path>specs/.+/task-state\.json)$", issue)
+    if missing_task_state:
+        spec_key = missing_task_state.group("spec_key")
+        spec = next((candidate for candidate in queue.get("specs", []) if candidate.get("spec_key") == spec_key), None)
+        if spec is None or spec_requires_task_state(repo_root, spec, queue.get("active_spec_ids") or []):
+            return (
+                "route_to_planning_task_gen",
+                f"{spec_key}: missing {missing_task_state.group('path')}; run task-gen or refresh planning artifacts before execution",
+            )
+        return None
+
+    if "task-state.json task ids do not match tasks.md" in issue or " in task-state.json but tasks.md checkbox disagrees" in issue:
+        return "route_to_planning_task_gen", f"{issue}; refresh planning artifacts or rerun task-gen before execution"
+
+    if "research_status is" in issue and "research.md" in issue and "is missing" in issue:
+        return "route_to_planning_task_gen", f"{issue}; rerun plan or research before execution"
+
+    if "queue entry is missing task_state_path" in issue:
+        return "route_to_planning_task_gen", f"{issue}; refresh planning artifacts before execution"
+
+    return "hard_repair_required", issue
+
+
+def check_runtime_preflight(
+    repo_root: Path,
+    apply_repairs: bool = True,
+) -> dict[str, list[str]]:
+    repo_root = resolve_canonical_checkout_root(repo_root)
+    results = {
+        "self_healed": [],
+        "route_to_planning_task_gen": [],
+        "upgrade_required": [],
+        "hard_repair_required": [],
+    }
+
+    upgrade_issues = validate_upgrade_preflight(repo_root)
+    results["upgrade_required"].extend(upgrade_issues)
+    if upgrade_issues:
+        for issue in validate_installed_runtime(repo_root):
+            classification = classify_preflight_issue(repo_root, {"specs": [], "active_spec_ids": []}, issue)
+            if classification is None:
+                continue
+            category, message = classification
+            if category == "upgrade_required":
+                results["upgrade_required"].append(message)
+        for key in results:
+            results[key] = dedupe_messages(results[key])
+        return results
+
+    required_paths = (
+        repo_root / ".ralph/state/workflow-state.json",
+        repo_root / ".ralph/state/spec-queue.json",
+        repo_root / ".ralph/state/worker-claims.json",
+        repo_root / ".ralph/state/orchestrator-lease.json",
+        repo_root / ".ralph/context/project-facts.json",
+        repo_root / ".ralph/state/orchestrator-intents.jsonl",
+    )
+    if apply_repairs and all(path.exists() for path in required_paths):
+        workflow = load_json(repo_root / ".ralph/state/workflow-state.json")
+        queue = load_json(repo_root / ".ralph/state/spec-queue.json")
+        worker_claims = load_json(repo_root / ".ralph/state/worker-claims.json")
+        lease = load_json(repo_root / ".ralph/state/orchestrator-lease.json")
+        project_facts = normalize_project_facts(load_json(repo_root / ".ralph/context/project-facts.json"))
+        intents = load_jsonl_records(repo_root / ".ralph/state/orchestrator-intents.jsonl")
+
+        workflow, queue, self_healed = refresh_runtime_derived_state(
+            repo_root,
+            workflow,
+            queue,
+            worker_claims,
+            lease,
+            pending_intent_count=len(intents),
+        )
+        results["self_healed"].extend(self_healed)
+
+        worktree_repairs, hard_repairs = repair_active_spec_worktrees(repo_root, queue, project_facts)
+        results["self_healed"].extend(worktree_repairs)
+        results["hard_repair_required"].extend(hard_repairs)
+
+    queue_for_classification: dict[str, Any]
+    queue_path = repo_root / ".ralph/state/spec-queue.json"
+    if queue_path.exists():
+        queue_for_classification = load_json(queue_path)
+    else:
+        queue_for_classification = {"specs": [], "active_spec_ids": []}
+
+    for issue in validate_installed_runtime(repo_root):
+        classification = classify_preflight_issue(repo_root, queue_for_classification, issue)
+        if classification is None:
+            continue
+        category, message = classification
+        results[category].append(message)
+
+    for key in results:
+        results[key] = dedupe_messages(results[key])
+    return results
