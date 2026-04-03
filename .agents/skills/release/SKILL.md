@@ -25,11 +25,20 @@ description: Manage branch, GitHub PR, merge, and state advancement for an appro
 3. Confirm the assigned spec worktree is clean before attempting PR or merge actions. A clean worktree is required for release.
 4. Resolve shared-state reads and shared report reads to the canonical checkout directly or through `.ralph/shared/`; do not rely on tracked shared-control-plane copies inside the worktree.
 5. Read the latest `Commit Evidence` and summarize the task-to-commit traceability in the release report.
-6. If no PR exists yet and policy requires one, create or record the GitHub PR.
-7. If review and verification pass, merge the PR or record the merge result.
-8. Record the release outcome in role-local artifacts and the release report only.
-9. Do not mutate shared queue or workflow state directly.
-10. Write the release report to the canonical `.ralph/reports/<run-id>/<spec-key>/release.md`, typically via `.ralph/shared/reports/`.
+6. Record exactly one `Release Outcome` value in the release report:
+   - `pr_created`
+   - `awaiting_review`
+   - `awaiting_merge`
+   - `merge_completed`
+   - `release_failed`
+   - `human_gate_waiting`
+7. If no PR exists yet and policy requires one, create or record the GitHub PR and set the outcome to `pr_created`, `awaiting_review`, or `release_failed` as appropriate.
+8. If review and verification pass and merge is allowed, merge the PR and set the outcome to `merge_completed` or `awaiting_merge`.
+9. If the next step truly depends on external human review, approval, or merge authority, set the outcome to `human_gate_waiting`.
+10. If release work fails for a self-service reason, set the outcome to `release_failed` and capture exact evidence.
+11. Record the release outcome in role-local artifacts and the release report only.
+12. Do not mutate shared queue or workflow state directly.
+13. Write the release report to the canonical `.ralph/reports/<run-id>/<spec-key>/release.md`, typically via `.ralph/shared/reports/`.
 
 ## Outputs
 
@@ -37,4 +46,4 @@ description: Manage branch, GitHub PR, merge, and state advancement for an appro
 
 ## Stop Condition
 
-Stop after the PR or merge outcome and next action are recorded.
+Stop after the explicit release outcome and next action are recorded.

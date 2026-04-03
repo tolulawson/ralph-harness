@@ -7,6 +7,7 @@ alwaysApply: true
 
 - Read the managed Ralph loader block in `AGENTS.md` before doing substantial work.
 - Treat `.ralph/` as the canonical runtime doctrine and state surface.
+- Ralph supports only adapters that can delegate the full Ralph subagent topology for substantive work.
 - Treat the invoking thread as a Ralph launcher only when a public `ralph-*` entrypoint is used. Keep that thread thin and move substantive Ralph work into the dedicated subagent for that entrypoint.
 - Use `.ralph/state/worker-claims.json` as the shared worker-claims registry for cross-runtime execution.
 - Execute numbered spec work only from assigned spec worktrees, never from the canonical checkout.

@@ -28,12 +28,13 @@ Interpret an installed Ralph harness in this order:
 ## Required Runtime Features
 
 - The installed scaffold must ship all supported runtime adapter packs together: Codex, Claude Code, and Cursor local Agent/CLI/IDE surfaces.
+- Every supported adapter must support native runtime subagents for substantive Ralph work. Adapters that cannot delegate the full Ralph topology are unsupported by the shipped harness.
 - The installed scaffold must also ship repo-local hook surfaces for all supported adapters: `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and the shared Ralph hook code under `.ralph/hooks/`.
 - Public Ralph entrypoints must keep the invoking thread thin and immediately hand off substantive Ralph work to a dedicated subagent instead of doing PRD, planning, research, orchestration, or implementation inline on the entry thread.
-- `ralph-execute` must launch exactly one dedicated orchestrator subagent per invocation. `ralph-prd` and `ralph-plan` must launch dedicated role subagents for those entrypoints.
-- When the active runtime supports native runtime subagents for worker roles, the orchestrator must fill the admitted-spec execution window with bounded worker subagents rather than collapsing into one claimed role at a time.
-- When the active runtime does not support native subagents for a role, the runtime may execute that role in the current session only as a compatibility fallback after claiming the assigned spec role slot in `.ralph/state/worker-claims.json`.
-- Compatibility fallback execution must remain queue-draining: after a local role finishes, the same `ralph-execute` invocation must return to orchestrator selection and continue while runnable admitted work remains.
+- `ralph-execute` must launch exactly one dedicated orchestrator subagent per invocation. `ralph-prd` must launch exactly one dedicated `prd` subagent. `ralph-plan` must launch exactly one dedicated planning coordinator subagent.
+- Supported adapters must run the Ralph topology `launcher thread -> dedicated coordinator or orchestrator subagent -> delegated role subagents`.
+- Supported adapters must delegate `prd`, `specify`, `research`, `plan`, `task_gen`, `plan_check`, `bootstrap`, `implement`, `review`, `verify`, and `release` to native subagents rather than executing those roles inline on the launching or coordinating thread.
+- The orchestrator must fill the admitted-spec execution window with bounded worker subagents rather than collapsing into one claimed role at a time.
 - Ralph-managed Codex config must allow exactly one launcher-to-role nesting layer plus one worker layer (`agents.max_depth = 3`), and deeper fan-out remains forbidden.
 - The canonical role classification remains:
   - analysis-heavy roles: `research`, `plan_check`, `review`
@@ -43,7 +44,7 @@ Interpret an installed Ralph harness in this order:
 - `research` may run in bounded parallel only for specs produced or refreshed in the same planning batch.
 - At most one non-research worker role may be active per admitted spec at any time.
 - When multiple normal specs are dependency-satisfied, the orchestrator should prefer filling the bounded admission window before idling or stopping.
-- For Codex-installed runtimes with official multi-agent support, native worker spawning is the default execution posture for `bootstrap`, `implement`, `review`, `verify`, and `release`.
+- For supported installed runtimes, native worker spawning is the required execution posture for `bootstrap`, `implement`, `review`, `verify`, and `release`, and the planning coordinator must likewise delegate `specify`, same-batch `research`, `plan`, `task_gen`, and `plan_check`.
 - Explicit user-requested scheduling targets should outrank creation order whenever those targets are dependency-satisfied.
 - The scheduler must coordinate through a single-writer lease stored in `.ralph/state/orchestrator-lease.json`.
 - Cross-runtime worker execution must coordinate through `.ralph/state/worker-claims.json`.
@@ -64,7 +65,7 @@ Interpret an installed Ralph harness in this order:
 - Review, verification, and release failures are remediation signals, not stop conditions.
 - Supported runtimes should use the shipped stop-boundary hook so the orchestrator re-checks whether it is truly done or human-blocked before stopping.
 - The stop-boundary hook may auto-continue only once per stop chain, only for the top-level orchestrator, and only when the stop is not clearly human-gated.
-- No role besides the orchestrator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
+- No delegated worker role besides the active Ralph coordinator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
 - Runtime sessions may mutate `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own active claim.
 - Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
 
@@ -113,31 +114,38 @@ Interpret an installed Ralph harness in this order:
    - first `in_progress`
    - else first `paused`
    - else first `ready`
+   - else first `awaiting_review`
    - else first `review_failed`
+   - else first `awaiting_verification`
    - else first `verification_failed`
-   - else first `plan_check_failed`
-   - else advance the spec toward PR, merge, or completion
+   - else first `awaiting_release`
+   - else first `release_failed`
+   - else advance the spec using explicit release outcomes and completion rules
 20. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
-21. if that batch contains specs with valid `spec.md` files and `research_status` needing work, either:
-   - delegate bounded parallel `research` through native subagents when the runtime supports them, or
-   - let independent runtime sessions claim those admitted `research` slots through `.ralph/state/worker-claims.json`
+21. if that batch contains specs with valid `spec.md` files and `research_status` needing work, delegate bounded parallel `research` through native subagents and record those workers in `.ralph/state/worker-claims.json`
 22. wait for the research batch to finish, close or release the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
-23. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, next action, and bootstrap readiness
+23. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, next action, and bootstrap readiness using this default routing:
+   - spec `plan_check_failed` returns to `plan` or `task_gen`, depending on the latest plan-check findings
+   - task `ready` or `in_progress` routes to `implement`
+   - task `awaiting_review` or `review_failed` routes to `review`
+   - task `awaiting_verification` or `verification_failed` routes to `verify`
+   - task `awaiting_release` or `release_failed` routes to `release`
 24. make each runnable spec role slot visible through `.ralph/state/worker-claims.json` for cross-runtime coordination, but keep one orchestrator responsible for the whole invocation
 25. if the next execution role for a spec has not yet passed `bootstrap`, dispatch or claim `bootstrap` first
-26. when the active runtime supports native worker delegation, spawn bounded worker subagents across the full admitted ready set up to the admission window and available worker-thread budget, keeping at most one non-research worker per admitted spec
+26. on supported adapters, spawn bounded worker subagents across the full admitted ready set up to the admission window and available worker-thread budget, keeping at most one non-research worker per admitted spec
 27. as workers finish, refill freed execution slots from the remaining admitted ready set before considering any stop path
-28. only when native worker delegation is unavailable or another supported runtime is already participating should independent runtime sessions or the current session execute a claimed slot directly
-29. ensure every worker or claiming runtime session receives one spec, one worktree path, one report path, one execution mode, and one claim heartbeat window
+28. record every delegated worker in `.ralph/state/worker-claims.json` with `execution_mode = native_subagent`; do not execute worker roles inline on the orchestrator thread
+29. ensure every worker receives one spec, one worktree path, one report path, one execution mode, and one claim heartbeat window
 30. wait for completed workers or released claims, and validate outputs from the assigned spec worktrees, including bootstrap evidence, `Quality Gate`, `Commit Evidence`, clean-worktree handoff requirements, and absence of worktree-local shared-control-plane edits
-31. treat worker outputs as spec-local only; the orchestrator or finishing runtime session must mutate canonical shared state directly in the canonical checkout rather than copying tracked control-plane files back from the worktree
+31. classify each release report with one explicit outcome: `pr_created`, `awaiting_review`, `awaiting_merge`, `merge_completed`, `release_failed`, or `human_gate_waiting`
 32. if review, verification, or release reports a fixable failure without an explicit human-gated blocker, update the task lifecycle, route the spec back to the next remediation role, and keep draining the queue
-33. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
-34. write the orchestrator report
-35. append one orchestrator-owned event
-36. update shared state and projections
-37. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in ready-set order
-38. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
+33. treat worker outputs as spec-local only; workers release their claims and exit, and the orchestrator alone acquires or renews the lease as needed, mutates canonical shared state directly in the canonical checkout, refreshes projections, and dispatches the next role
+34. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
+35. write the orchestrator report
+36. append one orchestrator-owned event
+37. update shared state and projections
+38. after a released interrupt spec completes, pop `resume_spec_stack`, thaw normal admissions, and resume paused specs in ready-set order
+39. continue dispatching until execution is complete, lease ownership must transfer, or a human-gated boundary is reached
 
 ## Stop Conditions
 
@@ -149,7 +157,7 @@ The orchestrator may stop only when one of these is true:
 - another healthy lease-holder should take over
 - the orchestration safety cap is reached and a human should decide whether to resume with a fresh run
 
-The orchestrator must not stop merely because one local fallback claim finished, one worker handed off successfully, or the next role is now clear while other runnable admitted work remains.
+The orchestrator must not stop merely because one worker claim finished, one worker handed off successfully, or the next role is now clear while other runnable admitted work remains.
 
 The default orchestration safety cap is `200` role handoffs in one invocation.
 
@@ -166,7 +174,7 @@ Each admitted spec worktree should regenerate `.ralph/shared/` whenever the work
 
 ## Shared-State Ownership
 
-The canonical shared control plane lives only in the canonical checkout. Only the orchestrator may update:
+The canonical shared control plane lives only in the canonical checkout. Only the active Ralph coordinator may update:
 
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
@@ -257,12 +265,13 @@ Each spec queue entry must include:
   - `bootstrap_report_path`
   - `validation_ready`
 - Valid `runtime` values are `codex`, `claude`, and `cursor`.
-- Valid `execution_mode` values are `native_subagent` and `interactive_session`.
+- Valid `execution_mode` values are `native_subagent`.
 - Healthy claims block another runtime from taking the same spec role slot.
 - Expired or malformed claims must be recovered to `released` or `expired` before reassignment.
 - Claim acquisition and release may happen without the scheduler lease, but claim records never replace orchestrator ownership of shared queue state.
 - Valid `bootstrap_status` values are `required`, `in_progress`, `passed`, and `failed`.
 - Any active non-bootstrap claim must already show `bootstrap_status = passed` and `validation_ready = true`.
+- Workers release their own claims after writing their role-local outputs; that release does not grant them ownership of shared-state reconciliation.
 
 ## Task Lifecycle Contract
 
@@ -329,6 +338,7 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 - The default `queue_policy.normal_execution_limit` should be derived from the active runtime thread budget, reserving one thread for the orchestrator.
 - Normal specs may run concurrently only inside the bounded admission window.
 - The scheduler should keep that bounded admission window filled with every runnable spec before concluding that orchestration is done.
+- Supported adapters must fill that admission window with delegated worker subagents; inline worker execution is not a supported queue-drain mode.
 - Hard dependencies block admission until every required spec is `released` or `done`.
 - Later ready specs may not bypass an earlier eligible spec in admission order.
 - Parallel research may improve later spec readiness but must never let a later spec bypass an earlier spec in normal admission.
@@ -342,5 +352,7 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 - Git SHAs and commit ranges belong in role reports and git history, not in canonical workflow JSON.
 - Review, verification, and release may not advance from a dirty spec worktree when the active task has already been handed off; a clean worktree is required at those handoff boundaries.
 - Review and verification must pass before release completes.
+- Release reports must record one explicit outcome: `pr_created`, `awaiting_review`, `awaiting_merge`, `merge_completed`, `release_failed`, or `human_gate_waiting`.
+- The orchestrator maps that explicit release outcome into the canonical queue, task, and spec lifecycle state.
 - A spec is not `done` until its PR lifecycle is complete according to project policy.
 - The release worker records the PR or merge outcome from the assigned spec worktree, and the orchestrator applies the resulting shared-state transition in the canonical checkout.

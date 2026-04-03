@@ -124,6 +124,7 @@ Use this order whenever a fresh coding-agent run resumes work in this source rep
 - `awaiting_verification`
 - `verification_failed`
 - `awaiting_release`
+- `release_failed`
 - `released`
 - `done`
 - `blocked`
@@ -141,6 +142,7 @@ Use this order whenever a fresh coding-agent run resumes work in this source rep
 - `verification_failed`
 - `plan_check_failed`
 - `awaiting_merge`
+- `release_failed`
 - `done`
 - `blocked`
 - `superseded`

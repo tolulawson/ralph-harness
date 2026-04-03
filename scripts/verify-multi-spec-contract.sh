@@ -14,6 +14,7 @@ for path in \
   src/.ralph/policy/project-policy.md \
   src/.agents/skills/orchestrator/SKILL.md \
   src/.agents/skills/plan/SKILL.md \
+  src/.agents/skills/release/SKILL.md \
   skills/ralph-execute/SKILL.md \
   skills/ralph-plan/SKILL.md \
   scripts/check-installed-runtime-state.py \
@@ -52,6 +53,18 @@ grep -Fq -- 'exactly one dedicated orchestrator subagent per invocation' src/.ra
 grep -Fq -- 'fill the admitted-spec execution window with bounded worker subagents' src/.ralph/runtime-contract.md \
   || fail "runtime contract must require worker fan-out across the admitted window"
 
+for status in awaiting_review awaiting_verification awaiting_release release_failed
+do
+  grep -Fq -- "$status" src/.ralph/runtime-contract.md \
+    || fail "runtime contract must mention $status in the lifecycle"
+done
+
+grep -Fq -- 'workers release their claims and exit' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must make workers release claims before orchestrator reconciliation"
+
+grep -Fq -- 'orchestrator alone' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must keep shared-state reconciliation on the orchestrator"
+
 grep -Fq -- 'single-writer lease' src/.ralph/policy/project-policy.md \
   || fail "project policy must describe the single-writer lease"
 
@@ -73,6 +86,9 @@ grep -Fq -- '.ralph/shared/' src/.agents/skills/orchestrator/SKILL.md \
 grep -Fq -- 'refill freed slots' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must refill freed worker slots while runnable work remains"
 
+grep -Fq -- 'execution_mode = native_subagent' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must require native subagent worker claims"
+
 grep -Fq -- 'depends_on_spec_ids' src/.agents/skills/plan/SKILL.md \
   || fail "plan skill must seed depends_on_spec_ids"
 
@@ -85,6 +101,9 @@ grep -Fq -- '.ralph/shared/' skills/ralph-execute/SKILL.md \
 grep -Fq -- 'one orchestrator with many workers' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must describe the one-orchestrator/many-workers topology"
 
+grep -Fq -- 'record every delegated worker' skills/ralph-execute/SKILL.md \
+  || fail "ralph-execute must require native subagent worker claims"
+
 grep -Fq -- 'route to `$ralph-plan`' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must route planning gaps back to ralph-plan"
 
@@ -96,6 +115,15 @@ grep -Fq -- 'task-state.json' skills/ralph-plan/SKILL.md \
 
 grep -Fq -- 'plan-check' skills/ralph-plan/SKILL.md \
   || fail "ralph-plan must mention the plan-check handoff"
+
+grep -Fq -- 'Delegate `task-gen`' skills/ralph-plan/SKILL.md \
+  || fail "ralph-plan must delegate task generation instead of implying inline ownership"
+
+for outcome in pr_created awaiting_review awaiting_merge merge_completed release_failed human_gate_waiting
+do
+  grep -Fq -- "$outcome" src/.agents/skills/release/SKILL.md \
+    || fail "release skill must mention explicit outcome $outcome"
+done
 
 grep -Fq -- 'check_runtime_preflight' scripts/check-installed-runtime-state.py \
   || fail "check-installed-runtime-state.py must use the shared runtime preflight classifier"
@@ -110,10 +138,15 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
+constitution = Path("src/.ralph/constitution.md").read_text()
 workflow = json.loads(Path("src/.ralph/state/workflow-state.json").read_text())
 queue = json.loads(Path("src/.ralph/state/spec-queue.json").read_text())
 lease = json.loads(Path("src/.ralph/state/orchestrator-lease.json").read_text())
 queue_template = json.loads(Path("src/.ralph/templates/spec-queue-template.json").read_text())
+
+for needle in ("release_failed", "awaiting_release", "awaiting_merge"):
+    if needle not in constitution:
+        raise SystemExit(f"verify-multi-spec-contract: constitution must include {needle}")
 
 for key in ("active_spec_ids", "active_interrupt_spec_id", "orchestrator_lease_path", "worker_claims_path", "orchestrator_intents_path", "scheduler_summary"):
     if key not in workflow:

@@ -89,12 +89,14 @@ MAX_AGENT_DEPTH = 3
 RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     "supported runtime adapter packs together",
     "native runtime subagents",
+    "unsupported by the shipped harness",
     ".ralph/state/worker-claims.json",
     ".ralph/shared/",
     "canonical shared control plane",
     "worktree-local tracked copies",
     "Child roles must not spawn nested workers",
     "Review, verification, and release failures are remediation signals, not stop conditions.",
+    "Release reports must record one explicit outcome",
     "single-writer lease",
     "orchestrator-intents.jsonl",
     "git worktree",
@@ -103,7 +105,9 @@ RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
 ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
     "worker-claims",
     "native subagents",
-    "current session",
+    "execution_mode = native_subagent",
+    "release their claims and exit",
+    "orchestrator alone",
     ".ralph/shared/",
     "canonical checkout",
     "shared-control-plane",
@@ -276,10 +280,10 @@ UNCHECKED_TASK_STATUSES = {"queued", "ready", "in_progress", "paused", "blocked"
 CHECKED_TASK_STATUSES = {
     "awaiting_review",
     "review_failed",
-    "plan_check_failed",
     "awaiting_verification",
     "verification_failed",
     "awaiting_release",
+    "release_failed",
     "released",
     "done",
 }
@@ -295,6 +299,7 @@ ACTIVE_SPEC_STATUSES = {
     "awaiting_verification",
     "verification_failed",
     "awaiting_merge",
+    "release_failed",
     "blocked",
     "paused",
 }
@@ -308,6 +313,7 @@ HANDOFF_TASK_STATUSES = {
     "awaiting_verification",
     "verification_failed",
     "awaiting_release",
+    "release_failed",
     "released",
 }
 REPORT_COMMIT_ROLES = {"implement", "review", "verify", "release"}
@@ -331,7 +337,25 @@ LEASE_STATUSES = {"idle", "held"}
 CLAIM_STATUSES = {"claimed", "released", "expired"}
 BOOTSTRAP_STATUSES = {"required", "in_progress", "passed", "failed"}
 SUPPORTED_RUNTIME_NAMES = {"codex", "claude", "cursor"}
-SUPPORTED_EXECUTION_MODES = {"native_subagent", "interactive_session"}
+SUPPORTED_EXECUTION_MODES = {"native_subagent"}
+TASK_STATUS_ROLE_ROUTING = {
+    "ready": "implement",
+    "in_progress": "implement",
+    "awaiting_review": "review",
+    "review_failed": "review",
+    "awaiting_verification": "verify",
+    "verification_failed": "verify",
+    "awaiting_release": "release",
+    "release_failed": "release",
+}
+RELEASE_OUTCOMES = {
+    "pr_created",
+    "awaiting_review",
+    "awaiting_merge",
+    "merge_completed",
+    "release_failed",
+    "human_gate_waiting",
+}
 
 
 class RuntimeStateError(RuntimeError):
@@ -809,6 +833,14 @@ def task_checkbox_matches_status(status: str) -> bool | None:
     if status in UNCHECKED_TASK_STATUSES:
         return False
     return None
+
+
+def task_status_expected_role(status: Any, previous_status: Any = None) -> str | None:
+    if not isinstance(status, str):
+        return None
+    if status == "paused" and isinstance(previous_status, str):
+        status = previous_status
+    return TASK_STATUS_ROLE_ROUTING.get(status)
 
 
 def report_role_from_path(report_path: Any) -> Any:
@@ -1940,7 +1972,7 @@ def infer_target_task_id(spec: dict[str, Any], tasks: list[dict[str, Any]], work
     status = spec.get("status")
     if status in {"awaiting_review", "review_failed", "awaiting_verification", "verification_failed"}:
         return checked_ids[-1] if checked_ids else None
-    if status in {"awaiting_release", "awaiting_pr", "awaiting_merge", "done"}:
+    if status in {"awaiting_release", "release_failed", "awaiting_pr", "awaiting_merge", "done"}:
         return tasks[-1]["task_id"] if tasks else None
     if status in {"blocked", "paused"}:
         return unchecked_ids[0] if unchecked_ids else (checked_ids[-1] if checked_ids else None)
@@ -1977,8 +2009,8 @@ def infer_task_entries(spec: dict[str, Any], tasks: list[dict[str, Any]], workfl
         target_status = "done"
     elif status in {"awaiting_review", "review_failed", "awaiting_verification", "verification_failed"}:
         target_status = status
-    elif status in {"awaiting_release", "awaiting_pr", "awaiting_merge"}:
-        target_status = "awaiting_release"
+    elif status in {"awaiting_release", "awaiting_pr", "awaiting_merge", "release_failed"}:
+        target_status = "release_failed" if status == "release_failed" else "awaiting_release"
     elif status in {"blocked", "paused"}:
         target_status = status
     elif workflow.get("active_spec_id") == spec.get("spec_id") and workflow.get("task_status"):
@@ -2025,8 +2057,8 @@ def infer_task_entries(spec: dict[str, Any], tasks: list[dict[str, Any]], workfl
                 "last_report_path": spec.get("latest_report_path"),
                 "updated_at": updated_at,
                 "blocked_reason": spec.get("blocked_reason"),
-                "review_result": "passed" if entry_status in {"awaiting_verification", "awaiting_release", "released", "done"} else None,
-                "verification_result": "passed" if entry_status in {"awaiting_release", "released", "done"} else None,
+                "review_result": "passed" if entry_status in {"awaiting_verification", "verification_failed", "awaiting_release", "release_failed", "released", "done"} else None,
+                "verification_result": "passed" if entry_status in {"awaiting_release", "release_failed", "released", "done"} else None,
                 "requirement_ids": [],
                 "verification_commands": [],
                 "planned_artifacts": [],

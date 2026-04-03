@@ -9,6 +9,8 @@ Resume and advance an already-installed Ralph harness in the current repository 
 
 The default operating principle is to keep advancing every runnable spec in bounded parallel when dependencies allow, rather than completing one spec and stopping while other runnable specs remain.
 
+Ralph's shipped adapters are Codex, Claude, and Cursor, and all three are expected to support the full delegated topology `launcher thread -> dedicated orchestrator subagent -> delegated role subagents`. Inline worker fallback is not part of the shipped contract.
+
 This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand execution to exactly one dedicated orchestrator subagent.
 
 This skill does not install the harness. It assumes the current repository already contains the Ralph harness scaffold.
@@ -66,6 +68,7 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - admitted specs must have valid worktrees whose branches match the active queue entries after any safe repairs complete
    - admitted spec worktrees must expose a valid `.ralph/shared/` overlay back to the canonical checkout after any safe repairs complete
    - admitted spec worktrees must not carry tracked or untracked edits under canonical shared-control-plane paths
+   - active claims must use `execution_mode = native_subagent`; inline compatibility claims are unsupported for Ralph's shipped adapters
    - active non-bootstrap claims must already show `bootstrap_status = passed` and `validation_ready = true`
    - review, verification, release, and completed-task handoffs must not sit on a dirty spec worktree
    - the latest relevant worker report must include `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) before work advances past implementation
@@ -87,14 +90,16 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
    - require `bootstrap` before `implement` or any other execution role begins in a claim that is not yet validation-ready
    - allow bounded same-batch `research` workers only before normal execution resumes across the admitted queue
    - run one orchestrator with many workers: do not spawn multiple orchestrators to get parallelism
-   - for Codex-installed runtimes, dispatch native worker subagents across the admitted ready set by default
+   - for Ralph's shipped adapters, dispatch native worker subagents across the admitted ready set as the required execution posture
    - keep at most one non-research worker per admitted spec and refill freed slots as workers finish
-   - expose admitted slots for claim in `.ralph/state/worker-claims.json` only for cross-runtime coordination or when native worker delegation is unavailable
+   - record every delegated worker in `.ralph/state/worker-claims.json` with `execution_mode = native_subagent`
    - preserve the canonical analysis-heavy and delivery-heavy role classification
+   - route task lifecycle states deterministically: `ready` or `in_progress` -> `implement`, `awaiting_review` or `review_failed` -> `review`, `awaiting_verification` or `verification_failed` -> `verify`, `awaiting_release` or `release_failed` -> `release`
+   - classify every release report with one explicit outcome: `pr_created`, `awaiting_review`, `awaiting_merge`, `merge_completed`, `release_failed`, or `human_gate_waiting`
    - wait for completed workers or released claims
    - close completed worker threads before mutating shared state when native subagents were used
-   - update canonical shared state directly in the canonical checkout instead of copying tracked control-plane files back from the worktree
-   - allow the finishing runtime session to acquire the brief lease and reconcile its own validated work
+   - let workers release their claims and exit after writing role-local outputs
+   - update canonical shared state directly in the canonical checkout from the orchestrator instead of copying tracked control-plane files back from the worktree
    - create an interrupt spec automatically for any failing out-of-scope bug
    - pause admitted normal specs at role boundaries and later resume them after the interrupt is released
    - validate outputs
@@ -118,8 +123,8 @@ In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are 
 - Do not route missing or drifted task registries to `$ralph-upgrade`; send those back through planning or `task-gen`.
 - Do not rely on tracked worktree copies of shared-control-plane files when a spec worktree is active.
 - Keep all parallelism bounded to same-batch `research` plus the scheduler's admitted-spec execution window.
-- Require the Ralph launcher plus worker topology: entry thread -> one orchestrator subagent -> worker subagents or claimed worker sessions.
-- Do not accept one-role-at-a-time claim execution as the default Codex posture while runnable admitted specs remain.
+- Require the Ralph launcher plus worker topology: entry thread -> one orchestrator subagent -> delegated role subagents.
+- Do not accept inline current-session worker execution for Ralph's shipped adapters; if an adapter cannot delegate the full subagent topology, treat it as unsupported instead of falling back.
 - Treat `active_spec_ids` as authoritative. Any singular active-spec fields are compatibility mirrors only and must not drive scheduling.
 - Keep all role configs at full permissions (`danger-full-access`).
 - Do not advance review, verification, or release from a report that lacks `Quality Gate` evidence.

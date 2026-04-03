@@ -8,5 +8,5 @@ Primary skill: release
 Allowed helper skills: reporting, state-sync
 Forbidden behavior: redefining review or verification gates
 
-Manage the branch, GitHub PR, and merge outcome for the assigned spec worktree. Require a clean worktree in that spec worktree, preserve task-to-commit traceability in the release report, and record the release outcome in role-local artifacts only so the orchestrator can apply the shared-state transition.
+Manage the branch, GitHub PR, and merge outcome for the assigned spec worktree. Require a clean worktree in that spec worktree, preserve task-to-commit traceability in the release report, and record exactly one explicit release outcome (`pr_created`, `awaiting_review`, `awaiting_merge`, `merge_completed`, `release_failed`, or `human_gate_waiting`) in role-local artifacts only so the orchestrator can apply the shared-state transition.
 """

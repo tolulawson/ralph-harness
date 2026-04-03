@@ -4,6 +4,44 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.4 - 2026-04-02
+
+### Summary
+
+This release restores Ralph's intended queue-draining control plane and makes subagent delegation a required part of every shipped adapter.
+
+It closes the lifecycle gap that let execution stop after a single implementation checkpoint, re-centers shared-state reconciliation in the orchestrator, and aligns the planning, execution, review, verification, and release surfaces around one strict `launcher -> coordinator/orchestrator -> delegated workers` model.
+
+### Highlights
+
+- Tightened the shipped runtime contract so Codex, Claude Code, and Cursor are all treated as subagent-capable first-class adapters, and any adapter that cannot delegate the full Ralph topology is now unsupported instead of fallback-capable.
+- Replaced partial task-selection wording with deterministic lifecycle routing for `ready`, `in_progress`, `awaiting_review`, `review_failed`, `awaiting_verification`, `verification_failed`, `awaiting_release`, and `release_failed`.
+- Added `release_failed` to the canonical lifecycle definitions and made release outcomes explicit across the runtime contract, release skill, helper logic, and adapter surfaces.
+- Re-centered reconciliation in the orchestrator so workers write only role-local outputs, release their claims, and exit while the orchestrator alone validates outputs, updates shared state, refreshes projections, and dispatches the next role.
+- Updated the public `ralph-prd`, `ralph-plan`, and `ralph-execute` entrypoints plus generated Claude and Cursor surfaces so planning roles are delegated with the same strictness as execution roles.
+- Added regression coverage for lifecycle routing, explicit release outcomes, native-subagent-only execution mode enforcement, queue-draining doctrine, and multi-adapter subagent isolation.
+- Resynced the source repo's dogfood runtime mirrors with the shipped scaffold so release validation and upgrade-preflight continue to block real doctrine drift instead of silently tolerating it.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.4` as the default public install or upgrade reference.
+- Fresh installs now inherit the universal subagent-driven control-plane doctrine, the repaired lifecycle routing, and the explicit release-outcome contract.
+- Existing installs can upgrade normally to pick up the queue-drain repair and stricter delegation model; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified the new lifecycle regression coverage with `python3 scripts/test-control-plane-lifecycle.py`.
+- Verified the full release surface, including install and upgrade smoke coverage, with `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Project policy: `src/.ralph/policy/project-policy.md`
+- Orchestrator skill: `src/.agents/skills/orchestrator/SKILL.md`
+- Release skill: `src/.agents/skills/release/SKILL.md`
+- Runtime helpers: `scripts/runtime_state_helpers.py`
+- Release asset: `ralph-harness-v0.12.4.tar.gz`
+
 ## v0.12.3 - 2026-04-02
 
 ### Summary

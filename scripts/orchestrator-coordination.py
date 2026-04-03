@@ -34,6 +34,7 @@ from runtime_state_helpers import (
     resolve_canonical_checkout_root,
     render_spec_index_markdown,
     render_workflow_state_markdown,
+    SUPPORTED_EXECUTION_MODES,
     worker_claim_is_healthy,
     utc_now,
     write_json,
@@ -403,7 +404,7 @@ def build_parser() -> argparse.ArgumentParser:
     claim.add_argument("--session-id")
     claim.add_argument("--thread-id")
     claim.add_argument("--holder")
-    claim.add_argument("--execution-mode", default="interactive_session")
+    claim.add_argument("--execution-mode", default="native_subagent", choices=sorted(SUPPORTED_EXECUTION_MODES))
     claim.add_argument("--bootstrap-report-path")
     claim.add_argument("--ttl-seconds", type=int, default=LEASE_TTL_SECONDS)
     claim.set_defaults(handler=claim_cmd)

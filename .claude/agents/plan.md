@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Produce the implementation plan for a numbered spec.
+description: Produce queue-visible planning artifacts for a numbered spec.
 ---
 
 # Ralph Plan Agent
@@ -37,7 +37,6 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 - .ralph/context/project-truths.md
 - .ralph/context/project-facts.json
 - .ralph/reports/<run-id>/<spec-key>/plan.md
-
-Do not write `tasks.md` or `task-state.json` from the runtime `plan` role. `task-gen` owns the executable task registry.
+- .ralph/reports/<run-id>/plan.md
 
 Use the canonical `.agents/skills/` role instructions and the shared `.ralph/` runtime contract as the source of truth. Do not invent tool-specific workflow rules that diverge from Ralph.

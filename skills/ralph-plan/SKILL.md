@@ -24,19 +24,18 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 1. Read the project PRD, project policy, and any related artifacts.
 2. Immediately spawn a dedicated Ralph planning coordinator subagent with forked context semantics and the canonical Ralph plan config.
 3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the planning coordinator, wait for completion, and relay the result, but it must not produce planning artifacts inline.
-4. Inside the planning coordinator, decompose the PRD into ordered epochs and numbered specs.
-5. Run `specify` for any seeded or refreshed spec that still needs a decision-complete `spec.md`.
-6. Run same-batch `research` only when the refreshed planning batch needs research before implementation planning can settle.
-7. Run `plan` to produce or refresh `.ralph/state/spec-queue.json`, `specs/INDEX.md`, `specs/<spec-id>-<slug>/plan.md`, and any plan-owned supporting artifacts.
-8. Run `task-gen` for every spec that should leave planning execution-ready so `specs/<spec-id>-<slug>/tasks.md` and `specs/<spec-id>-<slug>/task-state.json` are synchronized.
-9. Run `plan-check` before finishing whenever the intent is to hand the repo to `$ralph-execute`.
-10. Seed or refresh scheduler metadata such as `depends_on_spec_ids`, admission state, and default worktree metadata for each spec.
-11. Reject dependency cycles or missing dependency references instead of guessing.
-12. Keep tasks dependency-ordered and small enough for focused implementation passes.
-13. Do not invent implicit dependencies or queue-head priority. Later execution should honor explicit scheduling targets first, then fill the remaining ready set.
-14. Keep any planning-time parallelism bounded to same-batch `research` only; later execution uses the scheduler admission window and hard dependencies.
-15. Stop before code changes or implementation begin.
-16. Recommend the next entry point:
+4. Inside the planning coordinator, decompose the PRD into ordered epochs and numbered specs, then delegate `specify` for any seeded or refreshed spec that still needs a decision-complete `spec.md`.
+5. Delegate same-batch `research` only when the refreshed planning batch needs research before implementation planning can settle.
+6. Delegate `plan` to produce or refresh `.ralph/state/spec-queue.json`, `specs/INDEX.md`, `specs/<spec-id>-<slug>/plan.md`, and any plan-owned supporting artifacts.
+7. Delegate `task-gen` for every spec that should leave planning execution-ready so `specs/<spec-id>-<slug>/tasks.md` and `specs/<spec-id>-<slug>/task-state.json` are synchronized.
+8. Delegate `plan-check` before finishing whenever the intent is to hand the repo to `$ralph-execute`.
+9. Seed or refresh scheduler metadata such as `depends_on_spec_ids`, admission state, and default worktree metadata for each spec.
+10. Reject dependency cycles or missing dependency references instead of guessing.
+11. Keep tasks dependency-ordered and small enough for focused implementation passes.
+12. Do not invent implicit dependencies or queue-head priority. Later execution should honor explicit scheduling targets first, then fill the remaining ready set.
+13. Keep any planning-time parallelism bounded to same-batch `research` only; later execution uses the scheduler admission window and hard dependencies.
+14. Stop before code changes or implementation begin.
+15. Recommend the next entry point:
    - `$ralph-execute` when the installed harness should take over execution
    - `$ralph-prd` when requirements are still too unclear and need reshaping
 

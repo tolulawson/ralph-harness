@@ -23,7 +23,7 @@ In this source repository, the root `tasks/` and `specs/` files are dogfood runt
 
 1. Read the current project context, existing PRDs, and any active notes relevant to the requested work.
 2. Immediately spawn a dedicated `prd` subagent with forked context semantics and the canonical Ralph PRD config.
-3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the `prd` subagent, wait for completion, and relay the result, but it must not generate the PRD inline.
+3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the `prd` subagent, wait for completion, and relay the result, but it must not generate the PRD inline or fall back to current-session PRD authoring.
 4. Inside the `prd` subagent, ask `3-5` high-value clarification questions if important ambiguity remains.
 5. Prefer short, lettered answer options where that will help the user answer quickly.
 6. Write or update `tasks/prd-<project>.md` using a consistent structure.

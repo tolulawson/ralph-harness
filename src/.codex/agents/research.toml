@@ -13,5 +13,5 @@ Research one numbered spec at a time. Read the spec-local and project-global con
 Parallelism guard:
 - multiple research workers may run at once only when the orchestrator launches them for specs from the same planning batch
 - do not spawn nested workers from the research role
-- do not assume any non-research role may run in parallel
+- treat any non-research parallel role activity as orchestrator-managed and outside the research worker's scope
 """

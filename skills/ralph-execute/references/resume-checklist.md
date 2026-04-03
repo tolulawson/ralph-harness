@@ -24,6 +24,10 @@ When resuming the harness:
 20. check `active_spec_ids`, `active_interrupt_spec_id`, `resume_spec_stack`, `interruption_state`, worker claims, durable intents, and lease health before selecting the next spec
 21. confirm deprecated compatibility mirrors in `workflow-state.json` still match one admitted spec when they are present, but do not use them for scheduling
 22. choose the next role from spec status, task lifecycle state, interruption state, dependency state, PR state, and any explicit scheduling targets
-23. prefer explicit ready targets first, then fill every remaining runnable slot in the bounded admission window before concluding that orchestration should stop
-24. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
-25. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs
+23. route task lifecycle states deterministically: `ready` or `in_progress` -> `implement`, `awaiting_review` or `review_failed` -> `review`, `awaiting_verification` or `verification_failed` -> `verify`, `awaiting_release` or `release_failed` -> `release`
+24. classify every release report with one explicit outcome: `pr_created`, `awaiting_review`, `awaiting_merge`, `merge_completed`, `release_failed`, or `human_gate_waiting`
+25. prefer explicit ready targets first, then fill every remaining runnable slot in the bounded admission window before concluding that orchestration should stop
+26. record delegated workers in `.ralph/state/worker-claims.json` with `execution_mode = native_subagent`; do not execute worker roles inline on supported adapters
+27. after a worker finishes, let it release its claim and exit, then let the orchestrator reacquire the lease as needed, validate outputs, update shared state, and dispatch the next role
+28. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
+29. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs

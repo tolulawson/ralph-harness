@@ -24,6 +24,7 @@ for path in \
   src/.claude/commands/ralph-plan.md \
   src/.claude/commands/ralph-prd.md \
   src/.cursor/rules/ralph-core.mdc \
+  src/.cursor/rules/ralph-execute.mdc \
   src/.codex/config.toml \
   src/.codex/agents/orchestrator.toml \
   skills/ralph-execute/SKILL.md \
@@ -38,6 +39,9 @@ grep -Fq -- '.ralph/state/worker-claims.json' src/.ralph/runtime-contract.md \
 
 grep -Fq -- 'native runtime subagents' src/.ralph/runtime-contract.md \
   || fail "runtime contract must describe native runtime subagents"
+
+grep -Fq -- 'unsupported by the shipped harness' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must reject adapters that cannot delegate the full Ralph topology"
 
 grep -Fq -- 'thin and immediately hand off substantive Ralph work to a dedicated subagent' src/.ralph/runtime-contract.md \
   || fail "runtime contract must require thin entry-thread delegation"
@@ -75,6 +79,9 @@ grep -Fq -- 'fill the admitted-spec execution window with worker subagents' src/
 grep -Fq -- 'dedicated Ralph planning coordinator subagent' src/.claude/commands/ralph-plan.md \
   || fail "Claude plan command must keep the command thread thin"
 
+grep -Fq -- 'delegate `specify`' src/.claude/commands/ralph-plan.md \
+  || fail "Claude plan command must describe delegated planning roles"
+
 grep -Fq -- 'dedicated Ralph `prd` subagent' src/.claude/commands/ralph-prd.md \
   || fail "Claude PRD command must keep the command thread thin"
 
@@ -83,6 +90,13 @@ grep -Fq -- '.ralph/state/worker-claims.json' src/.claude/agents/orchestrator.md
 
 grep -Fq -- 'worker-claims' src/.cursor/rules/ralph-core.mdc \
   || fail "Cursor core rule must mention the shared Ralph claim contract"
+
+grep -Fq -- 'execution_mode = native_subagent' src/.cursor/rules/ralph-execute.mdc \
+  || fail "Cursor execute rule must require native subagent worker claims"
+
+if grep -Fq -- 'finishing session may reconcile its own validated work' src/.cursor/rules/ralph-execute.mdc; then
+  fail "Cursor execute rule must keep reconciliation on the orchestrator"
+fi
 
 python3 - <<'PY'
 import json
@@ -154,7 +168,7 @@ delegation_by_role = {
     entry["id"]: entry["native_subagent_delegation"]
     for entry in registry["roles"]
 }
-required_native_roles = {"bootstrap", "implement", "review", "verify", "release"}
+required_native_roles = set(delegation_by_role)
 for role in required_native_roles:
     if delegation_by_role.get(role) is not True:
         raise SystemExit(
