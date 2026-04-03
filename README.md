@@ -103,6 +103,7 @@ The short version:
 - keep the canonical shared control plane in the main checkout and use generated `.ralph/shared/` overlays inside admitted spec worktrees
 - during upgrade, merge `.codex/config.toml` plus repo-local hook configs instead of overwriting user-owned settings like `sandbox_mode`
 - preserve unknown runtime skills under `.agents/skills/` while Ralph refreshes only its managed runtime skill set
+- keep project-specific control-plane tweaks out of Ralph-managed `.agents/skills/` directories; use `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed local skill directory instead
 - install and upgrade all supported runtime adapter packs together rather than selecting one agent up front
 - do not upgrade over a healthy live orchestrator lease
 - persist the canonical project base branch in `.ralph/context/project-facts.json`

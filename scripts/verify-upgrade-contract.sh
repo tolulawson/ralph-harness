@@ -76,6 +76,7 @@ for required in \
   'bootstrap_env_files' \
   'bootstrap_copy_exclude_globs' \
   'preserve unknown runtime skills' \
+  'non-managed skill directory' \
   'managed runtime skill' \
   'check-upgrade-surface.py'
 do
@@ -102,6 +103,9 @@ grep -Fq -- 'spec-scoped' "$UPGRADING_MD" \
 
 grep -Fq -- '.ralph/policy/runtime-overrides.md' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the preserved runtime overrides surface"
+
+grep -Fq -- '.ralph/policy/project-policy.md' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the preserved project-policy surface for project workflow rules"
 
 grep -Fq -- 'duplicate branch ownership' "$UPGRADE_SKILL" \
   || fail "ralph-upgrade skill must warn about duplicate branch ownership"
@@ -141,6 +145,9 @@ grep -Fq -- 'migrate-installed-runtime.py' "$UPGRADE_SKILL" \
 
 grep -Fq -- 'check-upgrade-surface.py' "$UPGRADE_SKILL" \
   || fail "ralph-upgrade skill must mention the upgrade preflight phase"
+
+grep -Fq -- 'non-managed skill directory' "$UPGRADE_SKILL" \
+  || fail "ralph-upgrade skill must route managed skill drift into preserved policy or non-managed skill directories"
 
 python3 - <<'PY'
 import hashlib

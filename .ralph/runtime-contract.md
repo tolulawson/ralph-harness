@@ -68,6 +68,7 @@ Interpret an installed Ralph harness in this order:
 - No delegated worker role besides the active Ralph coordinator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
 - Runtime sessions may mutate `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own active claim.
 - Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
+- Ralph-managed runtime skill directories under `.agents/skills/` are scaffold-owned. Project-specific control-plane changes must live in `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed project skill directory instead of patching a Ralph-managed skill in place.
 
 ## Artifact Classes
 
@@ -84,6 +85,7 @@ Interpret an installed Ralph harness in this order:
 - Spec-owned branch artifacts:
   - product source files
   - spec-local implementation artifacts such as `spec.md`, `plan.md`, `research.md`, and optional review or verification summaries
+- Project-owned helper skills may live under `.agents/skills/` only when they use a non-managed directory name. Ralph-managed skill directories remain upgrade-owned scaffold content.
 - `.ralph/shared/` inside a spec worktree is a generated convenience overlay only. It is not a branch-owned source of truth and must never be committed as replacement content.
 
 ## Core Loop

@@ -8,26 +8,26 @@ This guide explains how to upgrade an already-installed Ralph harness in a targe
 
 The upgrade-safe scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.12.4`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.12.5`
 
 The canonical upgrade overwrite contract is:
 
-- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.4/src/upgrade-manifest.txt)
+- [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/upgrade-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.12.4/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/VERSION)
 
 The installed harness metadata file is:
 
-- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.12.4/src/.ralph/harness-version.json)
+- [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/.ralph/harness-version.json)
 
 The upgrade authority order is:
 
-1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.12.4/UPGRADING.md)
-2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.4/src/upgrade-manifest.txt)
-3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.12.4/VERSION)
-4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.12.4/src/.ralph/harness-version.json)
+1. [UPGRADING.md](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/UPGRADING.md)
+2. [src/upgrade-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/upgrade-manifest.txt)
+3. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/VERSION)
+4. [src/.ralph/harness-version.json](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/.ralph/harness-version.json)
 
 ## Goal
 
@@ -50,6 +50,7 @@ After upgrade, the target repository should:
 - backfill or preserve the canonical `base_branch` in `.ralph/context/project-facts.json`
 - backfill bootstrap lifecycle fields in worker claims and bootstrap summary fields in queue entries
 - preserve unknown runtime skills that live under `.agents/skills/` and refresh only the Ralph-managed skill directories listed in `src/.ralph/agent-registry.json`
+- treat Ralph-managed runtime skill directories as scaffold-owned upgrade surface rather than project-owned customization points
 - normalize legacy worker report pointers from root-level `.ralph/reports/<run-id>/<role>.md` paths into spec-scoped `.ralph/reports/<run-id>/<spec-key>/<role>.md` paths when ownership is unambiguous
 - record the installed Ralph version tag, resolved commit, and migration-aware upgrade contract in `.ralph/harness-version.json`
 - preserve or refresh the managed Ralph blocks in `AGENTS.md` and `CLAUDE.md`
@@ -58,9 +59,21 @@ An upgrade must not run over a healthy live orchestrator lease. If `.ralph/state
 
 ## Default Reference
 
-Use the latest stable semver tag by default. The current stable example in this guide is `v0.12.4`.
+Use the latest stable semver tag by default. The current stable example in this guide is `v0.12.5`.
 
 If exact reproducibility matters more than readability, pin to a specific commit SHA instead and still record the human-facing tag when known.
+
+## Managed Skill Drift Rule
+
+Ralph preserves project-owned runtime extensions, but not direct edits inside Ralph-managed skill directories.
+
+- `.ralph/runtime-contract.md` is scaffold-owned; project-specific runtime doctrine belongs in `.ralph/policy/runtime-overrides.md`.
+- `.ralph/policy/project-policy.md` is the preserved home for project workflow rules and verification policy.
+- Ralph-managed runtime skill directories are the ones listed in `src/.ralph/agent-registry.json`; those directories are refreshed on upgrade and should be treated as scaffold-owned.
+- Project-owned helper or wrapper skills may live under `.agents/skills/` only when they use a non-managed directory name.
+- If local control-plane behavior cannot be expressed in the preserved policy files, move it into a project-owned non-managed skill directory instead of editing a Ralph-managed skill in place.
+- If preflight reports managed skill drift, repair by moving the intended project-specific behavior out of the Ralph-managed directory, restoring that managed directory to the recorded baseline, and rerunning preflight.
+- When an upgrade helper reports managed skill drift, it should report full relative paths or managed skill directory names, not bare filenames such as `SKILL.md`.
 
 ## Optional Helper Skill
 
@@ -78,18 +91,20 @@ From inside the target repository, ask your coding agent to upgrade from a tagge
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the source repository.
-Upgrade this repository's installed Ralph harness to tag v0.12.4 using UPGRADING.md as the authoritative guide.
+Upgrade this repository's installed Ralph harness to tag v0.12.5 using UPGRADING.md as the authoritative guide.
 Run the upgrade preflight first so direct edits to the installed .ralph/runtime-contract.md are detected before any scaffold-owned files are overwritten.
 If the preflight reports drift in .ralph/runtime-contract.md, move those project-specific runtime rules into .ralph/policy/runtime-overrides.md before continuing.
+If the preflight reports drift in a Ralph-managed runtime skill directory, stop and move that project-specific control-plane behavior into .ralph/policy/runtime-overrides.md, .ralph/policy/project-policy.md, or a non-managed skill directory under .agents/skills/ before restoring the managed skill baseline.
 Only overwrite the scaffold-owned paths listed in src/upgrade-manifest.txt.
 Preserve project-owned files under .ralph/policy/, .ralph/context/, .ralph/reports/, and .ralph/logs/, and preserve spec prose unless a named migration step below says otherwise.
 Refresh the managed Ralph blocks inside AGENTS.md and CLAUDE.md instead of replacing the whole files.
 Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, lease state, worker claims, durable intents, task-state, projection files, worktree metadata, `.ralph/shared/` worktree overlays, and the runtime adapter packs are upgraded together.
 If .ralph/state/orchestrator-lease.json still shows a healthy held lease, stop instead of upgrading over live orchestration.
 If migration cannot infer historic task lifecycle safely, stop and report the ambiguous spec instead of guessing.
-Update .ralph/harness-version.json so it records version 0.12.4, tag v0.12.4, the source repo, the resolved commit used for this upgrade, upgrade_contract_version 11, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed runtime adapters, and the preserved branch prefix.
+Update .ralph/harness-version.json so it records version 0.12.5, tag v0.12.5, the source repo, the resolved commit used for this upgrade, upgrade_contract_version 11, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed runtime adapters, and the preserved branch prefix.
 Merge `.codex/config.toml`, `.codex/hooks.json`, `.claude/settings.json`, and `.cursor/hooks.json` instead of clobbering user-owned settings or unrelated hook entries.
 Preserve unknown runtime skills in `.agents/skills/`, but if a Ralph-managed runtime skill directory has local drift or a same-name conflict, stop and report the managed runtime skill that needs repair.
+Report the full relative managed skill path or directory name when drift is found; do not reduce the blocker to repeated bare filenames.
 Run the upgrade verification checklist from UPGRADING.md before finishing.
 ```
 
@@ -99,7 +114,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.12.4
+SOURCE_REF=v0.12.5
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 
@@ -165,6 +180,7 @@ Do not overwrite these project-owned areas during the manifest-copy phase:
 - user-owned values inside `.codex/config.toml`, such as `sandbox_mode`, model preferences, or custom agent entries
 - unrelated user-owned hook entries inside `.codex/hooks.json`, `.claude/settings.json`, and `.cursor/hooks.json`
 - unknown runtime skills under `.agents/skills/`
+- project-owned non-managed skill directories under `.agents/skills/`
 - `.ralph/policy/`
 - `.ralph/context/`
 - `.ralph/reports/`
@@ -205,7 +221,7 @@ That preflight must:
 - stop for manual review instead of guessing when no canonical baseline can be determined
 - stop when the base runtime contract was edited directly
 - stop when a managed runtime skill directory has local drift or a same-name conflict
-- direct the operator to move project-specific runtime rules into `.ralph/policy/runtime-overrides.md` before retrying
+- direct the operator to move project-specific control-plane changes into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed skill directory before retrying
 
 ## Managed `AGENTS.md` Block
 

@@ -1652,10 +1652,22 @@ copy_manifest_paths src/install-manifest.txt "$DRIFTED_MANAGED_SKILL_TARGET"
 create_generated_runtime "$DRIFTED_MANAGED_SKILL_TARGET"
 sync_loader_files "$DRIFTED_MANAGED_SKILL_TARGET"
 printf '\nLocal managed-skill drift.\n' >> "$DRIFTED_MANAGED_SKILL_TARGET/.agents/skills/bootstrap/SKILL.md"
-if python3 scripts/check-upgrade-surface.py --repo "$DRIFTED_MANAGED_SKILL_TARGET"; then
+if managed_skill_output="$(python3 scripts/check-upgrade-surface.py --repo "$DRIFTED_MANAGED_SKILL_TARGET" 2>&1)"; then
   echo "smoke-test-install-upgrade: managed runtime skill drift should have blocked upgrade preflight" >&2
   exit 1
 fi
+grep -Fq '.ralph/policy/runtime-overrides.md' <<<"$managed_skill_output" || {
+  echo "smoke-test-install-upgrade: managed skill drift output must point at runtime-overrides" >&2
+  exit 1
+}
+grep -Fq '.ralph/policy/project-policy.md' <<<"$managed_skill_output" || {
+  echo "smoke-test-install-upgrade: managed skill drift output must point at project-policy" >&2
+  exit 1
+}
+grep -Fq 'non-managed skill directory' <<<"$managed_skill_output" || {
+  echo "smoke-test-install-upgrade: managed skill drift output must mention non-managed skill directories" >&2
+  exit 1
+}
 
 LEGACY_TARGET="$TMP_DIR/legacy-target"
 write_positive_legacy_runtime "$LEGACY_TARGET"

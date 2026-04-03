@@ -1266,7 +1266,7 @@ def validate_managed_runtime_skill_drift(repo_root: Path) -> list[str]:
         extra_files = sorted(set(installed_files) - set(expected_installed_files))
         if missing_files or extra_files:
             issues.append(
-                f".agents/skills/{skill_name} differs from the managed Ralph runtime skill baseline; repair the managed skill before upgrading"
+                f".agents/skills/{skill_name} differs from the managed Ralph runtime skill baseline; Ralph preserves unknown skill directories but not edits inside Ralph-managed ones. Move project-specific control-plane changes into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed skill directory, then repair the managed skill before upgrading"
             )
             continue
 
@@ -1280,7 +1280,7 @@ def validate_managed_runtime_skill_drift(repo_root: Path) -> list[str]:
                 break
             if sha256_text(canonical_text) != sha256_file(installed_path):
                 issues.append(
-                    f"{installed_relative_path} differs from the managed Ralph runtime skill baseline; repair or remove the local change before upgrading"
+                    f"{installed_relative_path} differs from the managed Ralph runtime skill baseline; Ralph preserves unknown skill directories but not edits inside Ralph-managed ones. Move project-specific control-plane changes into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed skill directory, then repair or remove the local change before upgrading"
                 )
                 break
 

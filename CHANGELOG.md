@@ -4,6 +4,42 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.5 - 2026-04-02
+
+### Summary
+
+This release repairs Ralph's upgrade guidance around managed runtime skill drift.
+
+It closes the gap where upgrades correctly blocked direct edits inside Ralph-managed `.agents/skills/` directories but did not clearly explain where project-specific control-plane changes should live or how to repair the drift cleanly before retrying.
+
+### Highlights
+
+- Clarified the shipped runtime doctrine so Ralph-managed runtime skill directories are explicitly scaffold-owned, while project-specific control-plane behavior belongs in `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a project-owned non-managed skill directory.
+- Updated the upgrade guide with a dedicated managed-skill drift rule, including a concrete repair path for moving local control-plane customizations out of Ralph-managed skill directories before restoring the recorded baseline.
+- Tightened upgrade helper guidance so `ralph-upgrade` now routes managed-skill drift into preserved policy files or non-managed local skills instead of leaving the operator at a generic drift failure.
+- Made upgrade preflight errors more actionable by explaining that unknown skill directories are preserved, but edits inside Ralph-managed ones are not.
+- Added contract and smoke coverage so future releases must keep the managed-vs-project-owned skill boundary explicit and must mention the correct repair surfaces in preflight output.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.5` as the default public install or upgrade reference.
+- Fresh installs inherit the clarified doctrine about Ralph-managed skill ownership.
+- Existing installs can upgrade normally to pick up the improved guidance and more actionable managed-skill drift errors; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified the focused upgrade checks with `bash scripts/verify-upgrade-contract.sh` and `python3 scripts/check-upgrade-surface.py --repo .`.
+- Verified the full release surface, including install and upgrade smoke coverage, with `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Upgrade guide: `UPGRADING.md`
+- Upgrade helper: `skills/ralph-upgrade/SKILL.md`
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Project policy: `src/.ralph/policy/project-policy.md`
+- Upgrade preflight logic: `scripts/runtime_state_helpers.py`
+- Release asset: `ralph-harness-v0.12.5.tar.gz`
+
 ## v0.12.4 - 2026-04-02
 
 ### Summary

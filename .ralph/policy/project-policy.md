@@ -15,12 +15,13 @@
 - Harness doctrine: `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `.ralph/policy/runtime-overrides.md`
 - Control plane: repo files plus runtime-native adapter packs
 - Canonical shared control plane lives in the canonical checkout; spec worktrees get a generated `.ralph/shared/` overlay for shared reads and canonical report writes
-- Repo-local skills: `.agents/skills/*`
+- Ralph-managed runtime skill directories under `.agents/skills/` are scaffold-owned and refreshed on upgrade.
+- Project-owned helper skills may live under `.agents/skills/` only when they use a non-managed directory name.
 - External custom tool server: not required for v1
 - Shared-state coordination uses a single-writer lease in `.ralph/state/orchestrator-lease.json`.
 - Cross-runtime worker coordination uses `.ralph/state/worker-claims.json`.
 - Cross-thread scheduler requests use durable intent intake in `.ralph/state/orchestrator-intents.jsonl`.
-- Project-specific runtime additions belong in `.ralph/policy/runtime-overrides.md`, not as direct edits to `.ralph/runtime-contract.md`.
+- Project-specific control-plane additions belong in `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or project-owned non-managed skill directories, not as direct edits to `.ralph/runtime-contract.md` or Ralph-managed skill directories.
 
 ## Queue Policy
 
@@ -123,6 +124,7 @@
 - Child roles must not spawn nested workers beyond the runtime's Ralph-managed delegation policy.
 - The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - `review_failed`, `verification_failed`, and `release_failed` must route back through orchestrator-managed remediation unless the report names an explicit human-gated blocker.
+- Do not patch Ralph-managed runtime skill directories to express project-specific control-plane behavior; move those changes into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a project-owned non-managed skill directory instead.
 - Workers must not update shared workflow state, queue state, lease state, state Markdown, or orchestrator event logs directly.
 - Runtime sessions may update `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own worker claim.
 - Workers execute from their assigned spec worktree and may write spec-local artifacts there, but canonical control-plane updates remain orchestrator-mediated after the worker releases its claim and exits.
