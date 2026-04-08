@@ -3,6 +3,15 @@
   "repo_kind": null,
   "runtime_kind": null,
   "base_branch": null,
+  "canonical_control_plane": {
+    "mode": null,
+    "checkout_path": null,
+    "base_branch": null
+  },
+  "control_plane_versioning": {
+    "mode": null,
+    "gitignore_patterns": []
+  },
   "orchestrator_stop_hook": {
     "enabled": true,
     "mode": "conservative",

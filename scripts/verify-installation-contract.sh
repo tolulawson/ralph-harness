@@ -75,6 +75,9 @@ for required in \
   'canonical shared control plane' \
   'worker-claims' \
   'base_branch' \
+  'canonical_control_plane' \
+  'control_plane_versioning' \
+  "question/input tool" \
   'validation_bootstrap_commands' \
   'orchestrator_stop_hook' \
   'worktree_bootstrap_commands' \
@@ -82,6 +85,14 @@ for required in \
   'bootstrap_copy_exclude_globs'
 do
   grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing multi-runtime requirement: $required"
+done
+
+for required in \
+  'question/input tool' \
+  'canonical_control_plane.mode' \
+  'control_plane_versioning.mode'
+do
+  grep -Fq -- "$required" "$INSTALL_SKILL" || fail "ralph-install skill missing interactive setup requirement: $required"
 done
 
 grep -Fq -- 'last_report_path' "$SRC_AGENTS" \

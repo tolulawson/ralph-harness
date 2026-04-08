@@ -211,13 +211,17 @@ def create_fixture(name: str) -> Path:
     return target
 
 
-def run_check(repo: Path) -> subprocess.CompletedProcess[str]:
+def run_check_at_path(repo_path: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(ROOT / "scripts/check-installed-runtime-state.py"), "--repo", str(repo)],
+        [sys.executable, str(ROOT / "scripts/check-installed-runtime-state.py"), "--repo", str(repo_path)],
         cwd=ROOT,
         capture_output=True,
         text=True,
     )
+
+
+def run_check(repo: Path) -> subprocess.CompletedProcess[str]:
+    return run_check_at_path(repo)
 
 
 def assert_contains(text: str, needle: str) -> None:
@@ -340,6 +344,88 @@ def test_runtime_contract_baseline_drift_requires_upgrade() -> None:
     assert_contains(result.stdout, ".ralph/runtime-contract.md differs from its recorded canonical baseline")
 
 
+def test_custom_canonical_worktree_repo_arg_is_respected() -> None:
+    repo = create_fixture("custom-canonical-worktree")
+    project_facts_path = repo / ".ralph/context/project-facts.json"
+    project_facts = json.loads(project_facts_path.read_text())
+    project_facts["base_branch"] = "staging"
+    project_facts_path.write_text(json.dumps(project_facts, indent=2) + "\n")
+    run(["git", "add", ".ralph/context/project-facts.json"], repo)
+    run(["git", "commit", "-q", "-m", "test: set staging as canonical base branch"], repo)
+
+    staging_checkout = repo.parent / f"{repo.name}-staging"
+    run(["git", "worktree", "add", "-q", "-b", "staging", str(staging_checkout), "HEAD"], repo)
+
+    result = run_check_at_path(staging_checkout)
+    if result.returncode != 0:
+        raise AssertionError(result.stdout + result.stderr)
+    assert_contains(result.stdout, "check-installed-runtime-state: ok")
+
+
+def test_configured_custom_canonical_checkout_path_is_honored() -> None:
+    repo = create_fixture("configured-canonical-path")
+    staging_checkout = repo.parent / f"{repo.name}-staging"
+    run(["git", "worktree", "add", "-q", "-b", "staging", str(staging_checkout), "HEAD"], repo)
+
+    main_facts_path = repo / ".ralph/context/project-facts.json"
+    main_facts = json.loads(main_facts_path.read_text())
+    main_facts["base_branch"] = "staging"
+    main_facts["canonical_control_plane"] = {
+        "mode": "custom",
+        "checkout_path": str(staging_checkout),
+        "base_branch": "staging",
+    }
+    main_facts_path.write_text(json.dumps(main_facts, indent=2) + "\n")
+
+    staging_facts_path = staging_checkout / ".ralph/context/project-facts.json"
+    staging_facts = json.loads(staging_facts_path.read_text())
+    staging_facts["base_branch"] = "staging"
+    staging_facts["canonical_control_plane"] = {
+        "mode": "current_checkout",
+        "checkout_path": None,
+        "base_branch": "staging",
+    }
+    staging_facts_path.write_text(json.dumps(staging_facts, indent=2) + "\n")
+
+    result = run_check(repo)
+    if result.returncode != 0:
+        raise AssertionError(result.stdout + result.stderr)
+    assert_contains(result.stdout, "check-installed-runtime-state: ok")
+
+
+def test_spec_worktree_repo_arg_resolves_to_canonical_root() -> None:
+    repo = create_fixture("worktree-repo-arg")
+    spec = make_spec(
+        spec_id="001",
+        slug="worktree-repo-arg",
+        title="Worktree Repo Arg",
+        status="ready",
+        admission_status="admitted",
+        slot_status="admitted",
+        active_task_id="001-T001",
+        task_status="ready",
+        assigned_role="bootstrap",
+    )
+    write_task_artifacts(
+        repo,
+        spec,
+        tasks_body="# Tasks\n\n## Phase 1\n\n- [ ] 001-T001 Prepare worktree\n",
+        write_task_state=True,
+    )
+    write_runtime(repo, [spec], current_phase="implementation", task_status="ready")
+
+    initial = run_check(repo)
+    if initial.returncode != 0:
+        raise AssertionError(initial.stdout + initial.stderr)
+
+    spec_worktree = repo / ".ralph/worktrees/001-worktree-repo-arg"
+    result = run_check_at_path(spec_worktree)
+    if result.returncode != 0:
+        raise AssertionError(result.stdout + result.stderr)
+    assert_not_contains(result.stdout, "canonical control-plane checkout must stay on base branch")
+    assert_contains(result.stdout, "check-installed-runtime-state: ok")
+
+
 def main() -> int:
     tests = [
         test_planned_spec_routes_to_task_gen,
@@ -347,6 +433,9 @@ def main() -> int:
         test_missing_admitted_worktree_self_heals,
         test_stale_projections_self_heal,
         test_runtime_contract_baseline_drift_requires_upgrade,
+        test_custom_canonical_worktree_repo_arg_is_respected,
+        test_configured_custom_canonical_checkout_path_is_honored,
+        test_spec_worktree_repo_arg_resolves_to_canonical_root,
     ]
     for test in tests:
         test()

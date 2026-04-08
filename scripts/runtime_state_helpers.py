@@ -142,6 +142,8 @@ DEFAULT_BOOTSTRAP_COPY_EXCLUDE_GLOBS = [
     ".cache",
     ".cache/**",
 ]
+CANONICAL_CONTROL_PLANE_MODES = {None, "current_checkout", "custom"}
+CONTROL_PLANE_VERSIONING_MODES = {None, "track", "gitignore", "custom"}
 CANONICAL_SHARED_CONTROL_PLANE_PATHS = (
     ".ralph/constitution.md",
     ".ralph/runtime-contract.md",
@@ -486,6 +488,15 @@ def default_project_facts() -> dict[str, Any]:
         "repo_kind": None,
         "runtime_kind": None,
         "base_branch": None,
+        "canonical_control_plane": {
+            "mode": None,
+            "checkout_path": None,
+            "base_branch": None,
+        },
+        "control_plane_versioning": {
+            "mode": None,
+            "gitignore_patterns": [],
+        },
         "orchestrator_stop_hook": dict(DEFAULT_ORCHESTRATOR_STOP_HOOK),
         "worktree_bootstrap_commands": [],
         "bootstrap_env_files": [],
@@ -502,6 +513,31 @@ def default_project_facts() -> dict[str, Any]:
 def normalize_project_facts(project_facts: dict[str, Any]) -> dict[str, Any]:
     normalized = default_project_facts()
     normalized.update(project_facts)
+    canonical_control_plane = normalized.get("canonical_control_plane")
+    if not isinstance(canonical_control_plane, dict):
+        canonical_control_plane = {}
+    canonical_mode = canonical_control_plane.get("mode")
+    normalized["canonical_control_plane"] = {
+        "mode": canonical_mode if isinstance(canonical_mode, str) and canonical_mode else None,
+        "checkout_path": (
+            canonical_control_plane.get("checkout_path")
+            if isinstance(canonical_control_plane.get("checkout_path"), str) and canonical_control_plane.get("checkout_path")
+            else None
+        ),
+        "base_branch": (
+            canonical_control_plane.get("base_branch")
+            if isinstance(canonical_control_plane.get("base_branch"), str) and canonical_control_plane.get("base_branch")
+            else None
+        ),
+    }
+    control_plane_versioning = normalized.get("control_plane_versioning")
+    if not isinstance(control_plane_versioning, dict):
+        control_plane_versioning = {}
+    versioning_mode = control_plane_versioning.get("mode")
+    normalized["control_plane_versioning"] = {
+        "mode": versioning_mode if isinstance(versioning_mode, str) and versioning_mode else None,
+        "gitignore_patterns": list(control_plane_versioning.get("gitignore_patterns") or []),
+    }
     stop_hook = normalized.get("orchestrator_stop_hook")
     merged_stop_hook = dict(DEFAULT_ORCHESTRATOR_STOP_HOOK)
     if isinstance(stop_hook, dict):
@@ -862,8 +898,64 @@ def run_git(repo_root: Path, *args: str) -> str:
     return completed.stdout.strip()
 
 
+def path_is_within_spec_worktree(path: Path) -> bool:
+    parts = path.resolve().parts
+    for index, part in enumerate(parts[:-1]):
+        if part == ".ralph" and parts[index + 1] == "worktrees":
+            return True
+    return False
+
+
+def is_runtime_root(path: Path) -> bool:
+    marker_paths = (
+        ".ralph/state/workflow-state.json",
+        ".ralph/state/spec-queue.json",
+        ".ralph/context/project-facts.json",
+        ".ralph/harness-version.json",
+    )
+    return (path / ".ralph").exists() and any((path / relative).exists() for relative in marker_paths)
+
+
+def nearest_runtime_root(path: Path) -> Path | None:
+    for candidate in (path.resolve(), *path.resolve().parents):
+        if path_is_within_spec_worktree(candidate):
+            continue
+        if is_runtime_root(candidate):
+            return candidate
+    return None
+
+
+def configured_canonical_checkout_root(runtime_root: Path) -> Path | None:
+    project_facts_path = runtime_root / ".ralph/context/project-facts.json"
+    if not project_facts_path.exists():
+        return None
+    try:
+        project_facts = normalize_project_facts(load_json(project_facts_path))
+    except (json.JSONDecodeError, RuntimeError):
+        return None
+    config = project_facts.get("canonical_control_plane")
+    if not isinstance(config, dict):
+        return None
+    mode = config.get("mode")
+    if mode == "current_checkout":
+        return runtime_root
+    if mode != "custom":
+        return None
+    checkout_path = config.get("checkout_path")
+    if not isinstance(checkout_path, str) or not checkout_path:
+        return None
+    configured_root = Path(checkout_path)
+    if not configured_root.is_absolute():
+        configured_root = (runtime_root / configured_root).resolve()
+    return configured_root.resolve()
+
+
 def resolve_canonical_checkout_root(repo_root: Path) -> Path:
     candidate = repo_root.resolve()
+    runtime_root = nearest_runtime_root(candidate)
+    if runtime_root is not None:
+        configured_root = configured_canonical_checkout_root(runtime_root)
+        return configured_root if configured_root is not None else runtime_root
     if not is_git_worktree(candidate):
         return candidate
     try:
@@ -1033,12 +1125,19 @@ def ensure_project_facts_file(repo_root: Path, queue: dict[str, Any], workflow: 
     else:
         project_facts = default_project_facts()
 
-    if project_facts.get("base_branch") is None and is_git_worktree(repo_root):
-        branch, source = discover_canonical_base_branch(repo_root, queue, workflow)
-        if branch:
-            project_facts["base_branch"] = branch
-            if source and source not in project_facts["fact_sources"]:
-                project_facts["fact_sources"].append(source)
+    if project_facts.get("base_branch") is None:
+        configured = project_facts.get("canonical_control_plane")
+        configured_branch = configured.get("base_branch") if isinstance(configured, dict) else None
+        if isinstance(configured_branch, str) and configured_branch:
+            project_facts["base_branch"] = configured_branch
+            if "project-facts:canonical_control_plane.base_branch" not in project_facts["fact_sources"]:
+                project_facts["fact_sources"].append("project-facts:canonical_control_plane.base_branch")
+        elif is_git_worktree(repo_root):
+            branch, source = discover_canonical_base_branch(repo_root, queue, workflow)
+            if branch:
+                project_facts["base_branch"] = branch
+                if source and source not in project_facts["fact_sources"]:
+                    project_facts["fact_sources"].append(source)
 
     write_json(path, project_facts)
     return path, project_facts
@@ -2561,7 +2660,42 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         issues.append(".ralph/context/project-facts.json validation_bootstrap_commands must be a list")
     if not isinstance(project_facts.get("verification_commands"), list):
         issues.append(".ralph/context/project-facts.json verification_commands must be a list")
+    canonical_control_plane = project_facts.get("canonical_control_plane")
+    if not isinstance(canonical_control_plane, dict):
+        issues.append(".ralph/context/project-facts.json canonical_control_plane must be an object")
+        canonical_control_plane = {}
+    canonical_mode = canonical_control_plane.get("mode")
+    if canonical_mode not in CANONICAL_CONTROL_PLANE_MODES:
+        issues.append(
+            ".ralph/context/project-facts.json canonical_control_plane.mode must be one of: current_checkout, custom, or null"
+        )
+    if canonical_mode == "custom":
+        if not isinstance(canonical_control_plane.get("checkout_path"), str) or not canonical_control_plane.get("checkout_path"):
+            issues.append(
+                ".ralph/context/project-facts.json canonical_control_plane.checkout_path must be a non-empty string when mode is custom"
+            )
+    if canonical_control_plane.get("base_branch") is not None and (
+        not isinstance(canonical_control_plane.get("base_branch"), str) or not canonical_control_plane.get("base_branch")
+    ):
+        issues.append(
+            ".ralph/context/project-facts.json canonical_control_plane.base_branch must be a non-empty string or null"
+        )
+    control_plane_versioning = project_facts.get("control_plane_versioning")
+    if not isinstance(control_plane_versioning, dict):
+        issues.append(".ralph/context/project-facts.json control_plane_versioning must be an object")
+        control_plane_versioning = {}
+    versioning_mode = control_plane_versioning.get("mode")
+    if versioning_mode not in CONTROL_PLANE_VERSIONING_MODES:
+        issues.append(
+            ".ralph/context/project-facts.json control_plane_versioning.mode must be one of: track, gitignore, custom, or null"
+        )
+    if not isinstance(control_plane_versioning.get("gitignore_patterns"), list):
+        issues.append(".ralph/context/project-facts.json control_plane_versioning.gitignore_patterns must be a list")
+    elif not all(isinstance(pattern, str) and pattern for pattern in control_plane_versioning.get("gitignore_patterns")):
+        issues.append(".ralph/context/project-facts.json control_plane_versioning.gitignore_patterns must contain non-empty strings")
     resolved_base_branch = project_facts.get("base_branch")
+    if resolved_base_branch is None and isinstance(canonical_control_plane.get("base_branch"), str):
+        resolved_base_branch = canonical_control_plane.get("base_branch")
     if resolved_base_branch is None:
         for spec in queue.get("specs", []):
             if isinstance(spec.get("base_branch"), str) and spec.get("base_branch"):

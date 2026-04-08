@@ -58,6 +58,10 @@ grep -Fq -- '.ralph/state/worker-claims.json' "$UPGRADING_MD" \
 
 grep -Fq -- 'base_branch' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document canonical base-branch preservation"
+grep -Fq -- 'canonical_control_plane' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document canonical control-plane preservation"
+grep -Fq -- 'control_plane_versioning' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document control-plane versioning preservation"
 
 grep -Fq -- '.claude/agents/' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the Claude adapter pack"

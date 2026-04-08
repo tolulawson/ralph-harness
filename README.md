@@ -42,6 +42,7 @@ In short, manual install means:
 2. Generate the runtime-owned files listed in `src/generated-runtime-manifest.txt`.
 3. Preserve your project files and let the target repository own its runtime state after install.
 4. Use `skills/`, `AGENTS.md`, and `CLAUDE.md` as the public entry surface once setup is complete.
+5. During install, ask whether the current checkout is the canonical control plane (or a custom path/branch should be used) and whether control-plane artifacts should be tracked or gitignored.
 
 ## Skills Section
 
@@ -100,7 +101,7 @@ The short version:
 - use the latest stable tag unless you intentionally want to pin an older release
 - copy only manifest-listed scaffold paths from `src/`
 - let the target repo generate and own its runtime records
-- keep the canonical shared control plane in the main checkout and use generated `.ralph/shared/` overlays inside admitted spec worktrees
+- keep the canonical shared control plane in the selected canonical checkout (current checkout by default) and use generated `.ralph/shared/` overlays inside admitted spec worktrees
 - during upgrade, merge `.codex/config.toml` plus repo-local hook configs instead of overwriting user-owned settings like `sandbox_mode`
 - preserve unknown runtime skills under `.agents/skills/` while Ralph refreshes only its managed runtime skill set
 - keep project-specific control-plane tweaks out of Ralph-managed `.agents/skills/` directories; use `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed local skill directory instead

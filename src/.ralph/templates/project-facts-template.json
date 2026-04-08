@@ -1,8 +1,42 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "repo_kind": null,
   "runtime_kind": null,
   "base_branch": null,
+  "canonical_control_plane": {
+    "mode": null,
+    "checkout_path": null,
+    "base_branch": null
+  },
+  "control_plane_versioning": {
+    "mode": null,
+    "gitignore_patterns": []
+  },
+  "orchestrator_stop_hook": {
+    "enabled": true,
+    "mode": "conservative",
+    "max_auto_continue_count": 1
+  },
+  "worktree_bootstrap_commands": [],
+  "bootstrap_env_files": [],
+  "bootstrap_copy_exclude_globs": [
+    "node_modules",
+    "node_modules/**",
+    ".venv",
+    ".venv/**",
+    "venv",
+    "venv/**",
+    ".next",
+    ".next/**",
+    "dist",
+    "dist/**",
+    "build",
+    "build/**",
+    ".turbo",
+    ".turbo/**",
+    ".cache",
+    ".cache/**"
+  ],
   "validation_bootstrap_commands": [],
   "verification_commands": [],
   "deployment_model": null,

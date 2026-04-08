@@ -1,6 +1,6 @@
 {
-  "version": "0.12.6",
-  "tag": "v0.12.6",
+  "version": "0.12.7",
+  "tag": "v0.12.7",
   "source_repo": "https://github.com/tolulawson/ralph-harness",
   "resolved_commit": null,
   "upgrade_contract_version": 11,

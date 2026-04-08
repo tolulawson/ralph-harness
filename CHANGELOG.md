@@ -4,6 +4,48 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.7 - 2026-04-08
+
+### Summary
+
+This release makes canonical control-plane setup explicit and user-driven during install, while fixing upgrade/runtime validation so custom canonical worktree checkouts are honored instead of being collapsed back to the git common checkout.
+
+### Highlights
+
+- Added canonical control-plane metadata to project facts (`canonical_control_plane` and `control_plane_versioning`) and validation rules for these fields.
+- Updated canonical checkout resolution so runtime tooling prefers the active Ralph runtime root and honors explicit custom canonical checkout paths.
+- Added regression coverage for custom canonical worktree invocation, explicit configured canonical checkout paths, and spec-worktree-to-canonical resolution behavior.
+- Updated install guidance and `ralph-install` workflow to require using the runtime question/input tool for:
+  - canonical control-plane selection (current checkout vs custom path or branch)
+  - control-plane artifact versioning policy (track vs gitignore vs custom)
+- Updated install and upgrade contract verifiers so these interactive setup requirements remain enforced across future releases.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.7` as the default public install or upgrade reference.
+- Fresh installs now explicitly capture canonical control-plane and control-plane artifact versioning policy at setup time.
+- Existing installs can upgrade normally to pick up canonical-root resolution fixes and stronger install contract enforcement; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified runtime preflight regressions with `python3 scripts/test-runtime-preflight-repairs.py`.
+- Verified release contract surfaces with:
+  - `bash scripts/verify-installation-contract.sh`
+  - `bash scripts/verify-upgrade-contract.sh`
+  - `bash scripts/verify-canonical-control-plane-contract.sh`
+- Verified full release surface with `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime helpers: `scripts/runtime_state_helpers.py`
+- Runtime preflight regressions: `scripts/test-runtime-preflight-repairs.py`
+- Install contract checks: `scripts/verify-installation-contract.sh`
+- Upgrade contract checks: `scripts/verify-upgrade-contract.sh`
+- Install guide: `INSTALLATION.md`
+- Upgrade guide: `UPGRADING.md`
+- Install helper: `skills/ralph-install/SKILL.md`
+- Release asset: `ralph-harness-v0.12.7.tar.gz`
+
 ## v0.12.6 - 2026-04-08
 
 ### Summary
