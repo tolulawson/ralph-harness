@@ -8,28 +8,28 @@ This guide explains how an LLM or human operator should install the Ralph multi-
 
 The installable scaffold source is:
 
-- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.12.5`
+- `src/` in [tolulawson/ralph-harness](https://github.com/tolulawson/ralph-harness) at tag `v0.12.6`
 
 The canonical copy contract is:
 
-- [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/install-manifest.txt)
+- [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/src/install-manifest.txt)
 
 The canonical generated-runtime contract is:
 
-- [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/generated-runtime-manifest.txt)
+- [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/src/generated-runtime-manifest.txt)
 
 The current harness version source is:
 
-- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/VERSION)
+- [`VERSION`](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/VERSION)
 
 The install authority order is:
 
-1. [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/INSTALLATION.md)
-2. [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/install-manifest.txt)
-3. [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/generated-runtime-manifest.txt)
-4. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/VERSION)
+1. [INSTALLATION.md](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/INSTALLATION.md)
+2. [src/install-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/src/install-manifest.txt)
+3. [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/src/generated-runtime-manifest.txt)
+4. [VERSION](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/VERSION)
 
-Do not install from the repository root. The root contains this repository’s live dogfood runtime history.
+Do not install from the repository root. The root contains source-repo docs, public source-entry skills, validation scripts, and release tooling that are not part of the installable scaffold.
 
 ## Goal
 
@@ -70,14 +70,14 @@ From inside the target repository, ask your coding agent to use `src/` as the so
 
 ```text
 Use https://github.com/tolulawson/ralph-harness as the scaffold source repository.
-Use tag v0.12.5 from that repository unless the user explicitly requests another release.
+Use tag v0.12.6 from that repository unless the user explicitly requests another release.
 Use the scaffold under src/ in that repository.
 Install the Ralph multi-agent runtime into this repository using src/install-manifest.txt as the copy contract.
 Preserve the existing AGENTS.md and CLAUDE.md if they already exist and replace only the managed Ralph blocks between <!-- RALPH-HARNESS:START --> and <!-- RALPH-HARNESS:END -->.
 The managed Ralph blocks must tell the active coding agent to read .ralph/constitution.md, .ralph/runtime-contract.md, .ralph/policy/runtime-overrides.md, .ralph/policy/project-policy.md, .ralph/context/project-truths.md, .ralph/context/project-facts.json, .ralph/context/learning-summary.md, .ralph/state/workflow-state.json, .ralph/state/spec-queue.json, .ralph/state/orchestrator-lease.json, .ralph/state/worker-claims.json, only a recent tail of .ralph/state/orchestrator-intents.jsonl, the latest report, and only a recent tail of .ralph/context/learning-log.jsonl when diagnosing or promoting learnings.
 Copy only the manifest-listed runtime adapter files, repo-local role skills, neutral seed state files, and templates.
 Then create the generated runtime files listed in src/generated-runtime-manifest.txt.
-Do not copy the source repo's dogfood runtime logs, reports, PRD, or numbered spec history.
+Do not copy repo-root source-repo docs, scripts, public source-entry skills, or other files outside `src/`.
 Adapt the constitution, project policy, runtime overrides, and copied knowledge files for this repo, preserve existing code, keep the base `.ralph/runtime-contract.md` scaffold-owned, discover and persist the canonical base branch in `.ralph/context/project-facts.json`, seed any `validation_bootstrap_commands` that are already known, create the project PRD, decompose it into epochs and numbered specs, seed the initial explicit-first ready-set queue plus `depends_on_spec_ids`, keep any planning-time parallelism limited to same-batch research only, seed the lease, worker-claims, and durable intents files, create the `.ralph/worktrees/` directory, reserve the canonical shared control plane for the main checkout only, generate `.ralph/shared/` overlays when admitted spec worktrees are created or refreshed, and update .ralph/harness-version.json with the selected tag, the resolved commit, the scaffold runtime-contract baseline hash, the installed adapter packs, and the default branch prefix.
 Seed `.ralph/context/project-facts.json` with the conservative stop-hook policy plus bootstrap hydration fields: `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs`.
 Install repo-local `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and `.ralph/hooks/stop-boundary.py`.
@@ -90,7 +90,7 @@ From the parent directory of the target repository:
 
 ```bash
 SOURCE_REPO_URL=https://github.com/tolulawson/ralph-harness
-SOURCE_REF=v0.12.5
+SOURCE_REF=v0.12.6
 TARGET_REPO=/path/to/target-repo
 WORK_DIR="$(mktemp -d)"
 
@@ -106,7 +106,7 @@ done < "$SOURCE_REPO/src/install-manifest.txt"
 rm -rf "$WORK_DIR"
 ```
 
-Then create the runtime files listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/generated-runtime-manifest.txt), refresh the managed Ralph block in `AGENTS.md`, update `.ralph/harness-version.json`, discover and persist the canonical base branch in `.ralph/context/project-facts.json`, and adapt the target repository before first use.
+Then create the runtime files listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/src/generated-runtime-manifest.txt), refresh the managed Ralph block in `AGENTS.md`, update `.ralph/harness-version.json`, discover and persist the canonical base branch in `.ralph/context/project-facts.json`, and adapt the target repository before first use.
 
 ## Optional Skill-Driven Entry
 
@@ -158,7 +158,7 @@ Copy only the manifest-listed scaffold paths from `src/`:
 
 ## What Gets Generated After Copy
 
-After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.5/src/generated-runtime-manifest.txt):
+After copying the scaffold, create the runtime records listed in [src/generated-runtime-manifest.txt](https://github.com/tolulawson/ralph-harness/blob/v0.12.6/src/generated-runtime-manifest.txt):
 
 - `tasks/todo.md`
 - `tasks/lessons.md`
@@ -171,17 +171,19 @@ When Ralph later creates or refreshes an admitted spec worktree, it must also ge
 
 ## What Must Not Be Copied
 
-Do not copy these root dogfood runtime paths into target repos:
+Do not copy repo-root source-repo files into target repos. Installation should copy only the manifest-listed scaffold under `src/`.
 
-- `/.ralph/logs/events.jsonl`
-- `/.ralph/reports/bootstrap-20260305/`
-- `/.ralph/state/workflow-state.json`
-- `/.ralph/state/spec-queue.json`
-- `/.ralph/state/workflow-state.md`
-- `/tasks/prd-ralph-harness.md`
-- `/specs/001-self-bootstrap-harness/`
+In particular, do not copy:
 
-Those belong only to this repository’s own live runtime.
+- `/README.md`
+- `/INSTALLATION.md`
+- `/UPGRADING.md`
+- `/CHANGELOG.md`
+- `/VERSION`
+- `/LICENSE`
+- `/scripts/`
+- `/skills/`
+- any other repo-root path that is not listed in `src/install-manifest.txt`
 
 ## Existing Loader Handling
 
@@ -270,7 +272,7 @@ When an LLM installs this harness into a new or existing project, it should:
 4. preserve the target repo’s existing product code
 5. adapt `.ralph/constitution.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, and the copied `.ralph/context/` files for the target project
 6. rewrite the workflow state and spec queue files for the target project
-7. update `.ralph/harness-version.json` with tag `v0.12.5`, the resolved source commit, and the scaffold runtime-contract baseline hash
+7. update `.ralph/harness-version.json` with tag `v0.12.6`, the resolved source commit, and the scaffold runtime-contract baseline hash
 8. seed explicit truths in `.ralph/context/project-truths.md`
 9. seed any known structured facts in `.ralph/context/project-facts.json`, including the canonical `base_branch`, and leave unknown or irrelevant facts absent or null
 10. install the repo-local hook surfaces and the shared `.ralph/hooks/stop-boundary.py` handler so supported agents can auto-continue only at safe stop boundaries
@@ -289,12 +291,12 @@ An install is correct only if it does all of the following:
 3. preserves existing `AGENTS.md` and `CLAUDE.md` files and replaces only the managed Ralph blocks from this guide instead of replacing whole files
 4. adapts `.ralph/constitution.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, and copied `.ralph/context/` files for the target project
 5. rewrites scaffold seed state into target-project state
-6. records tag `v0.12.5` plus the resolved source commit in `.ralph/harness-version.json`
+6. records tag `v0.12.6` plus the resolved source commit in `.ralph/harness-version.json`
 7. persists the canonical `base_branch` in `.ralph/context/project-facts.json`
 8. seeds the conservative `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs` facts in `.ralph/context/project-facts.json`
 9. installs repo-local `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and `.ralph/hooks/stop-boundary.py`
 10. creates the first real project PRD, epoch map, spec queue, and first numbered spec artifacts
-11. avoids copying this repository's root dogfood runtime files into the target repo
+11. avoids copying this repository's repo-root source files into the target repo
 
 ## Verification After Installation
 
@@ -318,6 +320,7 @@ At the end of setup, verify:
 - `.ralph/policy/runtime-overrides.md` exists and is the project-owned extension surface for runtime-specific additions
 - `.ralph/state/worker-claims.json` exists and parses
 - `.ralph/runtime-contract.md` includes the lease-plus-claims execution model and the multi-runtime adapter-pack contract
+- `.ralph/runtime-contract.md` forbids keeping PRD or planning coordination on the main thread and makes the orchestrator the only queue-wide control-plane coordinator after launcher handoff
 - `.ralph/runtime-contract.md` makes `bootstrap` a required step before implementation begins in a claimed session
 - `.ralph/runtime-contract.md` requires spec execution to happen from assigned spec worktrees rather than the canonical checkout
 - `.ralph/harness-version.json` exists, parses, and records the selected tag, the resolved source commit, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed adapter packs, and the default branch prefix
@@ -334,7 +337,7 @@ At the end of setup, verify:
 - `specs/INDEX.md` matches the queue semantically
 - `specs/<spec-key>/research.md` exists for any spec whose queue entry marks research complete
 - `specs/<spec-key>/task-state.json` exists for seeded specs and matches `tasks.md` semantically
-- the target repo did not receive this source repo’s dogfood PRD, numbered spec history, reports, or event log
+- the target repo did not receive repo-root source-repo docs, validation scripts, or other non-`src/` files by mistake
 
 ## Final Result
 

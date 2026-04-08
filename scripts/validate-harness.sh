@@ -16,7 +16,6 @@ except ModuleNotFoundError:
 root = pathlib.Path(".")
 
 json_paths = [
-    *sorted((root / ".ralph").rglob("*.json")),
     *sorted((root / "src/.ralph").rglob("*.json")),
     root / "src/.codex/hooks.json",
     root / "src/.claude/settings.json",
@@ -24,7 +23,6 @@ json_paths = [
 ]
 
 jsonl_paths = [
-    *sorted((root / ".ralph").rglob("*.jsonl")),
     *sorted((root / "src/.ralph").rglob("*.jsonl")),
 ]
 
@@ -52,7 +50,21 @@ for legacy_dir in (root / "agents", root / "src/agents"):
     if legacy_dir.exists():
         raise SystemExit(f"legacy agent directory must not exist: {legacy_dir}")
 
-config_paths = [root / ".codex/config.toml", root / "src/.codex/config.toml"]
+for removed_runtime_path in (
+    root / ".agents",
+    root / ".claude",
+    root / ".codex",
+    root / ".cursor",
+    root / ".ralph",
+    root / "tasks",
+    root / "specs",
+):
+    if removed_runtime_path.exists():
+        raise SystemExit(
+            f"repo-root installed-runtime surface must not exist in the source repo anymore: {removed_runtime_path}"
+        )
+
+config_paths = [root / "src/.codex/config.toml"]
 toml_paths = []
 for config_path in config_paths:
     parse_toml(config_path)
@@ -98,7 +110,6 @@ scripts/verify-multi-spec-contract.sh
 scripts/verify-parallel-research-contract.sh
 scripts/verify-subagent-isolation-contract.sh
 scripts/verify-upgrade-contract.sh
-python3 scripts/check-upgrade-surface.py --repo .
 python3 scripts/test-runtime-preflight-repairs.py
 python3 scripts/test-control-plane-lifecycle.py
 

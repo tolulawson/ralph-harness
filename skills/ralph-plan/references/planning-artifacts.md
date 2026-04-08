@@ -19,5 +19,6 @@ Expectations:
 - `plan.md` records the intended implementation approach for that spec
 - `tasks.md` is dependency-ordered and execution-ready
 - `task-state.json` is the canonical machine-readable task registry for the generated tasks
-- public `ralph-plan` should coordinate `specify` -> same-batch `research` -> `plan` -> `task-gen` -> `plan-check` when the goal is a direct handoff to execution
+- public `ralph-plan` should first launch a dedicated planning coordinator subagent, then let that coordinator drive `specify` -> same-batch `research` -> `plan` -> `task-gen` -> `plan-check` when the goal is a direct handoff to execution
+- the invoking thread must stay launcher-only; planning must not continue inline on the main thread
 - planning should stop before code changes begin

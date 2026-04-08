@@ -15,7 +15,7 @@ fail() {
 
 for path in \
   AGENTS.md \
-  .ralph/constitution.md
+  CLAUDE.md
 do
   grep -Fq -- 'implementation changes in `src/`' "$path" \
     || grep -Fq -- 'must be changed in `src/`' "$path" \

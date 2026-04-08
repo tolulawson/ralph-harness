@@ -9,7 +9,7 @@ Create a new interrupt spec in the current repository for a failing out-of-scope
 
 Use this as the public manual entry point when a human identifies a bug that belongs to an earlier spec or no spec at all and wants it fixed before the queue continues.
 
-In this source repository, the root runtime artifacts are dogfood examples. Installed target repos should use their own copied scaffold from `src/` and generate their own runtime records after installation.
+In this source repository, the installable scaffold lives under `src/`. Installed target repos should use their own copied scaffold and generate their own runtime records after installation.
 
 ## Use When
 

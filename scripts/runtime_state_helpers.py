@@ -95,6 +95,7 @@ RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     "canonical shared control plane",
     "worktree-local tracked copies",
     "Child roles must not spawn nested workers",
+    "main thread must never continue as the PRD or planning coordinator",
     "Review, verification, and release failures are remediation signals, not stop conditions.",
     "Release reports must record one explicit outcome",
     "single-writer lease",
@@ -116,6 +117,7 @@ ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
     "durable intent",
     "worktree",
     "bootstrap",
+    "launcher thread is already done being a launcher",
 )
 DEFAULT_ORCHESTRATOR_STOP_HOOK = {
     "enabled": True,

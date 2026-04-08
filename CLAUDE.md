@@ -1,27 +1,24 @@
-# Ralph Harness Loader Source Repo
+# Ralph Harness Source Repo
 
 This repository is the source repository for the Ralph multi-agent runtime.
 
+The installable scaffold lives in `src/`. Repo root contains source-repo docs, validation scripts, release tooling, and public source-entry skills. It is not an installed Ralph runtime.
+
 Before doing substantial work, read these files in order:
 
-1. `.ralph/constitution.md`
-2. `.ralph/runtime-contract.md`
-3. `.ralph/policy/runtime-overrides.md`
-4. `.ralph/policy/project-policy.md`
-5. `.ralph/state/workflow-state.json`
-6. `.ralph/state/spec-queue.json`
-7. `.ralph/state/orchestrator-lease.json`
-8. a recent tail of `.ralph/state/orchestrator-intents.jsonl`
-9. the report at `last_report_path`
-10. active spec artifacts under `specs/<spec-id>-<slug>/`
-11. `specs/INDEX.md`
-12. `tasks/todo.md`
-13. a recent tail of `.ralph/logs/events.jsonl`
+1. `README.md`
+2. `INSTALLATION.md`
+3. `UPGRADING.md`
+4. `src/AGENTS.md`
+5. `src/CLAUDE.md`
+6. `src/.ralph/constitution.md`
+7. `src/.ralph/runtime-contract.md`
+8. `src/.ralph/policy/runtime-overrides.md`
+9. `src/.ralph/policy/project-policy.md`
+10. `src/install-manifest.txt`
+11. `src/generated-runtime-manifest.txt`
+12. `src/upgrade-manifest.txt`
 
-When the task is about improving the shipped harness scaffold, also read:
+The live shipped implementation belongs in `src/`. Keep public entry skills in `skills/` and supporting tooling in `scripts/` aligned with that shipped scaffold, and do not recreate a repo-root installed runtime unless the task explicitly asks for one.
 
-1. `src/install-manifest.txt`
-2. `src/generated-runtime-manifest.txt`
-3. `src/upgrade-manifest.txt`
-
-The live source-repo implementation still belongs in `src/`. Treat root `.ralph/`, root `.agents/skills/`, root `.codex/`, `tasks/`, and `specs/` as this repository's dogfood runtime unless a task explicitly targets dogfood repair.
+Make implementation changes in `src/`.

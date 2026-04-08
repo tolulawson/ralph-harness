@@ -1,111 +1,33 @@
-# Ralph Harness Loader Source Repo
+# Ralph Harness Source Repo
 
 This repository is the source repository for the Ralph multi-agent runtime.
 
-Its ground truth is fixed:
-
-- `src/` contains the generic scaffold that gets installed into other projects
-- repo root contains this repository's own dogfood runtime and development records
-- `skills/` at repo root is the public entry surface for installing or invoking the harness
-
-All paths below are relative to this repository root, which is the live dogfood runtime for this source repository.
+The installable scaffold lives in `src/`. Repo root contains source-repo docs, validation scripts, release tooling, and public source-entry skills. It is not an installed Ralph runtime.
 
 ## Read Order
 
 Before doing substantial work, read these files in order:
 
-1. `.ralph/constitution.md`
-2. `.ralph/runtime-contract.md`
-3. `.ralph/policy/runtime-overrides.md`
-4. `.ralph/policy/project-policy.md`
-5. `.ralph/state/workflow-state.json`
-6. `.ralph/state/spec-queue.json`
-7. `.ralph/state/orchestrator-lease.json`
-8. a recent tail of `.ralph/state/orchestrator-intents.jsonl`
-9. the report at `last_report_path`
-10. active spec artifacts under `specs/<spec-id>-<slug>/`
-11. `specs/INDEX.md`
-12. `tasks/todo.md`
-13. a recent tail of `.ralph/logs/events.jsonl`
-
-When the task is about improving the shipped harness scaffold, also read:
-
-11. `src/install-manifest.txt`
-12. `src/generated-runtime-manifest.txt`
-13. `src/upgrade-manifest.txt`
-
-## Purpose Of This File
-
-`AGENTS.md` is a loader surface. It is intentionally thin.
-
-- The durable harness doctrine lives in `.ralph/constitution.md`.
-- The generic dogfood runtime doctrine lives in `.ralph/runtime-contract.md`.
-- Project-specific runtime extensions live in `.ralph/policy/runtime-overrides.md`.
-- Project-specific workflow rules live in `.ralph/policy/project-policy.md`.
-- Runtime execution state lives in `.ralph/state/workflow-state.json`.
-- The canonical spec queue lives in `.ralph/state/spec-queue.json`.
+1. `README.md`
+2. `INSTALLATION.md`
+3. `UPGRADING.md`
+4. `src/AGENTS.md`
+5. `src/CLAUDE.md`
+6. `src/.ralph/constitution.md`
+7. `src/.ralph/runtime-contract.md`
+8. `src/.ralph/policy/runtime-overrides.md`
+9. `src/.ralph/policy/project-policy.md`
+10. `src/install-manifest.txt`
+11. `src/generated-runtime-manifest.txt`
+12. `src/upgrade-manifest.txt`
 
 ## Operating Rule
 
-Do not treat conversational memory as the source of truth when the harness files already contain the needed state or policy.
+Do not treat conversational memory as the source of truth when the repository files already contain the needed contract or install surface.
 
-- make all harness behavior, scaffold, contract, template, skill, config, and implementation changes in `src/`
-- treat root `.ralph/`, root `.agents/skills/`, root `.codex/agents/`, root `.codex/`, `tasks/`, and `specs/` as this repository's dogfood/reference runtime, not as the primary implementation surface
-- do not make direct implementation edits to the root dogfood runtime in normal harness work
-- only touch root dogfood files when the task explicitly says to repair, inspect, or regenerate dogfood records themselves
-
-The root `AGENTS.md` and root `.ralph/constitution.md` describe this source repository itself. The copies shipped from `src/` are generic installed-harness documents and may differ from the root source-repo documents.
-
-If this repository is installed into a project that already has its own loader files, keep those files and append or replace only the managed Ralph section that points the active coding agent to the files listed above.
-
-<!-- RALPH-HARNESS:START -->
-# Ralph Harness Loader
-
-This file is part of the generic Ralph harness scaffold that gets installed into a target repository.
-
-All paths below are relative to the target repository root, which becomes the live harness runtime after installation.
-
-## Read Order
-
-Before doing substantial work, read these files in order:
-
-1. `.ralph/constitution.md`
-2. `.ralph/runtime-contract.md`
-3. `.ralph/policy/runtime-overrides.md`
-4. `.ralph/policy/project-policy.md`
-5. `.ralph/context/project-truths.md`
-6. `.ralph/context/project-facts.json`
-7. `.ralph/context/learning-summary.md`
-8. `.ralph/state/workflow-state.json`
-9. `.ralph/state/spec-queue.json`
-10. `.ralph/state/orchestrator-lease.json`
-11. a recent tail of `.ralph/state/orchestrator-intents.jsonl`
-12. the report at `last_report_path`
-13. active spec artifacts under `specs/<spec-id>-<slug>/`
-14. `specs/INDEX.md`
-15. `tasks/todo.md`
-16. a recent tail of `.ralph/logs/events.jsonl`
-
-## Purpose Of This File
-
-`AGENTS.md` is a loader surface. It is intentionally thin.
-
-- The project-specific Ralph mission lives in `.ralph/constitution.md`.
-- The generic installed-runtime doctrine lives in `.ralph/runtime-contract.md`.
-- Project-specific runtime extensions live in `.ralph/policy/runtime-overrides.md`.
-- Project-specific workflow rules live in `.ralph/policy/project-policy.md`.
-- Project truths and promoted learnings live under `.ralph/context/`.
-- Runtime execution state lives in `.ralph/state/workflow-state.json`.
-- The canonical spec queue lives in `.ralph/state/spec-queue.json`.
-- Scheduler coordination lives in `.ralph/state/orchestrator-lease.json` and `.ralph/state/orchestrator-intents.jsonl`.
-
-## Operating Rule
-
-Do not treat conversational memory as the source of truth when the harness files already contain the needed state or policy.
-
-The repository root is the harness work area after installation.
-
-Treat `.ralph/policy/runtime-overrides.md`, `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, and `.ralph/context/learning-summary.md` as part of the default harness context. Read only a recent tail of `.ralph/context/learning-log.jsonl` when diagnosing issues or promoting candidate learnings.
-
-If this repository is installed into a project that already has its own `AGENTS.md`, keep that file and replace only the managed Ralph block between the markers shown here.
-<!-- RALPH-HARNESS:END -->
+- make shipped harness behavior, templates, adapter packs, and runtime skills changes in `src/`
+- make implementation changes in `src/`
+- keep public source-entry skills in `skills/` aligned with the shipped scaffold contract
+- keep install, upgrade, validation, and migration tooling in `scripts/` aligned with the shipped scaffold contract
+- update `README.md`, `INSTALLATION.md`, and `UPGRADING.md` when the shipped surface or workflow changes
+- do not recreate a repo-root installed-runtime control plane unless a task explicitly asks for an example or fixture

@@ -52,6 +52,7 @@ def render_loader_block(registry: dict) -> str:
             "Treat the repository root as the harness work area after installation. Keep agent-specific instructions thin and route all substantive behavior back to the shared Ralph runtime contract.",
             "Ralph supports only adapters that can delegate the full Ralph subagent topology for substantive work.",
             "When a public Ralph entrypoint is invoked, keep the entry thread thin and immediately launch the dedicated Ralph subagent for that entrypoint instead of doing the work inline.",
+            "Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to the orchestrator.",
             "",
             "If this repository already has its own loader file, preserve non-Ralph content and replace only the managed Ralph block between the markers shown here.",
             registry["loaders"]["managed_block_end"],
@@ -128,8 +129,10 @@ def render_claude_command(entrypoint: dict) -> str:
         lines.append("That orchestrator should fill the admitted-spec execution window with worker subagents up to the bounded thread budget, then reconcile completed worker output itself instead of spawning multiple orchestrators or tolerating inline worker execution.")
     elif entrypoint["id"] == "ralph-plan":
         lines.append("Keep the invoking thread thin: launch a dedicated Ralph planning coordinator subagent immediately, let that coordinator delegate `specify`, same-batch `research`, `plan`, `task-gen`, and `plan-check` as needed, then wait and relay its result instead of planning inline on the command thread.")
+        lines.append("Do not let the main thread become the planning coordinator. If that subagent cannot be launched natively, stop and report the adapter as unsupported instead of planning inline.")
     elif entrypoint["id"] == "ralph-prd":
         lines.append("Keep the invoking thread thin: launch a dedicated Ralph `prd` subagent immediately, then wait and relay its result instead of writing the PRD inline on the command thread.")
+        lines.append("Do not let the main thread become the PRD coordinator. If that subagent cannot be launched natively, stop and report the adapter as unsupported instead of writing the PRD inline.")
     lines.append("")
     return "\n".join(line for line in lines if line is not None)
 
@@ -169,6 +172,7 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
             "Treat `.ralph/` as the canonical runtime doctrine and state surface.",
             "Ralph supports only adapters that can delegate the full Ralph subagent topology for substantive work.",
             "Treat the invoking thread as a Ralph launcher only when a public `ralph-*` entrypoint is used. Keep that thread thin and move substantive Ralph work into the dedicated subagent for that entrypoint.",
+            "Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to the orchestrator.",
             "Use `.ralph/state/worker-claims.json` as the shared worker-claims registry for cross-runtime execution.",
             "Execute numbered spec work only from assigned spec worktrees, never from the canonical checkout.",
             "Use `.cursor/rules/` only as Cursor-native wrappers around the shared Ralph contract, not as a divergent workflow definition.",

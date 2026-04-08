@@ -15,7 +15,7 @@ This public entrypoint is a thin launcher. It should keep the invoking thread fo
 
 This skill does not install the harness. It assumes the current repository already contains the Ralph harness scaffold.
 
-In this source repository, the root `.ralph/`, `tasks/`, and `specs/` paths are dogfood runtime artifacts. The shipped scaffold under `src/` stays cleaner than the root runtime, and target runtime records are generated after installation or first run.
+In this source repository, the shipped scaffold lives under `src/`. Target runtime records are generated after installation or first run rather than copied from repo-root source materials.
 
 ## Use When
 

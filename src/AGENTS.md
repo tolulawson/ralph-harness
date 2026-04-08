@@ -45,6 +45,7 @@ Do not treat conversational memory as the source of truth when the Ralph runtime
 Treat the repository root as the harness work area after installation. Keep agent-specific instructions thin and route all substantive behavior back to the shared Ralph runtime contract.
 Ralph supports only adapters that can delegate the full Ralph subagent topology for substantive work.
 When a public Ralph entrypoint is invoked, keep the entry thread thin and immediately launch the dedicated Ralph subagent for that entrypoint instead of doing the work inline.
+Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to the orchestrator.
 
 If this repository already has its own loader file, preserve non-Ralph content and replace only the managed Ralph block between the markers shown here.
 <!-- RALPH-HARNESS:END -->

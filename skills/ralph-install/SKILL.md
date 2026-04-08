@@ -28,7 +28,7 @@ This is the main external entry point for adopting the harness in a target repos
 7. Install the canonical-control-plane model so shared state stays in the canonical checkout and admitted spec worktrees later receive generated `.ralph/shared/` overlays for shared reads and canonical report writes.
 8. Install the repo-local hook surfaces for Codex, Claude Code, and Cursor plus the shared `.ralph/hooks/stop-boundary.py` file.
 9. Use the canonical `AGENTS.md` and `CLAUDE.md` loader guidance plus the install checklist from `INSTALLATION.md` rather than inventing or rephrasing the install flow.
-10. Complete the installation without copying any root dogfood runtime history from the source repository.
+10. Complete the installation without copying any repo-root source files outside `src/` from the source repository.
 
 ## Outputs
 

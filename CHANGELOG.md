@@ -4,6 +4,40 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.6 - 2026-04-08
+
+### Summary
+
+This release removes the source repository's repo-root Ralph dogfood runtime and makes the repository operate as a source-only workspace.
+
+It keeps `src/` as the shipped scaffold, keeps `skills/` as the public source-entry surface, and eliminates the confusing split where the same repository was both the product source and a live installed runtime.
+
+### Highlights
+
+- Removed the repo-root installed-runtime surfaces, including the dogfood adapter packs, role-skill packs, runtime control plane, reports, logs, worktrees, and example planning history.
+- Replaced the root `AGENTS.md` and `CLAUDE.md` with source-repo contributor loaders that point work at `src/`, install/upgrade docs, and the shipped scaffold doctrine.
+- Updated the README, installation guide, and public `ralph-*` source skills so they describe the source repo as a packaging and validation workspace rather than a live Ralph-managed project.
+- Retargeted release validation so the source repo is checked through `src/` plus fixture installs instead of expecting a repo-root installed runtime to exist.
+- Repaired the install/upgrade smoke coverage so legacy fixture seeding pulls adapter configs from `src/.codex/agents/`.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.6` as the default public install or upgrade reference.
+- Fresh installs and upgrades keep the same shipped runtime scaffold model under `src/`; the main change is that the source repository itself no longer carries repo-root runtime history.
+- Existing installed target repositories are still upgraded through the normal manifest and migration flow; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified the full release surface, including contract checks and fixture install/upgrade smoke coverage, with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Source-repo loaders: `AGENTS.md`, `CLAUDE.md`
+- Source-repo guides: `README.md`, `INSTALLATION.md`
+- Public source skills: `skills/ralph-execute/SKILL.md`, `skills/ralph-interrupt/SKILL.md`, `skills/ralph-plan/SKILL.md`, `skills/ralph-prd/SKILL.md`
+- Validation tooling: `scripts/validate-harness.sh`, `scripts/smoke-test-install-upgrade.sh`
+- Release asset: `ralph-harness-v0.12.6.tar.gz`
+
 ## v0.12.5 - 2026-04-02
 
 ### Summary

@@ -1016,7 +1016,7 @@ EOF
 seed_legacy_agent_configs() {
   local target="$1"
   mkdir -p "$target/agents"
-  cp .codex/agents/*.toml "$target/agents/"
+  cp src/.codex/agents/*.toml "$target/agents/"
 }
 
 write_positive_legacy_runtime() {

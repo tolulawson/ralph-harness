@@ -11,7 +11,9 @@ Use this as the public planning entry point after requirements are understood.
 
 This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand planning work to a dedicated Ralph planning coordinator subagent.
 
-In this source repository, the root runtime artifacts are dogfood examples. Installed target repos should use their own copied scaffold from `src/` and generate their own runtime records after installation.
+The main thread must not become Ralph's planning coordinator. Queue-wide control-plane coordination belongs only to the orchestrator, and `ralph-plan` must stop and report an unsupported adapter rather than planning inline when native subagent launch is unavailable.
+
+In this source repository, the installable scaffold lives under `src/`. Installed target repos should use their own copied scaffold and generate their own runtime records after installation.
 
 ## Use When
 
@@ -23,7 +25,7 @@ In this source repository, the root runtime artifacts are dogfood examples. Inst
 
 1. Read the project PRD, project policy, and any related artifacts.
 2. Immediately spawn a dedicated Ralph planning coordinator subagent with forked context semantics and the canonical Ralph plan config.
-3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the planning coordinator, wait for completion, and relay the result, but it must not produce planning artifacts inline.
+3. Keep the invoking thread thin after launch. It may pass the repo path or user request into the planning coordinator, wait for completion, and relay the result, but it must not produce planning artifacts inline, keep coordinating planning on the main thread, or fall back to current-session planning when subagent launch is required.
 4. Inside the planning coordinator, decompose the PRD into ordered epochs and numbered specs, then delegate `specify` for any seeded or refreshed spec that still needs a decision-complete `spec.md`.
 5. Delegate same-batch `research` only when the refreshed planning batch needs research before implementation planning can settle.
 6. Delegate `plan` to produce or refresh `.ralph/state/spec-queue.json`, `specs/INDEX.md`, `specs/<spec-id>-<slug>/plan.md`, and any plan-owned supporting artifacts.

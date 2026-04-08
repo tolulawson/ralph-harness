@@ -124,10 +124,13 @@ def test_contract_language_covers_queue_drain_and_reconciliation() -> None:
     assert_contains(orchestrator_skill.lower(), "refill freed slots")
     assert_contains(execute_skill, "record every delegated worker")
     assert_contains(execute_skill, "Do not accept inline current-session worker execution")
+    assert_contains(runtime_contract, "main thread must never continue as the PRD or planning coordinator")
+    assert_contains(orchestrator_skill, "launcher thread is already done being a launcher")
 
     for outcome in RELEASE_OUTCOMES:
         assert_contains(release_skill, outcome)
 
+    assert_contains(plan_skill, "must not become Ralph's planning coordinator")
     assert_contains(plan_skill, "delegate `specify`")
     assert_contains(plan_skill, "Delegate `task-gen`")
     assert_contains(plan_skill, "Delegate `plan-check`")

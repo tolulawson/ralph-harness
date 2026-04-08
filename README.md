@@ -50,7 +50,7 @@ Ralph exposes a small public entry surface under `skills/`. These are the main w
 - `ralph-install` installs the harness into a repository that does not have it yet
 - `ralph-upgrade` refreshes an existing install without clobbering project-owned runtime data
 - `ralph-prd` creates the project PRD
-- `ralph-plan` turns requirements into numbered specs, synchronized planning artifacts, task registries, and a plan-check handoff
+- `ralph-plan` launches a dedicated planning coordinator subagent that turns requirements into numbered specs, synchronized planning artifacts, task registries, and a plan-check handoff
 - `ralph-execute` resumes the harness from disk and advances the queue
 - `ralph-interrupt` splits a failing out-of-scope bug into an interrupt spec
 
@@ -114,7 +114,7 @@ The short version:
 When an LLM installs or upgrades Ralph, the important rules are:
 
 - use `src/` as the installable scaffold source
-- never copy the repo-root dogfood runtime into target repositories
+- never install from the repository root or copy repo-root source-repo files into target repositories
 - use `src/install-manifest.txt` for fresh installs
 - use `src/upgrade-manifest.txt` for upgrades
 - treat `skills/` as the public entry surface
@@ -126,12 +126,12 @@ When an LLM installs or upgrades Ralph, the important rules are:
 The source-of-truth split in this repository is:
 
 - `src/` is the scaffold shipped to other repos
-- repo root is this repository's live dogfood runtime
+- repo root is the source-repo workspace for docs, release tooling, validation, and public source-entry skills
 - `skills/` is the public invocation surface for install, upgrade, and resume flows
 
 ## Architectural Overview
 
-Ralph keeps shared state behind a single-writer lease, but lease ownership is brief and operation-scoped rather than tied to one immortal orchestrator thread. Public Ralph entrypoints are thin launchers: `ralph-execute` should immediately hand off to one dedicated orchestrator subagent, while `ralph-prd` and `ralph-plan` should immediately hand off to dedicated role subagents. Normal specs enter an explicit-first ready-set admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns the canonical shared control plane: `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `.ralph/context/`, `.ralph/policy/`, `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `specs/INDEX.md`. Admitted worktrees expose those shared artifacts through generated `.ralph/shared/` overlays, and tracked shared-state copies inside a worktree are checkout artifacts only, not authoritative runtime state. The default Codex posture is one orchestrator with bounded worker fan-out across admitted specs up to the admission window and worker-thread budget. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec. Worker claims still matter for cross-runtime coordination and fallback, but they are not the default reason Codex should serialize execution.
+Ralph keeps shared state behind a single-writer lease, but lease ownership is brief and operation-scoped rather than tied to one immortal orchestrator thread. Public Ralph entrypoints are thin launchers: `ralph-execute` should immediately hand off to one dedicated orchestrator subagent, while `ralph-prd` and `ralph-plan` should immediately hand off to dedicated role subagents and must never keep PRD or planning coordination on the main thread. Queue-wide control-plane coordination belongs only to the orchestrator after launcher handoff. Normal specs enter an explicit-first ready-set admission window, hard dependencies gate admission, and each admitted spec runs in its own git worktree while the canonical checkout owns the canonical shared control plane: `.ralph/state/`, `.ralph/logs/`, `.ralph/reports/`, `.ralph/context/`, `.ralph/policy/`, `.ralph/constitution.md`, `.ralph/runtime-contract.md`, and `specs/INDEX.md`. Admitted worktrees expose those shared artifacts through generated `.ralph/shared/` overlays, and tracked shared-state copies inside a worktree are checkout artifacts only, not authoritative runtime state. The default Codex posture is one orchestrator with bounded worker fan-out across admitted specs up to the admission window and worker-thread budget. The only unconstrained fan-out remains forbidden: `research` is still bounded to specs produced or refreshed in the same planning batch, and non-research roles stay at one worker per admitted spec. Worker claims still matter for cross-runtime coordination and fallback, but they are not the default reason Codex should serialize execution.
 
 ```mermaid
 flowchart TD
@@ -251,31 +251,24 @@ src/.cursor/                 Shipped Cursor adapter pack
 src/.agents/skills/          Shipped runtime role skills
 src/.ralph/                  Shipped doctrine, policy, templates, and seed state
 
-.codex/                      Dogfood control plane for this source repo
-.agents/skills/              Dogfood runtime skills for this source repo
-.ralph/                      Live dogfood runtime state, reports, logs, and templates
-tasks/                       Dogfood PRDs and todo tracking
-specs/                       Dogfood numbered specs and register
+skills/                      Public source-entry skills
+scripts/                     Install, upgrade, migration, and validation tooling
+AGENTS.md                    Source-repo contributor loader
+CLAUDE.md                    Source-repo contributor loader
+README.md                    Source-repo overview
+INSTALLATION.md              Canonical install guide
+UPGRADING.md                 Canonical upgrade guide
 ```
 
-## This Repository Also Dogfoods Ralph
+## Source Repo Workflow
 
-This repo is not just the source template. It is also a live Ralph-managed project.
+This repo ships Ralph from `src/` rather than running an installed Ralph control plane at repo root.
 
 That means:
 
-- repo root contains real runtime history for this repository
-- `src/` contains the clean scaffold that gets shipped elsewhere
-- changes to the harness itself should usually be made in `src/` first
-
-Current dogfood examples live in:
-
-- [tasks/prd-ralph-harness.md](https://github.com/tolulawson/ralph-harness/blob/main/tasks/prd-ralph-harness.md)
-- [specs/INDEX.md](https://github.com/tolulawson/ralph-harness/blob/main/specs/INDEX.md)
-- [`.ralph/state/workflow-state.json`](https://github.com/tolulawson/ralph-harness/blob/main/.ralph/state/workflow-state.json)
-- [`.ralph/state/spec-queue.json`](https://github.com/tolulawson/ralph-harness/blob/main/.ralph/state/spec-queue.json)
-
-Those are reference records, not the files target repos should copy directly.
+- `src/` is the only installable scaffold source
+- root files document, validate, package, and release that scaffold
+- changes to the harness itself should usually be made in `src/` first, then reflected in docs and scripts at repo root
 
 ## Versioning
 

@@ -11,6 +11,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 - A role has finished and the next role must be chosen.
 - Shared state, reports, the spec queue, lease, durable intents, and event history must be synchronized.
 - This skill is already running inside the dedicated orchestrator subagent for the current Ralph entrypoint, not inline on the public entry thread.
+- By the time this skill starts, the launcher thread is already done being a launcher. It must not still be acting as a PRD or planning coordinator.
 - This invocation owns one orchestrator. Parallelism comes from worker fan-out across admitted specs, not from spawning multiple orchestrators.
 - Ralph's supported adapters are expected to delegate substantive work through native subagents. Inline worker fallback is not part of the shipped contract.
 

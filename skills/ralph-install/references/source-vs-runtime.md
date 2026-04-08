@@ -11,7 +11,7 @@ The orchestrator and role skills under `.agents/skills/` are internal runtime sk
 Keep the repository layers distinct as well:
 
 - `src/` is the canonical installable scaffold source
-- repo root `.ralph/`, `tasks/`, and `specs/` are this repository's live dogfood runtime
+- repo root is the source-repo workspace for docs, scripts, release metadata, and public source-entry skills
 - `src/` should stay clean and should not carry this repository's own TODOs, lessons, event history, or bootstrap work records
 - target runtime records are generated after the scaffold is copied, rather than copied as authored files from `src/`
-- target repos should install from `src/`, not from the root runtime history
+- target repos should install from `src/`, not from repo-root source files

@@ -46,6 +46,9 @@ grep -Fq -- 'unsupported by the shipped harness' src/.ralph/runtime-contract.md 
 grep -Fq -- 'thin and immediately hand off substantive Ralph work to a dedicated subagent' src/.ralph/runtime-contract.md \
   || fail "runtime contract must require thin entry-thread delegation"
 
+grep -Fq -- 'main thread must never continue as the PRD or planning coordinator' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must forbid main-thread PRD or planning coordination"
+
 grep -Fq -- 'Child roles must not spawn nested workers' src/.ralph/runtime-contract.md \
   || fail "runtime contract must forbid nested worker fan-out"
 
@@ -54,6 +57,9 @@ grep -Fq -- '.ralph/state/worker-claims.json' src/.agents/skills/orchestrator/SK
 
 grep -Fq -- 'native subagents' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must mention native subagents"
+
+grep -Fq -- 'launcher thread is already done being a launcher' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must assume launcher-only entry threads"
 
 grep -Fq -- '.ralph/state/worker-claims.json' src/CLAUDE.md \
   || fail "CLAUDE.md must include worker-claims in the read order"
@@ -67,6 +73,9 @@ grep -Fq -- 'dedicated orchestrator subagent' skills/ralph-execute/SKILL.md \
 grep -Fq -- 'dedicated Ralph planning coordinator subagent' skills/ralph-plan/SKILL.md \
   || fail "public plan skill must launch a dedicated planning coordinator subagent"
 
+grep -Fq -- 'must not become Ralph'\''s planning coordinator' skills/ralph-plan/SKILL.md \
+  || fail "public plan skill must forbid inline planning on the main thread"
+
 grep -Fq -- 'dedicated `prd` subagent' skills/ralph-prd/SKILL.md \
   || fail "public PRD skill must launch a dedicated PRD subagent"
 
@@ -78,6 +87,9 @@ grep -Fq -- 'fill the admitted-spec execution window with worker subagents' src/
 
 grep -Fq -- 'dedicated Ralph planning coordinator subagent' src/.claude/commands/ralph-plan.md \
   || fail "Claude plan command must keep the command thread thin"
+
+grep -Fq -- 'main thread become the planning coordinator' src/.claude/commands/ralph-plan.md \
+  || fail "Claude plan command must forbid inline planning on the main thread"
 
 grep -Fq -- 'delegate `specify`' src/.claude/commands/ralph-plan.md \
   || fail "Claude plan command must describe delegated planning roles"

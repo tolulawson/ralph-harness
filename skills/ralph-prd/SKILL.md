@@ -11,7 +11,7 @@ Use this as the direct public entry point for shaping work before planning or ex
 
 This public entrypoint is a thin launcher. It should keep the invoking thread focused on Ralph doctrine and immediately hand PRD work to a dedicated `prd` subagent.
 
-In this source repository, the root `tasks/` and `specs/` files are dogfood runtime artifacts. The installable scaffold lives under `src/`, and target runtime records are created after installation rather than copied from the scaffold history.
+In this source repository, the installable scaffold lives under `src/`, and target runtime records are created after installation rather than copied from repo-root source materials.
 
 ## Use When
 
