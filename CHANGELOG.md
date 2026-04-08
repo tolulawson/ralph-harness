@@ -4,6 +4,49 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.12.8 - 2026-04-08
+
+### Summary
+
+This release tightens upgrade and install language so project-specific contract or control-plane instructions are explicitly kept out of canonical scaffold-owned files.
+
+### Highlights
+
+- Added an explicit canonical-file guardrail to the upgrade guide that forbids writing project-specific rules into `.ralph/runtime-contract.md` or Ralph-managed runtime skill directories.
+- Tightened install and upgrade skills so they route custom runtime and control-plane instructions into extension surfaces:
+  - `.ralph/policy/runtime-overrides.md`
+  - `.ralph/policy/project-policy.md`
+  - `.ralph/context/project-facts.json` (`canonical_control_plane`, `control_plane_versioning`)
+- Updated preflight error messaging to point operators at the full set of extension surfaces instead of implying only one destination.
+- Extended contract verifiers so these guardrails are enforced by release checks.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.12.8` as the default public install or upgrade reference.
+- Fresh installs now explicitly emphasize extension-only customization for runtime contract and control-plane rules.
+- Existing installs can upgrade normally to pick up stronger guardrail language and clearer remediation guidance; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified focused contract and regression checks with:
+  - `bash scripts/verify-installation-contract.sh`
+  - `bash scripts/verify-upgrade-contract.sh`
+  - `bash scripts/verify-canonical-control-plane-contract.sh`
+  - `python3 scripts/test-runtime-preflight-repairs.py`
+- Verified full release surface with `bash scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Install guide: `INSTALLATION.md`
+- Upgrade guide: `UPGRADING.md`
+- Install helper: `skills/ralph-install/SKILL.md`
+- Upgrade helper: `skills/ralph-upgrade/SKILL.md`
+- Runtime helpers: `scripts/runtime_state_helpers.py`
+- Contract checks: `scripts/verify-installation-contract.sh`, `scripts/verify-upgrade-contract.sh`
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Runtime extension policy: `src/.ralph/policy/runtime-overrides.md`
+- Release asset: `ralph-harness-v0.12.8.tar.gz`
+
 ## v0.12.7 - 2026-04-08
 
 ### Summary

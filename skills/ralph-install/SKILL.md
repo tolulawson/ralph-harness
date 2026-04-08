@@ -28,9 +28,10 @@ This is the main external entry point for adopting the harness in a target repos
 7. Use the runtime's question/input tool to ask whether control-plane artifacts should be tracked in version control or excluded via `.gitignore`; persist that answer in `control_plane_versioning.mode` and `control_plane_versioning.gitignore_patterns`, and only edit `.gitignore` when the user chooses that mode.
 8. Persist the project's canonical `base_branch` into `.ralph/context/project-facts.json` during installation, seed `validation_bootstrap_commands` there only when the project already has known environment-prep commands, and initialize `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs` with the shipped conservative defaults.
 9. Install the canonical-control-plane model so shared state stays in the selected canonical checkout and admitted spec worktrees later receive generated `.ralph/shared/` overlays for shared reads and canonical report writes.
-10. Install the repo-local hook surfaces for Codex, Claude Code, and Cursor plus the shared `.ralph/hooks/stop-boundary.py` file.
-11. Use the canonical `AGENTS.md` and `CLAUDE.md` loader guidance plus the install checklist from `INSTALLATION.md` rather than inventing or rephrasing the install flow.
-12. Complete the installation without copying any repo-root source files outside `src/` from the source repository.
+10. Do not write project-specific contract or control-plane instructions into `.ralph/runtime-contract.md` or Ralph-managed runtime skill directories; write them into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, and `.ralph/context/project-facts.json` extension fields.
+11. Install the repo-local hook surfaces for Codex, Claude Code, and Cursor plus the shared `.ralph/hooks/stop-boundary.py` file.
+12. Use the canonical `AGENTS.md` and `CLAUDE.md` loader guidance plus the install checklist from `INSTALLATION.md` rather than inventing or rephrasing the install flow.
+13. Complete the installation without copying any repo-root source files outside `src/` from the source repository.
 
 ## Outputs
 

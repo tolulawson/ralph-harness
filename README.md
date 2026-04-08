@@ -210,6 +210,8 @@ Upgrade behavior is part of the runtime model, not an afterthought. The shipped 
 
 For project-specific runtime rules, Ralph treats `.ralph/policy/runtime-overrides.md` as the preserved extension surface. The base `.ralph/runtime-contract.md` remains upgrade-managed, and direct edits there are treated as scaffold drift.
 
+Project-specific control-plane instructions should not be written into canonical scaffold-owned files (`.ralph/runtime-contract.md` or Ralph-managed runtime skill directories). Put those rules into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, and `.ralph/context/project-facts.json` fields such as `canonical_control_plane` and `control_plane_versioning`.
+
 An installed Ralph repo gets:
 
 - `.ralph/constitution.md`

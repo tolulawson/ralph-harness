@@ -62,6 +62,10 @@ grep -Fq -- 'canonical_control_plane' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document canonical control-plane preservation"
 grep -Fq -- 'control_plane_versioning' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document control-plane versioning preservation"
+grep -Fq -- 'Canonical File Guardrail' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must include a canonical-file guardrail section"
+grep -Fq -- '`.ralph/runtime-contract.md` must stay canonical' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must explicitly forbid project-specific edits to .ralph/runtime-contract.md"
 
 grep -Fq -- '.claude/agents/' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the Claude adapter pack"

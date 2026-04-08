@@ -87,10 +87,14 @@ do
   grep -Fq -- "$required" "$INSTALLATION_MD" || fail "INSTALLATION.md missing multi-runtime requirement: $required"
 done
 
+grep -Fq -- 'Do not put project-specific runtime contract or control-plane customizations into `.ralph/runtime-contract.md`' "$INSTALLATION_MD" \
+  || fail "INSTALLATION.md must explicitly route custom contract/control-plane rules away from canonical runtime-contract"
+
 for required in \
   'question/input tool' \
   'canonical_control_plane.mode' \
-  'control_plane_versioning.mode'
+  'control_plane_versioning.mode' \
+  'Do not write project-specific contract or control-plane instructions into `.ralph/runtime-contract.md`'
 do
   grep -Fq -- "$required" "$INSTALL_SKILL" || fail "ralph-install skill missing interactive setup requirement: $required"
 done

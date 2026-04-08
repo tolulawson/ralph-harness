@@ -1397,13 +1397,13 @@ def validate_upgrade_preflight(repo_root: Path) -> list[str]:
     expected_hash = expected_runtime_contract_baseline_hash(repo_root)
     if expected_hash is None:
         issues.append(
-            "cannot determine the previously installed canonical .ralph/runtime-contract.md; restore the canonical base or move project-specific runtime rules into `.ralph/policy/runtime-overrides.md` before upgrading"
+            "cannot determine the previously installed canonical .ralph/runtime-contract.md; restore the canonical base or move project-specific runtime or control-plane rules into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or `.ralph/context/project-facts.json` (`canonical_control_plane`, `control_plane_versioning`) before upgrading"
         )
         return issues
     actual_hash = sha256_file(runtime_contract_path)
     if actual_hash != expected_hash:
         issues.append(
-            ".ralph/runtime-contract.md differs from its recorded canonical baseline; move project-specific runtime changes into `.ralph/policy/runtime-overrides.md` before upgrading"
+            ".ralph/runtime-contract.md differs from its recorded canonical baseline; move project-specific runtime or control-plane changes into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or `.ralph/context/project-facts.json` extension fields before upgrading"
         )
     issues.extend(validate_managed_runtime_skill_drift(repo_root))
     return issues
@@ -2620,7 +2620,7 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             actual_runtime_contract_hash = sha256_file(repo_root / ".ralph/runtime-contract.md")
             if actual_runtime_contract_hash != expected_baseline_hash:
                 issues.append(
-                    ".ralph/runtime-contract.md differs from its recorded canonical baseline; move project-specific runtime changes into `.ralph/policy/runtime-overrides.md`"
+                    ".ralph/runtime-contract.md differs from its recorded canonical baseline; move project-specific runtime or control-plane changes into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or `.ralph/context/project-facts.json` extension fields"
                 )
 
     for key in WORKFLOW_REQUIRED_KEYS:

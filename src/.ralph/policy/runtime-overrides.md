@@ -14,6 +14,7 @@ Guardrails:
 - prefer additive rules here rather than restating the full base contract
 - do not contradict the base runtime contract unless the project explicitly accepts the divergence and understands the maintenance cost
 - upgrades preserve this file; direct edits to `.ralph/runtime-contract.md` may block upgrade preflight
+- when control-plane customization is structural, also encode it in `.ralph/context/project-facts.json` (`canonical_control_plane`, `control_plane_versioning`) and `.ralph/policy/project-policy.md` when workflow policy context is needed
 
 ## Current Overrides
 

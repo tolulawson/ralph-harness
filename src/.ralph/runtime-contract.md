@@ -68,7 +68,7 @@ Interpret an installed Ralph harness in this order:
 - The stop-boundary hook may auto-continue only once per stop chain, only for the top-level orchestrator, and only when the stop is not clearly human-gated.
 - No delegated worker role besides the active Ralph coordinator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
 - Runtime sessions may mutate `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own active claim.
-- Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
+- Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or `.ralph/context/project-facts.json` extension fields such as `canonical_control_plane` and `control_plane_versioning`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
 - Ralph-managed runtime skill directories under `.agents/skills/` are scaffold-owned. Project-specific control-plane changes must live in `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed project skill directory instead of patching a Ralph-managed skill in place.
 
 ## Artifact Classes
