@@ -3214,6 +3214,10 @@ def dedupe_messages(messages: list[str]) -> list[str]:
     return ordered
 
 
+def canonical_or_legacy_path_exists(repo_root: Path, canonical_relative_path: str, legacy_relative_path: str) -> bool:
+    return (repo_root / canonical_relative_path).exists() or (repo_root / legacy_relative_path).exists()
+
+
 def classify_preflight_issue(
     repo_root: Path,
     queue: dict[str, Any],
@@ -3274,18 +3278,35 @@ def check_runtime_preflight(
     required_paths = (
         repo_root / ".ralph/state/workflow-state.json",
         repo_root / ".ralph/state/spec-queue.json",
-        repo_root / ".ralph/state/execution-claims.json",
-        repo_root / ".ralph/state/scheduler-lock.json",
         repo_root / ".ralph/context/project-facts.json",
-        repo_root / ".ralph/state/scheduler-intents.jsonl",
     )
-    if apply_repairs and all(path.exists() for path in required_paths):
+    coordination_paths_available = all(
+        (
+            canonical_or_legacy_path_exists(
+                repo_root,
+                DEFAULT_EXECUTION_CLAIMS_PATH,
+                LEGACY_EXECUTION_CLAIMS_PATH,
+            ),
+            canonical_or_legacy_path_exists(
+                repo_root,
+                DEFAULT_SCHEDULER_LOCK_PATH,
+                LEGACY_SCHEDULER_LOCK_PATH,
+            ),
+            canonical_or_legacy_path_exists(
+                repo_root,
+                DEFAULT_SCHEDULER_INTENTS_PATH,
+                LEGACY_SCHEDULER_INTENTS_PATH,
+            ),
+        )
+    )
+    if apply_repairs and all(path.exists() for path in required_paths) and coordination_paths_available:
         workflow = load_json(repo_root / ".ralph/state/workflow-state.json")
         queue = load_json(repo_root / ".ralph/state/spec-queue.json")
-        execution_claims = load_json(repo_root / ".ralph/state/execution-claims.json")
-        lease = load_json(repo_root / ".ralph/state/scheduler-lock.json")
+        execution_claims_path = ensure_execution_claims_file(repo_root, workflow)
+        execution_claims = load_json(execution_claims_path)
+        lease = ensure_lease_file(repo_root, workflow)
         project_facts = normalize_project_facts(load_json(repo_root / ".ralph/context/project-facts.json"))
-        intents = load_jsonl_records(repo_root / ".ralph/state/scheduler-intents.jsonl")
+        intents = load_jsonl_records(ensure_intent_log(repo_root, workflow))
 
         workflow, queue, self_healed = refresh_runtime_derived_state(
             repo_root,

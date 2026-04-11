@@ -360,6 +360,54 @@ def test_legacy_coordination_paths_migrate_to_canonical_names() -> None:
         raise AssertionError("normalized workflow should canonicalize scheduler_intents_path")
 
 
+def test_preflight_repairs_legacy_coordination_files_before_validation() -> None:
+    repo = create_fixture("legacy-preflight-repair")
+    state_dir = repo / ".ralph/state"
+    workflow = json.loads((state_dir / "workflow-state.json").read_text())
+    workflow.pop("scheduler_lock_path", None)
+    workflow.pop("execution_claims_path", None)
+    workflow.pop("scheduler_intents_path", None)
+    workflow["orchestrator_lease_path"] = ".ralph/state/orchestrator-lease.json"
+    workflow["worker_claims_path"] = ".ralph/state/worker-claims.json"
+    workflow["orchestrator_intents_path"] = ".ralph/state/orchestrator-intents.jsonl"
+    (state_dir / "workflow-state.json").write_text(json.dumps(workflow, indent=2) + "\n")
+
+    for canonical_name in ("scheduler-lock.json", "execution-claims.json", "scheduler-intents.jsonl"):
+        canonical_path = state_dir / canonical_name
+        if canonical_path.exists():
+            canonical_path.unlink()
+
+    (state_dir / "orchestrator-lease.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0.0",
+                "owner_token": None,
+                "holder_thread": None,
+                "run_id": None,
+                "acquired_at": None,
+                "heartbeat_at": None,
+                "expires_at": None,
+                "status": "idle",
+            }
+        )
+        + "\n"
+    )
+    (state_dir / "worker-claims.json").write_text(json.dumps({"schema_version": "1.0.0", "claims": []}) + "\n")
+    (state_dir / "orchestrator-intents.jsonl").write_text("")
+
+    result = run_check(repo)
+    if result.returncode != 0:
+        raise AssertionError(result.stdout + result.stderr)
+    assert_contains(result.stdout, "check-installed-runtime-state: ok")
+    assert_not_contains(result.stdout, "Hard Repair Required:")
+    if not (state_dir / "scheduler-lock.json").exists():
+        raise AssertionError("preflight repair should materialize the canonical scheduler lock file")
+    if not (state_dir / "execution-claims.json").exists():
+        raise AssertionError("preflight repair should materialize the canonical execution claims file")
+    if not (state_dir / "scheduler-intents.jsonl").exists():
+        raise AssertionError("preflight repair should materialize the canonical scheduler intents log")
+
+
 def test_missing_admitted_worktree_self_heals() -> None:
     repo = create_fixture("missing-worktree")
     spec = make_spec(
