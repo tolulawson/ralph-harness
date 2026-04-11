@@ -38,24 +38,25 @@ If the project PRD is missing, stop and report that the PRD step must complete f
    - default worktree metadata
    - canonical `base_branch` from `.ralph/context/project-facts.json` unless a spec explicitly overrides it
    - compatibility mirrors only when needed
-5. Reject dependency cycles or missing dependency targets instead of guessing. Do not invent implicit dependencies or queue-head priority.
-6. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
-7. For the active spec, require `research.md` when the queue entry says `research_status = done`.
-8. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
-9. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, worktree rules, bootstrap requirements, and rollout or migration considerations.
-8. Add:
+5. Treat `depends_on_spec_ids` as a hard execution-prerequisite list, not as planning chronology. Record a dependency only when the downstream spec truly cannot execute until the upstream spec's outcome exists.
+6. Reject dependency cycles or missing dependency targets instead of guessing. Do not invent implicit dependencies, semantic dependencies, "all prior specs" dependencies, merge-conflict dependencies, or queue-head priority.
+7. For the active spec, define the canonical `task-state.json` lifecycle expectations before task generation begins.
+8. For the active spec, require `research.md` when the queue entry says `research_status = done`.
+9. For the active spec, fill the implementation plan structure in `specs/<spec-key>/plan.md`.
+10. Build a technical context section that captures architecture, interfaces, dependencies, verification strategy, orchestration stop conditions, worktree rules, bootstrap requirements, and rollout or migration considerations.
+11. Add:
    - `Research Inputs`
    - `Implementation Guardrails`
    - `Goal-Backward Verification` with observable truths, required artifacts, and critical links
-10. Create supporting artifacts only when needed:
+12. Create supporting artifacts only when needed:
    - `research.md`
    - `data-model.md`
    - `contracts/`
    - `quickstart.md`
-11. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established, including the canonical `base_branch` and any `validation_bootstrap_commands` that bootstrap should run before implementation.
-12. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
-13. Stop before generating `tasks.md` or `task-state.json`; `task-gen` owns those execution-ready artifacts.
-14. Write the role report to the canonical report path and recommend the next role.
+13. Record any explicit project truths or optional structured facts discovered during planning when they are clearly established, including the canonical `base_branch` and any `validation_bootstrap_commands` that bootstrap should run before implementation.
+14. Recheck the plan after the supporting artifacts exist and ensure the implementation path is decision-complete.
+15. Stop before generating `tasks.md` or `task-state.json`; `task-gen` owns those execution-ready artifacts.
+16. Write the role report to the canonical report path and recommend the next role.
 
 ## Outputs
 

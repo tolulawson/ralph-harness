@@ -33,7 +33,7 @@ If the plan is missing, stop and report that the planning step must complete fir
    - `- [ ] 001-T001 Description`
    - include `[US1]`, `[US2]`, etc. for story-specific tasks
    - include exact file paths whenever feasible
-   - express cross-spec dependencies in the queue entry rather than in the task list
+   - express cross-spec dependencies in the queue entry rather than in the task list, but only when another spec is a true execution prerequisite
    - express intra-spec independence through dependency ordering and phase structure rather than stale parallel markers
 6. Ensure each task is executable by a fresh worker without hidden context.
 7. Record dependencies, per-task requirement ids, verification commands, planned artifacts, independent test criteria, and PR readiness hooks.

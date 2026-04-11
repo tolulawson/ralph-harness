@@ -4,6 +4,50 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.13.1 - 2026-04-11
+
+### Summary
+
+This release tightens Ralph's planning doctrine so cross-spec dependencies only represent real execution prerequisites.
+
+It closes the gap where planning could over-author semantic or chronological dependency edges, which in turn made independent specs look artificially blocked even though the multi-orchestrator control plane itself could run them in parallel.
+
+### Highlights
+
+- Tightened the shipped runtime contract so `depends_on_spec_ids` is defined as a hard execution-prerequisite list rather than a semantic or chronological planning hint.
+- Updated project policy to state that hard dependencies should only be recorded for explicit execution prerequisites, not for shared code areas, merge coordination, or "this spec came earlier" ordering.
+- Updated the shipped `plan` skill and public `ralph-plan` entrypoint to forbid:
+  - semantic dependency edges
+  - "all prior specs" dependency authoring
+  - merge-conflict dependencies
+  - chronology encoded as hard scheduler blockers
+- Updated `task-gen` guidance so cross-spec dependencies stay in the queue only when another spec is a true execution prerequisite.
+- Added verifier coverage to keep the dependency-authoring rule explicit across the runtime contract, project policy, and planning surfaces.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.13.1` as the default public install or upgrade reference.
+- Fresh installs now teach the stricter dependency-authoring rule from the start.
+- Existing installs can upgrade normally to pick up the clarified planning doctrine and stronger verifier coverage; `upgrade_contract_version` remains `11`.
+
+### Validation And Release Workflow
+
+- Verified focused contract checks with:
+  - `bash scripts/verify-installation-contract.sh`
+  - `bash scripts/verify-upgrade-contract.sh`
+  - `bash scripts/verify-multi-spec-contract.sh`
+- Verified full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Project policy: `src/.ralph/policy/project-policy.md`
+- Planning skill: `src/.agents/skills/plan/SKILL.md`
+- Public planning entrypoint: `skills/ralph-plan/SKILL.md`
+- Task generation skill: `src/.agents/skills/task-gen/SKILL.md`
+- Contract verifier: `scripts/verify-multi-spec-contract.sh`
+- Release asset: `ralph-harness-v0.13.1.tar.gz`
+
 ## v0.13.0 - 2026-04-10
 
 ### Summary

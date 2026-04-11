@@ -60,6 +60,7 @@ Interpret an installed Ralph harness in this order:
 - Product files and spec-local implementation artifacts must be authored only from the assigned spec worktree.
 - Shared-state reads and writes must resolve to the canonical checkout, either directly or through the generated `.ralph/shared/` overlay. Workers must never rely on worktree-local tracked copies of shared artifacts.
 - Hard spec dependencies declared in `depends_on_spec_ids` must be satisfied before a normal spec is admitted.
+- `depends_on_spec_ids` must encode only explicit execution prerequisites. Do not use it for semantic relatedness, chronological planning order, shared area ownership, merge-conflict risk, or "this spec came earlier" bookkeeping.
 - Ralph-managed Codex role configs run with `sandbox_mode = "danger-full-access"` for maximum execution latitude.
 - Interrupt specs may preempt normal specs when a failing out-of-scope bug is discovered.
 - Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
@@ -245,6 +246,8 @@ Each spec queue entry must include:
 
 `branch_name`, `worktree_name`, and `worktree_path` must remain unique across specs. Upgrade or migration steps may reassign safely-derivable worktree metadata, but duplicate branch ownership is a repair error.
 
+`depends_on_spec_ids` is a hard admission contract, not a loose planning hint. Record a dependency only when the downstream spec cannot execute correctly until the upstream spec's required outcome exists. If multiple specs can be implemented and merged independently, they should remain dependency-free even when they touch related product areas.
+
 ## Worker Claim Contract
 
 - `.ralph/state/execution-claims.json` is the canonical machine-readable worker claim registry.
@@ -345,6 +348,7 @@ Each orchestrator-written event must record enough provenance to reconstruct del
 - The scheduler should keep that bounded admission window filled with every runnable spec before concluding that orchestration is done.
 - Supported adapters must fill that admission window with delegated worker subagents; inline worker execution is not a supported queue-drain mode.
 - Hard dependencies block admission until every required spec is `released` or `done`.
+- Do not use hard dependencies to represent semantic grouping, planning chronology, or eventual merge reconciliation. Those concerns belong in spec prose, planning notes, or human coordination, not in `depends_on_spec_ids`.
 - Later ready specs may not bypass an earlier eligible spec in admission order.
 - Parallel research may improve later spec readiness but must never let a later spec bypass an earlier spec in normal admission.
 - Research batches are limited to specs produced or refreshed together by one orchestrator-led planning pass.
