@@ -75,8 +75,15 @@ def find_repo_root(start: Path) -> Path:
     return start
 
 
+def resolve_shared_path(repo_root: Path, relative_path: str) -> Path:
+    shared_path = repo_root / ".ralph/shared" / relative_path
+    if shared_path.exists():
+        return shared_path
+    return repo_root / ".ralph" / relative_path
+
+
 def load_project_facts(repo_root: Path) -> dict[str, Any]:
-    path = repo_root / ".ralph/context/project-facts.json"
+    path = resolve_shared_path(repo_root, "context/project-facts.json")
     if not path.exists():
         return {}
     try:
@@ -86,7 +93,7 @@ def load_project_facts(repo_root: Path) -> dict[str, Any]:
 
 
 def load_runtime_contract(repo_root: Path) -> str:
-    path = repo_root / ".ralph/runtime-contract.md"
+    path = resolve_shared_path(repo_root, "runtime-contract.md")
     if not path.exists():
         return ""
     return path.read_text()
@@ -121,14 +128,12 @@ def execution_claim_is_healthy(claim: dict[str, Any], now: Any) -> bool:
 
 
 def load_runtime_state(repo_root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
-    workflow = load_optional_json(repo_root / ".ralph/state/workflow-state.json")
-    queue = load_optional_json(repo_root / ".ralph/state/spec-queue.json")
-    scheduler_lock_path = workflow.get("scheduler_lock_path") or ".ralph/state/scheduler-lock.json"
-    execution_claims_path = workflow.get("execution_claims_path") or ".ralph/state/execution-claims.json"
-    scheduler_intents_path = workflow.get("scheduler_intents_path") or ".ralph/state/scheduler-intents.jsonl"
-    scheduler_lock = load_optional_json(repo_root / scheduler_lock_path)
-    execution_claims = load_optional_json(repo_root / execution_claims_path)
-    intents_path = repo_root / scheduler_intents_path
+    state_root = resolve_shared_path(repo_root, "state")
+    workflow = load_optional_json(state_root / "workflow-state.json")
+    queue = load_optional_json(state_root / "spec-queue.json")
+    scheduler_lock = load_optional_json(state_root / "scheduler-lock.json")
+    execution_claims = load_optional_json(state_root / "execution-claims.json")
+    intents_path = state_root / "scheduler-intents.jsonl"
     intents: list[dict[str, Any]] = []
     if intents_path.exists():
         for line in intents_path.read_text().splitlines():
@@ -229,13 +234,13 @@ def should_continue(runtime: str, payload: dict[str, Any], project_facts: dict[s
         if not message:
             return False, "cursor stop payload does not include assistant text, so the conservative policy will not auto-continue a completed stop"
 
+    if text_matches_any(combined_context, HUMAN_GATED_PATTERNS):
+        return False, "stop message indicates a true human-gated boundary"
+
     repo_root = find_repo_root(Path.cwd())
     state_reason = runtime_state_continue_reason(repo_root)
     if state_reason:
         return True, state_reason
-
-    if text_matches_any(combined_context, HUMAN_GATED_PATTERNS):
-        return False, "stop message indicates a true human-gated boundary"
     if message and text_matches_any(message, DONE_PATTERNS) and not text_matches_any(message, SELF_RESOLVABLE_PATTERNS):
         return False, "stop message indicates the orchestrator is already done"
     if message and text_matches_any(message, SELF_RESOLVABLE_PATTERNS):

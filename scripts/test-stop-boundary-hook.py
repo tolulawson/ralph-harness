@@ -101,6 +101,17 @@ def run_hook(repo_root: Path, runtime: str, payload: dict) -> subprocess.Complet
     )
 
 
+def run_hook_at_path(cwd: Path, runtime: str, payload: dict) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["python3", str(HOOK_PATH), "--runtime", runtime],
+        cwd=cwd,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+
 def parse_json_stdout(completed: subprocess.CompletedProcess[str]) -> dict:
     return json.loads(completed.stdout) if completed.stdout.strip() else {}
 
@@ -198,6 +209,20 @@ def main() -> int:
         assert pending_continue["decision"] == "block"
         assert "pending scheduler intents remain" in pending_continue["reason"]
 
+        pending_human_gate = parse_json_stdout(
+            run_hook(
+                pending_repo,
+                "codex",
+                {
+                    "turn_id": "turn-3b",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "I am waiting for the user to approve the release before I continue.",
+                },
+            )
+        )
+        assert pending_human_gate["continue"] is False
+        assert "human-gated boundary" in pending_human_gate["stopReason"]
+
         admitted_repo = build_repo_fixture(Path(tmpdir) / "admitted")
         write_runtime_state(
             admitted_repo,
@@ -226,6 +251,37 @@ def main() -> int:
         )
         assert admitted_continue["decision"] == "block"
         assert "has no healthy execution claim" in admitted_continue["reason"]
+
+        shared_repo = build_repo_fixture(Path(tmpdir) / "shared")
+        write_runtime_state(
+            shared_repo,
+            intents=[{"intent_id": "intent-shared", "status": "pending", "kind": "schedule_spec"}],
+        )
+        worktree_root = Path(tmpdir) / "shared-worktree"
+        (worktree_root / ".ralph/context").mkdir(parents=True)
+        (worktree_root / ".ralph/state").mkdir(parents=True)
+        (worktree_root / ".ralph/shared").mkdir(parents=True)
+        (worktree_root / ".ralph/context/project-facts.json").write_text(
+            (shared_repo / ".ralph/context/project-facts.json").read_text()
+        )
+        (worktree_root / ".ralph/runtime-contract.md").write_text(
+            (shared_repo / ".ralph/runtime-contract.md").read_text()
+        )
+        (worktree_root / ".ralph/shared/state").symlink_to(shared_repo / ".ralph/state")
+        write_runtime_state(worktree_root)
+        shared_state_continue = parse_json_stdout(
+            run_hook_at_path(
+                worktree_root,
+                "codex",
+                {
+                    "turn_id": "turn-5",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "I think the work is done.",
+                },
+            )
+        )
+        assert shared_state_continue["decision"] == "block"
+        assert "pending scheduler intents remain" in shared_state_continue["reason"]
 
     print("test-stop-boundary-hook: ok")
     return 0
