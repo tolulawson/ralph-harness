@@ -9,8 +9,8 @@ Source of truth for an installed harness:
 5. `.ralph/policy/project-policy.md` as the repo-specific workflow policy
 6. `.ralph/state/workflow-state.json` as the canonical runtime state
 7. `.ralph/state/spec-queue.json` as the canonical spec queue
-8. `.ralph/state/orchestrator-lease.json` as the single-writer lease record
-9. `.ralph/state/orchestrator-intents.jsonl` as the durable cross-thread inbox
+8. `.ralph/state/scheduler-lock.json` as the short-lived global queue write lock record
+9. `.ralph/state/scheduler-intents.jsonl` as the durable cross-thread inbox
 10. `resume_spec_stack` and `interruption_state` inside workflow state as the interruption-resume context
 11. `specs/<spec-key>/task-state.json` as canonical per-spec task lifecycle when it exists
 12. `workflow-state.md` and `specs/INDEX.md` as human-readable projections of canonical JSON state

@@ -15,7 +15,7 @@ Workflow:
 2. Read `.ralph/runtime-contract.md`.
 3. Read `.ralph/policy/project-policy.md`.
 4. Read `.ralph/context/project-truths.md`, `.ralph/context/project-facts.json`, and `.ralph/context/learning-summary.md`.
-5. Read `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, `.ralph/state/orchestrator-lease.json`, `.ralph/state/worker-claims.json`, and the recent durable intents window from `.ralph/state/orchestrator-intents.jsonl`.
+5. Read `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, `.ralph/state/scheduler-lock.json`, `.ralph/state/execution-claims.json`, and the recent durable intents window from `.ralph/state/scheduler-intents.jsonl`.
 6. Acquire the single-writer lease only for the current shared-state mutation window.
 7. If another healthy lease-holder exists, append or acknowledge a durable intent and stop without mutating shared state.
 8. Re-read workflow, queue, lease, worker claims, and intent state after the lease is held.
@@ -25,7 +25,7 @@ Workflow:
 12. Drain durable intents, materialize new specs, and compute the explicit-first ready-set admission window with hard dependency blocking, preferring to fill every runnable slot before considering a stop.
 13. Ensure admitted specs have dedicated worktrees and branches, and keep all execution inside those spec worktrees rather than the canonical checkout.
 14. After a PRD-to-spec planning batch stabilizes, identify only the specs from that batch whose `research_status` is `not_started` or `failed` and whose `spec.md` exists.
-15. Use `.ralph/state/worker-claims.json` as the delegated worker registry. Ralph's shipped adapters require native subagent delegation for substantive work; do not fall back to inline worker execution.
+15. Use `.ralph/state/execution-claims.json` as the delegated worker registry. Ralph's shipped adapters require native subagent delegation for substantive work; do not fall back to inline worker execution.
 16. Outside that batch-scoped research step, compute the full admitted ready set and dispatch bounded workers across it up to the admission window and worker-thread budget, keeping at most one non-research worker per admitted spec and refilling freed slots after each completion.
 17. Record every delegated worker claim with `execution_mode = native_subagent`, and treat any adapter that cannot delegate the required role as unsupported rather than fallback-capable.
 18. Require `bootstrap` before `implement` or any other execution role begins in a claim that has not yet passed bootstrap locally.

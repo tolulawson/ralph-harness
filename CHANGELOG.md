@@ -565,7 +565,7 @@ This release keeps the shared Ralph doctrine and queue semantics under `.ralph/`
 
 - Rewrote the shipped runtime contract, project policy, public docs, and loaders around a runtime-neutral lease-plus-claims execution model.
 - Added a canonical agent registry at `src/.ralph/agent-registry.json` plus generated adapter packs for `AGENTS.md`, `CLAUDE.md`, `.claude/agents/`, `.claude/commands/`, and `.cursor/rules/`.
-- Added `.ralph/state/worker-claims.json` and the corresponding template and migration logic for cross-runtime slot claiming.
+- Added `.ralph/state/execution-claims.json` and the corresponding template and migration logic for cross-runtime slot claiming.
 - Switched new scaffold branch defaults from `codex/<spec-key>` to `ralph/<spec-key>` while preserving legacy branch prefixes during upgrade.
 - Extended install and upgrade manifests so all supported adapter packs ship together by default.
 - Added claim operations to `scripts/orchestrator-coordination.py` and generalized validation to cover the generated runtime adapters.
@@ -585,7 +585,7 @@ This release keeps the shared Ralph doctrine and queue semantics under `.ralph/`
 
 - Runtime doctrine: `src/.ralph/runtime-contract.md`
 - Agent registry: `src/.ralph/agent-registry.json`
-- Worker claims state: `src/.ralph/state/worker-claims.json`
+- Worker claims state: `src/.ralph/state/execution-claims.json`
 - Runtime coordination helper: `scripts/orchestrator-coordination.py`
 - Release asset: `ralph-harness-v0.9.0.tar.gz`
 

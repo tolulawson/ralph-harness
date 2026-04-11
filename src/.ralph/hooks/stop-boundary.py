@@ -92,6 +92,92 @@ def load_runtime_contract(repo_root: Path) -> str:
     return path.read_text()
 
 
+def load_optional_json(path: Path) -> dict[str, Any]:
+    try:
+        return load_json(path)
+    except Exception:
+        return {}
+
+
+def parse_timestamp(value: Any) -> Any:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        from datetime import datetime
+
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def execution_claim_is_healthy(claim: dict[str, Any], now: Any) -> bool:
+    if claim.get("status") != "claimed":
+        return False
+    heartbeat_at = parse_timestamp(claim.get("heartbeat_at"))
+    expires_at = parse_timestamp(claim.get("expires_at"))
+    if heartbeat_at is None or expires_at is None or expires_at <= heartbeat_at:
+        return False
+    return expires_at > now
+
+
+def load_runtime_state(repo_root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+    workflow = load_optional_json(repo_root / ".ralph/state/workflow-state.json")
+    queue = load_optional_json(repo_root / ".ralph/state/spec-queue.json")
+    scheduler_lock_path = workflow.get("scheduler_lock_path") or ".ralph/state/scheduler-lock.json"
+    execution_claims_path = workflow.get("execution_claims_path") or ".ralph/state/execution-claims.json"
+    scheduler_intents_path = workflow.get("scheduler_intents_path") or ".ralph/state/scheduler-intents.jsonl"
+    scheduler_lock = load_optional_json(repo_root / scheduler_lock_path)
+    execution_claims = load_optional_json(repo_root / execution_claims_path)
+    intents_path = repo_root / scheduler_intents_path
+    intents: list[dict[str, Any]] = []
+    if intents_path.exists():
+        for line in intents_path.read_text().splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                intents.append(json.loads(stripped))
+            except json.JSONDecodeError:
+                continue
+    return workflow, queue, scheduler_lock, execution_claims, intents
+
+
+def runtime_state_continue_reason(repo_root: Path) -> str | None:
+    from datetime import datetime, timezone
+
+    workflow, queue, scheduler_lock, execution_claims, intents = load_runtime_state(repo_root)
+    now = datetime.now(timezone.utc)
+
+    pending_intents = [intent for intent in intents if intent.get("status") == "pending"]
+    if pending_intents:
+        return "pending scheduler intents remain in the shared inbox"
+
+    if scheduler_lock.get("status") == "held":
+        heartbeat_at = parse_timestamp(scheduler_lock.get("heartbeat_at"))
+        expires_at = parse_timestamp(scheduler_lock.get("expires_at"))
+        if heartbeat_at is None or expires_at is None or expires_at <= heartbeat_at or expires_at <= now:
+            return "the scheduler lock is stale and recoverable"
+
+    active_spec_ids = set(queue.get("active_spec_ids") or workflow.get("active_spec_ids") or [])
+    for spec in queue.get("specs", []):
+        if spec.get("admission_status") not in {"admitted", "running", "paused"} and spec.get("spec_id") not in active_spec_ids:
+            continue
+        if not any(
+            claim.get("spec_id") == spec.get("spec_id") and execution_claim_is_healthy(claim, now)
+            for claim in execution_claims.get("claims", [])
+        ):
+            return f"admitted spec {spec.get('spec_key') or spec.get('spec_id')} has no healthy execution claim"
+
+    for claim in execution_claims.get("claims", []):
+        if claim.get("status") != "claimed":
+            continue
+        if execution_claim_is_healthy(claim, now):
+            continue
+        return f"execution claim {claim.get('claim_id')} expired while runnable work may remain"
+
+    return None
+
+
 def text_matches_any(text: str, patterns: tuple[str, ...]) -> bool:
     lowered = text.lower()
     return any(re.search(pattern, lowered) for pattern in patterns)
@@ -142,6 +228,11 @@ def should_continue(runtime: str, payload: dict[str, Any], project_facts: dict[s
             return True, "cursor stop status indicates an interrupted run that merits one autonomous continuation pass"
         if not message:
             return False, "cursor stop payload does not include assistant text, so the conservative policy will not auto-continue a completed stop"
+
+    repo_root = find_repo_root(Path.cwd())
+    state_reason = runtime_state_continue_reason(repo_root)
+    if state_reason:
+        return True, state_reason
 
     if text_matches_any(combined_context, HUMAN_GATED_PATTERNS):
         return False, "stop message indicates a true human-gated boundary"

@@ -20,7 +20,7 @@ description: Execute one assigned task for the active numbered spec, update only
 - `.ralph/shared/context/project-facts.json` or the resolved canonical `.ralph/context/project-facts.json`
 - `.ralph/shared/context/learning-summary.md` or the resolved canonical `.ralph/context/learning-summary.md`
 - active queue entry from `.ralph/shared/state/spec-queue.json` or the resolved canonical `.ralph/state/spec-queue.json`
-- active claim from `.ralph/shared/state/worker-claims.json` or the resolved canonical `.ralph/state/worker-claims.json`
+- active claim from `.ralph/shared/state/worker-claims.json` or the resolved canonical `.ralph/state/execution-claims.json`
 - any bounded file list from the orchestrator
 - optional `research.md`, `data-model.md`, `contracts/`, `quickstart.md`
 

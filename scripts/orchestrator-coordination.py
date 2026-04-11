@@ -10,11 +10,12 @@ from pathlib import Path
 from runtime_state_helpers import (
     BOOTSTRAP_STATUSES,
     CLAIM_STATUSES,
-    CURRENT_LEASE_SCHEMA_VERSION,
-    CURRENT_WORKER_CLAIMS_SCHEMA_VERSION,
-    DEFAULT_INTENTS_PATH,
-    DEFAULT_LEASE_PATH,
-    DEFAULT_WORKER_CLAIMS_PATH,
+    bump_queue_revision,
+    CURRENT_SCHEDULER_LOCK_SCHEMA_VERSION,
+    CURRENT_EXECUTION_CLAIMS_SCHEMA_VERSION,
+    DEFAULT_SCHEDULER_INTENTS_PATH,
+    DEFAULT_SCHEDULER_LOCK_PATH,
+    DEFAULT_EXECUTION_CLAIMS_PATH,
     INTENT_TYPES,
     LEASE_LOCK_SUFFIX,
     LEASE_TTL_SECONDS,
@@ -23,7 +24,7 @@ from runtime_state_helpers import (
     ensure_intent_log,
     ensure_lease_file,
     ensure_spec_worktree,
-    ensure_worker_claims_file,
+    ensure_execution_claims_file,
     lease_is_healthy,
     load_json,
     load_jsonl_records,
@@ -37,6 +38,7 @@ from runtime_state_helpers import (
     SUPPORTED_EXECUTION_MODES,
     worker_claim_is_healthy,
     utc_now,
+    write_json_atomic,
     write_json,
     write_jsonl_records,
 )
@@ -56,11 +58,11 @@ def release_lock(fd: int, lock_path: Path) -> None:
     lock_path.unlink(missing_ok=True)
 
 
-def lease_cmd(args: argparse.Namespace) -> int:
+def scheduler_lock_cmd(args: argparse.Namespace) -> int:
     repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
     lease = ensure_lease_file(repo_root, workflow)
-    lease_path = repo_root / (workflow.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH)
+    lease_path = repo_root / (workflow.get("scheduler_lock_path") or DEFAULT_SCHEDULER_LOCK_PATH)
     lock_path = lease_path.with_name(lease_path.name + LEASE_LOCK_SUFFIX)
 
     if args.action == "status":
@@ -70,7 +72,7 @@ def lease_cmd(args: argparse.Namespace) -> int:
     try:
         fd = acquire_lock(lock_path)
     except FileExistsError:
-        print("orchestrator-coordination: lease lock is busy")
+        print("orchestrator-coordination: scheduler lock is busy")
         return 1
 
     try:
@@ -81,11 +83,11 @@ def lease_cmd(args: argparse.Namespace) -> int:
 
         if args.action == "acquire":
             if lease.get("owner_token") and lease.get("owner_token") != args.owner_token and not is_expired:
-                print("orchestrator-coordination: lease is already held by another owner")
+                print("orchestrator-coordination: scheduler lock is already held by another owner")
                 return 1
             lease.update(
                 {
-                    "schema_version": CURRENT_LEASE_SCHEMA_VERSION,
+                    "schema_version": CURRENT_SCHEDULER_LOCK_SCHEMA_VERSION,
                     "owner_token": args.owner_token,
                     "holder_thread": args.holder_thread,
                     "run_id": args.run_id,
@@ -97,14 +99,14 @@ def lease_cmd(args: argparse.Namespace) -> int:
             )
         elif args.action == "heartbeat":
             if lease.get("owner_token") != args.owner_token:
-                print("orchestrator-coordination: cannot heartbeat a lease you do not hold")
+                print("orchestrator-coordination: cannot heartbeat a scheduler lock you do not hold")
                 return 1
             lease["heartbeat_at"] = now.isoformat()
             lease["expires_at"] = (now + timedelta(seconds=args.ttl_seconds)).isoformat()
             lease["status"] = "held"
         elif args.action == "release":
             if lease.get("owner_token") != args.owner_token:
-                print("orchestrator-coordination: cannot release a lease you do not hold")
+                print("orchestrator-coordination: cannot release a scheduler lock you do not hold")
                 return 1
             lease.update(
                 {
@@ -180,138 +182,148 @@ def worktree_cmd(args: argparse.Namespace) -> int:
 def claim_cmd(args: argparse.Namespace) -> int:
     repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
-    claims_path = ensure_worker_claims_file(repo_root, workflow)
-    payload = load_json(claims_path)
-    claims = list(payload.get("claims") or [])
+    claims_path = ensure_execution_claims_file(repo_root, workflow)
+    claims_lock_path = claims_path.with_name(claims_path.name + LEASE_LOCK_SUFFIX)
 
     if args.action == "list":
+        payload = load_json(claims_path)
         print(json.dumps(payload, indent=2))
         return 0
 
-    now = utc_now()
+    try:
+        fd = acquire_lock(claims_lock_path)
+    except FileExistsError:
+        print("orchestrator-coordination: execution claims lock is busy")
+        return 1
 
-    if args.action == "acquire":
-        queue = load_json(repo_root / ".ralph/state/spec-queue.json")
-        spec = next(
-            (entry for entry in queue.get("specs", []) if entry.get("spec_id") == args.spec_id or entry.get("spec_key") == args.spec_id),
-            None,
-        )
-        if spec is None:
-            print(f"orchestrator-coordination: spec `{args.spec_id}` not found")
-            return 1
+    try:
+        payload = load_json(claims_path)
+        claims = list(payload.get("claims") or [])
+        now = utc_now()
 
-        for claim in claims:
-            if claim.get("spec_id") != spec.get("spec_id") or claim.get("role") != args.role:
-                continue
-            if claim.get("holder") == args.holder and claim.get("status") == "claimed":
-                claim["heartbeat_at"] = now.isoformat()
-                claim["expires_at"] = (now + timedelta(seconds=args.ttl_seconds)).isoformat()
-                write_json(claims_path, {"schema_version": CURRENT_WORKER_CLAIMS_SCHEMA_VERSION, "claims": claims})
-                print(json.dumps(claim, indent=2))
-                return 0
-            if worker_claim_is_healthy(claim, now):
-                print("orchestrator-coordination: claim is already held by another runtime session")
+        if args.action == "acquire":
+            queue = load_json(repo_root / ".ralph/state/spec-queue.json")
+            spec = next(
+                (entry for entry in queue.get("specs", []) if entry.get("spec_id") == args.spec_id or entry.get("spec_key") == args.spec_id),
+                None,
+            )
+            if spec is None:
+                print(f"orchestrator-coordination: spec `{args.spec_id}` not found")
                 return 1
 
-        claim_record = {
-            "claim_id": args.claim_id or f"{spec['spec_id']}:{args.role}",
-            "spec_id": spec["spec_id"],
-            "spec_key": spec["spec_key"],
-            "task_id": args.task_id,
-            "role": args.role,
-            "runtime": args.runtime,
-            "session_id": args.session_id,
-            "thread_id": args.thread_id,
-            "holder": args.holder,
-            "execution_mode": args.execution_mode,
-            "worktree_path": spec.get("worktree_path"),
-            "status": "claimed",
-            "claimed_at": now.isoformat(),
-            "heartbeat_at": now.isoformat(),
-            "expires_at": (now + timedelta(seconds=args.ttl_seconds)).isoformat(),
-            "bootstrap_status": "required" if args.role != "bootstrap" else "in_progress",
-            "bootstrap_started_at": now.isoformat() if args.role == "bootstrap" else None,
-            "bootstrap_completed_at": None,
-            "bootstrap_report_path": None,
-            "validation_ready": False,
-        }
-        claims.append(claim_record)
-        write_json(claims_path, {"schema_version": CURRENT_WORKER_CLAIMS_SCHEMA_VERSION, "claims": claims})
-        print(json.dumps(claim_record, indent=2))
+            for claim in claims:
+                if claim.get("spec_id") != spec.get("spec_id") or claim.get("role") != args.role:
+                    continue
+                if claim.get("holder") == args.holder and claim.get("status") == "claimed":
+                    claim["heartbeat_at"] = now.isoformat()
+                    claim["expires_at"] = (now + timedelta(seconds=args.ttl_seconds)).isoformat()
+                    write_json_atomic(claims_path, {"schema_version": CURRENT_EXECUTION_CLAIMS_SCHEMA_VERSION, "claims": claims})
+                    print(json.dumps(claim, indent=2))
+                    return 0
+                if worker_claim_is_healthy(claim, now):
+                    print("orchestrator-coordination: execution claim is already held by another runtime session")
+                    return 1
+
+            claim_record = {
+                "claim_id": args.claim_id or f"{spec['spec_id']}:{args.role}",
+                "spec_id": spec["spec_id"],
+                "spec_key": spec["spec_key"],
+                "task_id": args.task_id,
+                "role": args.role,
+                "runtime": args.runtime,
+                "session_id": args.session_id,
+                "thread_id": args.thread_id,
+                "holder": args.holder,
+                "execution_mode": args.execution_mode,
+                "worktree_path": spec.get("worktree_path"),
+                "status": "claimed",
+                "claimed_at": now.isoformat(),
+                "heartbeat_at": now.isoformat(),
+                "expires_at": (now + timedelta(seconds=args.ttl_seconds)).isoformat(),
+                "bootstrap_status": "required" if args.role != "bootstrap" else "in_progress",
+                "bootstrap_started_at": now.isoformat() if args.role == "bootstrap" else None,
+                "bootstrap_completed_at": None,
+                "bootstrap_report_path": None,
+                "validation_ready": False,
+            }
+            claims.append(claim_record)
+            write_json_atomic(claims_path, {"schema_version": CURRENT_EXECUTION_CLAIMS_SCHEMA_VERSION, "claims": claims})
+            print(json.dumps(claim_record, indent=2))
+            return 0
+        target = next((claim for claim in claims if claim.get("claim_id") == args.claim_id), None)
+        if target is None:
+            print(f"orchestrator-coordination: execution claim `{args.claim_id}` not found")
+            return 1
+
+        if target.get("holder") != args.holder:
+            print("orchestrator-coordination: cannot mutate an execution claim held by another runtime session")
+            return 1
+
+        if args.action == "heartbeat":
+            target["heartbeat_at"] = now.isoformat()
+            target["expires_at"] = (now + timedelta(seconds=args.ttl_seconds)).isoformat()
+            target["status"] = "claimed"
+        elif args.action == "bootstrap-start":
+            target["bootstrap_status"] = "in_progress"
+            target["bootstrap_started_at"] = now.isoformat()
+            target["bootstrap_completed_at"] = None
+            if args.bootstrap_report_path:
+                target["bootstrap_report_path"] = args.bootstrap_report_path
+            target["validation_ready"] = False
+        elif args.action == "bootstrap-pass":
+            target["bootstrap_status"] = "passed"
+            if target.get("bootstrap_started_at") is None:
+                target["bootstrap_started_at"] = now.isoformat()
+            target["bootstrap_completed_at"] = now.isoformat()
+            if args.bootstrap_report_path:
+                target["bootstrap_report_path"] = args.bootstrap_report_path
+            target["validation_ready"] = True
+        elif args.action == "bootstrap-fail":
+            target["bootstrap_status"] = "failed"
+            if target.get("bootstrap_started_at") is None:
+                target["bootstrap_started_at"] = now.isoformat()
+            target["bootstrap_completed_at"] = now.isoformat()
+            if args.bootstrap_report_path:
+                target["bootstrap_report_path"] = args.bootstrap_report_path
+            target["validation_ready"] = False
+        elif args.action == "release":
+            target["heartbeat_at"] = now.isoformat()
+            target["expires_at"] = now.isoformat()
+            target["status"] = "released"
+        else:
+            print(f"orchestrator-coordination: unsupported claim action `{args.action}`")
+            return 1
+
+        write_json_atomic(claims_path, {"schema_version": CURRENT_EXECUTION_CLAIMS_SCHEMA_VERSION, "claims": claims})
+        print(json.dumps(target, indent=2))
         return 0
-
-    target = next((claim for claim in claims if claim.get("claim_id") == args.claim_id), None)
-    if target is None:
-        print(f"orchestrator-coordination: claim `{args.claim_id}` not found")
-        return 1
-
-    if target.get("holder") != args.holder:
-        print("orchestrator-coordination: cannot mutate a claim held by another runtime session")
-        return 1
-
-    if args.action == "heartbeat":
-        target["heartbeat_at"] = now.isoformat()
-        target["expires_at"] = (now + timedelta(seconds=args.ttl_seconds)).isoformat()
-        target["status"] = "claimed"
-    elif args.action == "bootstrap-start":
-        target["bootstrap_status"] = "in_progress"
-        target["bootstrap_started_at"] = now.isoformat()
-        target["bootstrap_completed_at"] = None
-        if args.bootstrap_report_path:
-            target["bootstrap_report_path"] = args.bootstrap_report_path
-        target["validation_ready"] = False
-    elif args.action == "bootstrap-pass":
-        target["bootstrap_status"] = "passed"
-        if target.get("bootstrap_started_at") is None:
-            target["bootstrap_started_at"] = now.isoformat()
-        target["bootstrap_completed_at"] = now.isoformat()
-        if args.bootstrap_report_path:
-            target["bootstrap_report_path"] = args.bootstrap_report_path
-        target["validation_ready"] = True
-    elif args.action == "bootstrap-fail":
-        target["bootstrap_status"] = "failed"
-        if target.get("bootstrap_started_at") is None:
-            target["bootstrap_started_at"] = now.isoformat()
-        target["bootstrap_completed_at"] = now.isoformat()
-        if args.bootstrap_report_path:
-            target["bootstrap_report_path"] = args.bootstrap_report_path
-        target["validation_ready"] = False
-    elif args.action == "release":
-        target["heartbeat_at"] = now.isoformat()
-        target["expires_at"] = now.isoformat()
-        target["status"] = "released"
-    else:
-        print(f"orchestrator-coordination: unsupported claim action `{args.action}`")
-        return 1
-
-    write_json(claims_path, {"schema_version": CURRENT_WORKER_CLAIMS_SCHEMA_VERSION, "claims": claims})
-    print(json.dumps(target, indent=2))
-    return 0
+    finally:
+        release_lock(fd, claims_lock_path)
 
 
 def reconcile_cmd(args: argparse.Namespace) -> int:
     repo_root = resolve_canonical_checkout_root(Path(args.repo).resolve())
     workflow = load_workflow(repo_root)
     lease = ensure_lease_file(repo_root, workflow)
-    lease_path = repo_root / (workflow.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH)
+    lease_path = repo_root / (workflow.get("scheduler_lock_path") or DEFAULT_SCHEDULER_LOCK_PATH)
     lock_path = lease_path.with_name(lease_path.name + LEASE_LOCK_SUFFIX)
 
     try:
         fd = acquire_lock(lock_path)
     except FileExistsError:
-        print("orchestrator-coordination: lease lock is busy")
+        print("orchestrator-coordination: scheduler lock is busy")
         return 1
 
     try:
         lease = load_json(lease_path)
         now = utc_now()
         if lease_is_healthy(lease, now) and lease.get("owner_token") != args.owner_token:
-            print("orchestrator-coordination: lease is already held by another owner")
+            print("orchestrator-coordination: scheduler lock is already held by another owner")
             return 1
 
         lease.update(
             {
-                "schema_version": CURRENT_LEASE_SCHEMA_VERSION,
+                "schema_version": CURRENT_SCHEDULER_LOCK_SCHEMA_VERSION,
                 "owner_token": args.owner_token,
                 "holder_thread": args.holder_thread,
                 "run_id": args.run_id,
@@ -329,15 +341,16 @@ def reconcile_cmd(args: argparse.Namespace) -> int:
         workflow = load_json(workflow_path)
         project_facts_path, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
         queue = normalize_queue(queue, workflow, project_facts, repo_root)
-        worker_claims_path = ensure_worker_claims_file(repo_root, workflow)
-        worker_claims = load_json(worker_claims_path)
-        merge_bootstrap_summary_from_claims(queue, worker_claims)
+        bump_queue_revision(queue)
+        execution_claims_path = ensure_execution_claims_file(repo_root, workflow)
+        execution_claims = load_json(execution_claims_path)
+        merge_bootstrap_summary_from_claims(queue, execution_claims)
         workflow = normalize_workflow(workflow, queue)
 
         write_json(queue_path, queue)
         write_json(workflow_path, workflow)
         write_json(project_facts_path, project_facts)
-        write_json(worker_claims_path, worker_claims)
+        write_json(execution_claims_path, execution_claims)
         (repo_root / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
         (repo_root / "specs/INDEX.md").write_text(render_spec_index_markdown(queue))
 
@@ -359,17 +372,17 @@ def reconcile_cmd(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage Ralph orchestrator lease, durable intents, and per-spec worktrees.")
+    parser = argparse.ArgumentParser(description="Manage Ralph scheduler locks, scheduler intents, execution claims, and per-spec worktrees.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    lease = subparsers.add_parser("lease")
-    lease.add_argument("action", choices=("acquire", "heartbeat", "release", "status"))
-    lease.add_argument("--repo", default=".")
-    lease.add_argument("--owner-token")
-    lease.add_argument("--holder-thread")
-    lease.add_argument("--run-id")
-    lease.add_argument("--ttl-seconds", type=int, default=LEASE_TTL_SECONDS)
-    lease.set_defaults(handler=lease_cmd)
+    scheduler_lock = subparsers.add_parser("scheduler-lock")
+    scheduler_lock.add_argument("action", choices=("acquire", "heartbeat", "release", "status"))
+    scheduler_lock.add_argument("--repo", default=".")
+    scheduler_lock.add_argument("--owner-token")
+    scheduler_lock.add_argument("--holder-thread")
+    scheduler_lock.add_argument("--run-id")
+    scheduler_lock.add_argument("--ttl-seconds", type=int, default=LEASE_TTL_SECONDS)
+    scheduler_lock.set_defaults(handler=scheduler_lock_cmd)
 
     intent = subparsers.add_parser("intent")
     intent.add_argument("action", choices=("append", "list"))

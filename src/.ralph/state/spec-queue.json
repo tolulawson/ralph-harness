@@ -1,11 +1,12 @@
 {
-  "schema_version": "6.0.0",
+  "schema_version": "7.0.0",
   "queue_policy": {
     "selection": "explicit_first_ready_set",
     "preemption": "failing_out_of_scope_bug",
     "normal_execution_limit": 3
   },
-  "worker_claims_path": ".ralph/state/worker-claims.json",
+  "execution_claims_path": ".ralph/state/execution-claims.json",
+  "queue_revision": 0,
   "active_spec_id": null,
   "active_spec_ids": [],
   "active_interrupt_spec_id": null,

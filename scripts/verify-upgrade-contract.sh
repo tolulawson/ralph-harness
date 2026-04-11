@@ -53,8 +53,8 @@ grep -Fq -- 'scripts/migrate-installed-runtime.py' "$UPGRADING_MD" \
 grep -Fq -- 'scripts/check-upgrade-surface.py' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the upgrade preflight script"
 
-grep -Fq -- '.ralph/state/worker-claims.json' "$UPGRADING_MD" \
-  || fail "UPGRADING.md must document the worker claims file"
+grep -Fq -- '.ralph/state/execution-claims.json' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the execution claims file"
 
 grep -Fq -- 'base_branch' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document canonical base-branch preservation"
@@ -94,13 +94,13 @@ done
 grep -Fq -- 'upgrade_contract_version' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document upgrade_contract_version"
 
-grep -Fq -- 'orchestrator-lease.json' "$UPGRADING_MD" \
-  || fail "UPGRADING.md must document the lease file"
+grep -Fq -- 'scheduler-lock.json' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the scheduler lock file"
 
-grep -Fq -- 'healthy held lease' "$UPGRADING_MD" \
-  || fail "UPGRADING.md must document the live-lease upgrade block"
+grep -Fq -- 'healthy held scheduler lock' "$UPGRADING_MD" \
+  || fail "UPGRADING.md must document the live scheduler-lock upgrade block"
 
-grep -Fq -- 'orchestrator-intents.jsonl' "$UPGRADING_MD" \
+grep -Fq -- 'scheduler-intents.jsonl' "$UPGRADING_MD" \
   || fail "UPGRADING.md must document the durable intents file"
 
 grep -Fq -- '.ralph/worktrees/' "$UPGRADING_MD" \
@@ -133,8 +133,8 @@ grep -Fq -- '.ralph/runtime-contract.md' "$SRC_AGENTS" \
 grep -Fq -- '.ralph/policy/runtime-overrides.md' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing runtime-overrides read-order entry"
 
-grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_AGENTS" \
-  || fail "src/AGENTS.md missing worker-claims read-order entry"
+grep -Fq -- '.ralph/state/execution-claims.json' "$SRC_AGENTS" \
+  || fail "src/AGENTS.md missing execution-claims read-order entry"
 
 grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block start marker"
@@ -142,8 +142,8 @@ grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_AGENTS" \
 grep -Fq -- '<!-- RALPH-HARNESS:END -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block end marker"
 
-grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_CLAUDE" \
-  || fail "src/CLAUDE.md missing worker-claims read-order entry"
+grep -Fq -- '.ralph/state/execution-claims.json' "$SRC_CLAUDE" \
+  || fail "src/CLAUDE.md missing execution-claims read-order entry"
 
 grep -Fq -- '`UPGRADING.md` is the canonical upgrade source of truth' "$UPGRADE_SKILL" \
   || fail "ralph-upgrade skill must defer to UPGRADING.md"

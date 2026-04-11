@@ -15,7 +15,7 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 - `.ralph/policy/project-policy.md`
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
-- `.ralph/state/worker-claims.json`
+- `.ralph/state/execution-claims.json`
 
 ## Role Contract
 

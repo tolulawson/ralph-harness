@@ -27,13 +27,13 @@ In this source repository, the installable scaffold lives under `src/`. Installe
    - read canonical JSON first and treat `.ralph/state/workflow-state.md` plus `specs/INDEX.md` as derived projections
    - if projections drift from canonical JSON, regenerate them under the lease instead of routing to upgrade
    - the origin spec `task-state.json` is required only when that spec is already execution-ready; if it is missing or drifted, route back through planning or `task-gen`
-   - `.ralph/state/orchestrator-lease.json` and `.ralph/state/orchestrator-intents.jsonl` must exist and parse
+   - `.ralph/state/scheduler-lock.json` and `.ralph/state/scheduler-intents.jsonl` must exist and parse
 5. Classify any preflight issues before creating the interrupt:
    - self-heal safely derivable projections or admitted worktree state first
    - route to `$ralph-plan` when planning artifacts or `task-state.json` still need to be generated or refreshed
    - route to `$ralph-upgrade` only for actual scaffold drift, mixed-version state, or recorded-baseline mismatch
    - stop and report a hard repair requirement when the runtime state is ambiguous enough that Ralph cannot repair it safely
-6. Acquire the single-writer lease before mutating canonical shared state. If another healthy lease-holder is active, append a durable interrupt request to `.ralph/state/orchestrator-intents.jsonl` and stop instead of mutating the queue concurrently.
+6. Acquire the short-lived scheduler lock before mutating canonical shared state. If another healthy scheduler-lock holder is active, append a durable interrupt request to `.ralph/state/scheduler-intents.jsonl` and release promptly instead of mutating the queue concurrently.
 7. Confirm the bug is out of scope for the currently executing or otherwise affected normal spec.
 8. Create a new numbered spec with `kind = interrupt`.
 9. Link the interrupt to `origin_spec_key` and `origin_task_id` when they exist, else leave them `null`.
@@ -56,7 +56,7 @@ In this source repository, the installable scaffold lives under `src/`. Installe
 
 - updated `.ralph/state/spec-queue.json`
 - updated `.ralph/state/workflow-state.json`
-- updated `.ralph/state/orchestrator-intents.jsonl` when another healthy lease-holder is already active
+- updated `.ralph/state/scheduler-intents.jsonl` when another healthy scheduler-lock holder is already active
 - updated `.ralph/state/workflow-state.md`
 - updated `specs/INDEX.md`
 - new `specs/<spec-key>/spec.md`
@@ -70,7 +70,7 @@ In this source repository, the installable scaffold lives under `src/`. Installe
 - Do not use this for defects that still belong to the current spec's own scope.
 - Do not create an interrupt from mixed-version runtime state or unresolved hard-repair conditions.
 - Do not treat derived projection drift or safely derivable worktree state as an upgrade-only failure.
-- Do not mutate canonical shared state while another healthy lease-holder is active.
+- Do not mutate canonical shared state while another healthy scheduler-lock holder is active.
 - Do not rewrite the original spec, plan, or tasks in place as part of the canonical interrupt flow.
 - Keep earlier specs historically immutable and record corrected guidance through linked amendments.
 

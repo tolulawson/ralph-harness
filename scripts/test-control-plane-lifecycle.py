@@ -118,14 +118,15 @@ def test_contract_language_covers_queue_drain_and_reconciliation() -> None:
         assert_contains(text, "release_failed")
 
     assert_contains(runtime_contract.lower(), "workers release their claims and exit")
-    assert_contains(runtime_contract.lower(), "orchestrator alone")
-    assert_contains(runtime_contract.lower(), "refill freed execution slots")
+    assert_contains(runtime_contract.lower(), "scheduler lock")
+    assert_contains(runtime_contract.lower(), "queue_revision")
     assert_contains(orchestrator_skill.lower(), "workers release their claims and exit")
-    assert_contains(orchestrator_skill.lower(), "refill freed slots")
+    assert_contains(orchestrator_skill.lower(), "scheduler lock")
     assert_contains(execute_skill, "record every delegated worker")
     assert_contains(execute_skill, "Do not accept inline current-session worker execution")
     assert_contains(runtime_contract, "main thread must never continue as the PRD or planning coordinator")
     assert_contains(orchestrator_skill, "launcher thread is already done being a launcher")
+    assert_contains(execute_skill, "orchestrator peer subagent")
 
     for outcome in RELEASE_OUTCOMES:
         assert_contains(release_skill, outcome)

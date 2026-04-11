@@ -13,7 +13,7 @@ description: Prepare the assigned spec worktree and local validation environment
 ## Inputs
 
 - active spec entry from `.ralph/shared/state/spec-queue.json` or the resolved canonical `.ralph/state/spec-queue.json`
-- current claim from `.ralph/shared/state/worker-claims.json` or the resolved canonical `.ralph/state/worker-claims.json`
+- current claim from `.ralph/shared/state/worker-claims.json` or the resolved canonical `.ralph/state/execution-claims.json`
 - `.ralph/shared/context/project-truths.md` or the resolved canonical `.ralph/context/project-truths.md`
 - `.ralph/shared/context/project-facts.json` or the resolved canonical `.ralph/context/project-facts.json`
 - `.ralph/shared/context/learning-summary.md` or the resolved canonical `.ralph/context/learning-summary.md`
@@ -35,7 +35,7 @@ description: Prepare the assigned spec worktree and local validation environment
    - `.ralph/context/project-facts.json` `validation_bootstrap_commands`
    - then `.ralph/context/project-facts.json` `verification_commands` when they are safe as bootstrap checks
 7. Record exact command results, copied files, skipped files, exclusions, and any missing prerequisites.
-8. Update the active claim bootstrap lifecycle in the canonical `.ralph/state/worker-claims.json` so the claim records whether bootstrap is `in_progress`, `passed`, or `failed`.
+8. Update the active claim bootstrap lifecycle in the canonical `.ralph/state/execution-claims.json` so the claim records whether bootstrap is `in_progress`, `passed`, or `failed`.
 9. Write the bootstrap report to the canonical `.ralph/reports/<run-id>/<spec-key>/bootstrap.md`, typically via `.ralph/shared/reports/`.
 10. Recommend `implement` only when bootstrap passed and the claim is validation-ready.
 
@@ -44,7 +44,7 @@ description: Prepare the assigned spec worktree and local validation environment
 - prepared assigned spec worktree
 - generated `.ralph/shared/` overlay inside the assigned worktree
 - copied or skipped allowlisted env or config files
-- bootstrap lifecycle updates in `.ralph/state/worker-claims.json`
+- bootstrap lifecycle updates in `.ralph/state/execution-claims.json`
 - `.ralph/reports/<run-id>/<spec-key>/bootstrap.md`
 
 ## Stop Condition

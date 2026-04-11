@@ -66,7 +66,7 @@ Epochs are a grouping and reporting layer. Specs are the actual execution queue.
 
 - `.ralph/state/workflow-state.json` is the canonical machine-readable runtime state.
 - `.ralph/state/spec-queue.json` is the canonical machine-readable spec queue and spec-state registry.
-- `.ralph/state/worker-claims.json` is the canonical machine-readable worker claim registry for cross-runtime execution claims.
+- `.ralph/state/execution-claims.json` is the canonical machine-readable worker claim registry for cross-runtime execution claims.
 - `.ralph/state/workflow-state.md` is a human-readable companion file and must agree with the JSON state.
 - `specs/<spec-id>-<slug>/task-state.json` is the canonical machine-readable task lifecycle registry for a spec when it exists.
 - `specs/<spec-id>-<slug>/research.md` is the canonical spec-local research artifact when research has been completed for that spec.
@@ -92,7 +92,7 @@ Use this order whenever a fresh coding-agent run resumes work:
 7. `.ralph/context/learning-summary.md`
 8. `.ralph/state/workflow-state.json`
 9. `.ralph/state/spec-queue.json`
-10. `.ralph/state/worker-claims.json`
+10. `.ralph/state/execution-claims.json`
 11. `.ralph/reports/<current-run-id>/` or `last_report_path`
 12. active spec files in `specs/<spec-id>-<slug>/`
 13. `specs/<spec-id>-<slug>/task-state.json` when present

@@ -31,7 +31,7 @@ Interpret an installed Ralph harness in this order:
 - Every supported adapter must support native runtime subagents for substantive Ralph work. Adapters that cannot delegate the full Ralph topology are unsupported by the shipped harness.
 - The installed scaffold must also ship repo-local hook surfaces for all supported adapters: `.codex/hooks.json`, `.claude/settings.json`, `.cursor/hooks.json`, and the shared Ralph hook code under `.ralph/hooks/`.
 - Public Ralph entrypoints must keep the invoking thread thin and immediately hand off substantive Ralph work to a dedicated subagent instead of doing PRD, planning, research, orchestration, or implementation inline on the entry thread.
-- `ralph-execute` must launch exactly one dedicated orchestrator subagent per invocation. `ralph-prd` must launch exactly one dedicated `prd` subagent. `ralph-plan` must launch exactly one dedicated planning coordinator subagent.
+- `ralph-execute` may launch one dedicated orchestrator peer subagent per invocation. `ralph-prd` must launch exactly one dedicated `prd` subagent. `ralph-plan` must launch exactly one dedicated planning coordinator subagent.
 - The main thread must never continue as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to the orchestrator, and adapters that cannot spawn the required `ralph-prd` or `ralph-plan` subagent are unsupported rather than allowed to fall back to inline execution.
 - Supported adapters must run the Ralph topology `launcher thread -> dedicated coordinator or orchestrator subagent -> delegated role subagents`.
 - Supported adapters must delegate `prd`, `specify`, `research`, `plan`, `task_gen`, `plan_check`, `bootstrap`, `implement`, `review`, `verify`, and `release` to native subagents rather than executing those roles inline on the launching or coordinating thread.
@@ -47,14 +47,15 @@ Interpret an installed Ralph harness in this order:
 - When multiple normal specs are dependency-satisfied, the orchestrator should prefer filling the bounded admission window before idling or stopping.
 - For supported installed runtimes, native worker spawning is the required execution posture for `bootstrap`, `implement`, `review`, `verify`, and `release`, and the planning coordinator must likewise delegate `specify`, same-batch `research`, `plan`, `task_gen`, and `plan_check`.
 - Explicit user-requested scheduling targets should outrank creation order whenever those targets are dependency-satisfied.
-- The scheduler must coordinate through a single-writer lease stored in `.ralph/state/orchestrator-lease.json`.
-- Cross-runtime worker execution must coordinate through `.ralph/state/worker-claims.json`.
-- A healthy held lease blocks concurrent shared-state mutation; expired or malformed held leases must be recovered to `idle` before mutation resumes.
+- The scheduler must coordinate through a short-lived global queue write lock stored in `.ralph/state/scheduler-lock.json`.
+- Cross-runtime worker execution must coordinate through `.ralph/state/execution-claims.json`.
+- A healthy held scheduler lock blocks concurrent shared-state mutation; expired or malformed held locks must be recovered to `idle` before mutation resumes.
 - A healthy held worker claim blocks another runtime from taking the same spec role slot until the claim is released or expires.
-- Cross-thread operator requests must be recorded durably in `.ralph/state/orchestrator-intents.jsonl`.
+- Cross-thread operator requests must be recorded durably in `.ralph/state/scheduler-intents.jsonl`.
 - Admitted specs must execute in dedicated git worktrees under `.ralph/worktrees/`, while the canonical control-plane checkout remains the only shared-state owner.
 - Each admitted spec worktree must get a generated `.ralph/shared/` overlay that symlinks shared artifacts back to the canonical checkout for convenience.
-- Lease ownership is ephemeral and mutation-scoped rather than resident for one long-lived orchestrator thread. Any eligible runtime session may briefly hold the lease to admit work, reconcile finished work, recover stale claims, or record pause or resume transitions.
+- Scheduler lock ownership is ephemeral and mutation-scoped rather than resident for one long-lived orchestrator thread. Any eligible runtime session may briefly hold the lock to admit work, reconcile finished work, recover stale claims, or record pause or resume transitions.
+- Many orchestrator peers may participate in one control plane, but they must coordinate queue-wide rewrites only through the shared scheduler lock.
 - `bootstrap` is a first-class delivery role. A claim must pass `bootstrap` and set `validation_ready = true` before `implement` or any other execution role begins in that session.
 - Product files and spec-local implementation artifacts must be authored only from the assigned spec worktree.
 - Shared-state reads and writes must resolve to the canonical checkout, either directly or through the generated `.ralph/shared/` overlay. Workers must never rely on worktree-local tracked copies of shared artifacts.
@@ -64,10 +65,10 @@ Interpret an installed Ralph harness in this order:
 - Completed tasks must be handed off through atomic git commits rather than dirty worktree state.
 - Handoffs past implementation must include `Quality Gate` evidence in the latest relevant worker report.
 - Review, verification, and release failures are remediation signals, not stop conditions.
-- Supported runtimes should use the shipped stop-boundary hook so the orchestrator re-checks whether it is truly done or human-blocked before stopping.
+- Supported runtimes should use the shipped stop-boundary hook so an orchestrator peer re-checks whether it is truly done or human-blocked before stopping.
 - The stop-boundary hook may auto-continue only once per stop chain, only for the top-level orchestrator, and only when the stop is not clearly human-gated.
 - No delegated worker role besides the active Ralph coordinator may mutate shared queue state, workflow state, lease state, projections, promoted learnings, or event logs.
-- Runtime sessions may mutate `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own active claim.
+- Runtime sessions may mutate `.ralph/state/execution-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own active claim.
 - Direct edits to `.ralph/runtime-contract.md` are scaffold drift and should be moved into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or `.ralph/context/project-facts.json` extension fields such as `canonical_control_plane` and `control_plane_versioning`; upgrade preflight may block if the base contract no longer matches its recorded canonical baseline.
 - Ralph-managed runtime skill directories under `.agents/skills/` are scaffold-owned. Project-specific control-plane changes must live in `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a non-managed project skill directory instead of patching a Ralph-managed skill in place.
 
@@ -98,12 +99,12 @@ Interpret an installed Ralph harness in this order:
 5. read `.ralph/context/project-facts.json`
 6. read `.ralph/context/learning-summary.md`
 7. read `.ralph/state/spec-queue.json`
-8. read `.ralph/state/orchestrator-lease.json`
-9. read `.ralph/state/worker-claims.json`
-10. tail only the recent window of `.ralph/state/orchestrator-intents.jsonl`
-11. attempt to acquire the single-writer lease only for the current shared-state mutation window
-12. if another healthy lease-holder exists, stop after recording or acknowledging the caller's durable intent
-13. re-read workflow, queue, lease, claim, and intent state after the lease is held
+8. read `.ralph/state/scheduler-lock.json`
+9. read `.ralph/state/execution-claims.json`
+10. tail only the recent window of `.ralph/state/scheduler-intents.jsonl`
+11. attempt to acquire the short-lived global queue write lock only for the current shared-state mutation window
+12. if another healthy scheduler-lock holder exists, release control promptly and retry later instead of treating that holder as a permanent scheduler owner
+13. re-read workflow, queue, lock, claim, and intent state after the queue lock is held
 14. materialize new-spec or scheduling intents into numbered spec queue entries without bypassing hard dependencies
 15. determine the admission window:
    - active interrupt spec
@@ -125,7 +126,7 @@ Interpret an installed Ralph harness in this order:
    - else first `release_failed`
    - else advance the spec using explicit release outcomes and completion rules
 20. after a PRD-to-spec pass, identify the planning batch whose specs were created or refreshed together
-21. if that batch contains specs with valid `spec.md` files and `research_status` needing work, delegate bounded parallel `research` through native subagents and record those workers in `.ralph/state/worker-claims.json`
+21. if that batch contains specs with valid `spec.md` files and `research_status` needing work, delegate bounded parallel `research` through native subagents and record those workers in `.ralph/state/execution-claims.json`
 22. wait for the research batch to finish, close or release the completed research workers, and validate every spec-local `research.md` plus report before mutating shared state
 23. outside the batch-scoped research step, decide the next role for each admitted spec from lifecycle state, PR state, dependency status, next action, and bootstrap readiness using this default routing:
    - spec `plan_check_failed` returns to `plan` or `task_gen`, depending on the latest plan-check findings
@@ -133,16 +134,16 @@ Interpret an installed Ralph harness in this order:
    - task `awaiting_review` or `review_failed` routes to `review`
    - task `awaiting_verification` or `verification_failed` routes to `verify`
    - task `awaiting_release` or `release_failed` routes to `release`
-24. make each runnable spec role slot visible through `.ralph/state/worker-claims.json` for cross-runtime coordination, but keep one orchestrator responsible for the whole invocation
+24. make each runnable spec role slot visible through `.ralph/state/execution-claims.json` for cross-runtime coordination, and let any orchestrator peer claim one runnable role after it releases the queue lock
 25. if the next execution role for a spec has not yet passed `bootstrap`, dispatch or claim `bootstrap` first
 26. on supported adapters, spawn bounded worker subagents across the full admitted ready set up to the admission window and available worker-thread budget, keeping at most one non-research worker per admitted spec
 27. as workers finish, refill freed execution slots from the remaining admitted ready set before considering any stop path
-28. record every delegated worker in `.ralph/state/worker-claims.json` with `execution_mode = native_subagent`; do not execute worker roles inline on the orchestrator thread
+28. record every delegated worker in `.ralph/state/execution-claims.json` with `execution_mode = native_subagent`; do not execute worker roles inline on the orchestrator thread
 29. ensure every worker receives one spec, one worktree path, one report path, one execution mode, and one claim heartbeat window
 30. wait for completed workers or released claims, and validate outputs from the assigned spec worktrees, including bootstrap evidence, `Quality Gate`, `Commit Evidence`, clean-worktree handoff requirements, and absence of worktree-local shared-control-plane edits
 31. classify each release report with one explicit outcome: `pr_created`, `awaiting_review`, `awaiting_merge`, `merge_completed`, `release_failed`, or `human_gate_waiting`
 32. if review, verification, or release reports a fixable failure without an explicit human-gated blocker, update the task lifecycle, route the spec back to the next remediation role, and keep draining the queue
-33. treat worker outputs as spec-local only; workers release their claims and exit, and the orchestrator alone acquires or renews the lease as needed, mutates canonical shared state directly in the canonical checkout, refreshes projections, and dispatches the next role
+33. treat worker outputs as spec-local only; workers release their claims and exit, and any orchestrator peer may later acquire the scheduler lock, mutate canonical shared state directly in the canonical checkout, refresh projections, and dispatch the next role
 34. if a worker failed or blocked on an out-of-scope bug, create a new interrupt spec, freeze new normal admissions, and pause in-flight normal specs at the current role boundary
 35. write the orchestrator report
 36. append one orchestrator-owned event
@@ -157,7 +158,7 @@ The orchestrator may stop only when one of these is true:
 - the queue is empty
 - every admitted spec is blocked on a human-gated issue
 - a credential, approval, or external human decision is required
-- another healthy lease-holder should take over
+- another orchestrator peer can continue after this thread releases the queue lock
 - the orchestration safety cap is reached and a human should decide whether to resume with a fresh run
 
 The orchestrator must not stop merely because one worker claim finished, one worker handed off successfully, or the next role is now clear while other runnable admitted work remains.
@@ -177,12 +178,12 @@ Each admitted spec worktree should regenerate `.ralph/shared/` whenever the work
 
 ## Shared-State Ownership
 
-The canonical shared control plane lives only in the canonical checkout. Only the active Ralph coordinator may update:
+The canonical shared control plane lives only in the canonical checkout. Only a queue-lock-holding Ralph coordinator may update:
 
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
-- `.ralph/state/orchestrator-lease.json`
-- `.ralph/state/orchestrator-intents.jsonl` once intents are drained or acknowledged
+- `.ralph/state/scheduler-lock.json`
+- `.ralph/state/scheduler-intents.jsonl` once intents are drained or acknowledged
 - `.ralph/state/workflow-state.md`
 - `.ralph/logs/events.jsonl`
 - `specs/INDEX.md`
@@ -192,7 +193,7 @@ The canonical shared control plane lives only in the canonical checkout. Only th
 
 Worker roles must not silently mutate shared queue state or append orchestrator events.
 
-`.ralph/state/worker-claims.json` is the only shared coordination file that non-orchestrator runtime sessions may update directly, and only for their own claim lifecycle, bootstrap lifecycle, heartbeat, and release metadata.
+`.ralph/state/execution-claims.json` is the only shared coordination file that non-orchestrator runtime sessions may update directly, and only for their own claim lifecycle, bootstrap lifecycle, heartbeat, and release metadata.
 
 Worker roles must not read or write shared artifacts through the tracked copies that happen to exist inside a git worktree checkout. They must resolve shared paths to the canonical checkout directly or use the generated `.ralph/shared/` overlay.
 
@@ -215,7 +216,8 @@ Top-level queue fields must include:
 
 - `active_spec_ids`
 - `active_interrupt_spec_id`
-- `worker_claims_path`
+- `execution_claims_path`
+- `queue_revision`
 - `queue_policy.normal_execution_limit`
 
 Each spec queue entry must include:
@@ -245,7 +247,7 @@ Each spec queue entry must include:
 
 ## Worker Claim Contract
 
-- `.ralph/state/worker-claims.json` is the canonical machine-readable worker claim registry.
+- `.ralph/state/execution-claims.json` is the canonical machine-readable worker claim registry.
 - Each claim record must include:
   - `claim_id`
   - `spec_id`

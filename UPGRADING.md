@@ -44,20 +44,20 @@ After upgrade, the target repository should:
 - gain the latest repo-local hook configs for Codex, Claude Code, and Cursor plus the shared Ralph stop-boundary hook
 - gain the shipped `research` and `plan-check` roles plus the bounded same-batch research contract
 - preserve the canonical shared control plane in the selected canonical checkout while refreshing admitted worktrees to use generated overlays
-- carry current live-state files for workflow, queue, lease, durable intents, projections, worktree coordination, and per-spec task lifecycle
+- carry current live-state files for workflow, queue, scheduler lock, durable intents, projections, worktree coordination, and per-spec task lifecycle
 - migrate live runtime semantics to the current explicit-first ready-set scheduler model rather than preserving stale queue-head behavior
 - regenerate `.ralph/shared/` overlays for admitted spec worktrees so shared reads and canonical report writes no longer depend on tracked worktree copies
 - backfill or preserve the canonical `base_branch` in `.ralph/context/project-facts.json`
 - preserve explicit canonical control-plane selection in `.ralph/context/project-facts.json` under `canonical_control_plane`
 - preserve explicit control-plane version-control policy in `.ralph/context/project-facts.json` under `control_plane_versioning`
-- backfill bootstrap lifecycle fields in worker claims and bootstrap summary fields in queue entries
+- backfill bootstrap lifecycle fields in execution claims and bootstrap summary fields in queue entries
 - preserve unknown runtime skills that live under `.agents/skills/` and refresh only the Ralph-managed skill directories listed in `src/.ralph/agent-registry.json`
 - treat Ralph-managed runtime skill directories as scaffold-owned upgrade surface rather than project-owned customization points
 - normalize legacy worker report pointers from root-level `.ralph/reports/<run-id>/<role>.md` paths into spec-scoped `.ralph/reports/<run-id>/<spec-key>/<role>.md` paths when ownership is unambiguous
 - record the installed Ralph version tag, resolved commit, and migration-aware upgrade contract in `.ralph/harness-version.json`
 - preserve or refresh the managed Ralph blocks in `AGENTS.md` and `CLAUDE.md`
 
-An upgrade must not run over a healthy live orchestrator lease. If `.ralph/state/orchestrator-lease.json` still shows an active non-expired holder, stop and retry after the live run releases or times out. Expired or malformed held leases are treated as stale and should be recovered to `idle` during migration before shared-state rewrite continues.
+An upgrade must not run over a healthy held scheduler lock. If `.ralph/state/scheduler-lock.json` still shows an active non-expired holder, stop and retry after the live run releases or times out. Expired or malformed held locks are treated as stale and should be recovered to `idle` during migration before shared-state rewrite continues.
 
 ## Default Reference
 
@@ -110,8 +110,8 @@ If the preflight reports drift in a Ralph-managed runtime skill directory, stop 
 Only overwrite the scaffold-owned paths listed in src/upgrade-manifest.txt.
 Preserve project-owned files under .ralph/policy/, .ralph/context/, .ralph/reports/, and .ralph/logs/, and preserve spec prose unless a named migration step below says otherwise.
 Refresh the managed Ralph blocks inside AGENTS.md and CLAUDE.md instead of replacing the whole files.
-Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, lease state, worker claims, durable intents, task-state, projection files, worktree metadata, `.ralph/shared/` worktree overlays, and the runtime adapter packs are upgraded together.
-If .ralph/state/orchestrator-lease.json still shows a healthy held lease, stop instead of upgrading over live orchestration.
+Run the live-runtime migration phase from UPGRADING.md so workflow-state, spec-queue, scheduler-lock state, execution claims, durable intents, task-state, projection files, worktree metadata, `.ralph/shared/` worktree overlays, and the runtime adapter packs are upgraded together.
+If .ralph/state/scheduler-lock.json still shows a healthy held scheduler lock, stop instead of upgrading over live orchestration.
 If migration cannot infer historic task lifecycle safely, stop and report the ambiguous spec instead of guessing.
 Update .ralph/harness-version.json so it records version 0.12.8, tag v0.12.8, the source repo, the resolved commit used for this upgrade, upgrade_contract_version 11, the scaffold runtime-contract baseline hash, the canonical runtime-overrides path, the installed runtime adapters, and the preserved branch prefix.
 Merge `.codex/config.toml`, `.codex/hooks.json`, `.claude/settings.json`, and `.cursor/hooks.json` instead of clobbering user-owned settings or unrelated hook entries.
@@ -209,9 +209,9 @@ The migration phase may update only Ralph-owned live state and projections, plus
 - `.ralph/hooks/stop-boundary.py`
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
-- `.ralph/state/orchestrator-lease.json`
-- `.ralph/state/worker-claims.json`
-- `.ralph/state/orchestrator-intents.jsonl`
+- `.ralph/state/scheduler-lock.json`
+- `.ralph/state/execution-claims.json`
+- `.ralph/state/scheduler-intents.jsonl`
 - `.ralph/state/workflow-state.md`
 - `specs/INDEX.md`
 - generated `.ralph/shared/` overlays inside admitted spec worktrees
@@ -258,9 +258,9 @@ Older installs or partial upgrades may be missing one or more of:
 - `.ralph/harness-version.json`
 - `.codex/agents/*.toml`
 - legacy repo-root `agents/*.toml`
-- `.ralph/state/orchestrator-lease.json`
-- `.ralph/state/worker-claims.json`
-- `.ralph/state/orchestrator-intents.jsonl`
+- `.ralph/state/scheduler-lock.json`
+- `.ralph/state/execution-claims.json`
+- `.ralph/state/scheduler-intents.jsonl`
 - `resume_spec_stack` or `interruption_state` in workflow state
 - interrupt metadata and `task_state_path` in queue entries
 - multi-spec scheduler metadata such as `active_spec_ids`, `depends_on_spec_ids`, worktree fields, or admission state
@@ -291,11 +291,11 @@ The migration phase must:
 - normalize `.ralph/state/spec-queue.json` to the current schema, explicit-first ready-set admission policy, and dependency model
 - backfill or preserve `.ralph/context/project-facts.json` so the canonical `base_branch` is recorded when it can be derived safely and canonical-control-plane selections remain explicit
 - seed or preserve `.ralph/context/project-facts.json` keys for `orchestrator_stop_hook`, `worktree_bootstrap_commands`, `bootstrap_env_files`, and `bootstrap_copy_exclude_globs`
-- create or normalize `.ralph/state/orchestrator-lease.json` and `.ralph/state/orchestrator-intents.jsonl`
-- stop immediately when `.ralph/state/orchestrator-lease.json` still shows a healthy non-expired holder for another live run
-- recover stale held lease state back to `idle` when the lease is expired, malformed, or otherwise no longer healthy
-- enforce the lease-plus-claims execution contract in runtime files, including the cross-runtime worker-claim registry
-- backfill bootstrap lifecycle fields into worker claims and propagate the latest bootstrap summary into each queued spec entry
+- create or normalize `.ralph/state/scheduler-lock.json` and `.ralph/state/scheduler-intents.jsonl`
+- stop immediately when `.ralph/state/scheduler-lock.json` still shows a healthy non-expired holder for another live run
+- recover stale held scheduler-lock state back to `idle` when the lock is expired, malformed, or otherwise no longer healthy
+- enforce the queue-lock-plus-claims execution contract in runtime files, including the cross-runtime execution-claim registry
+- backfill bootstrap lifecycle fields into execution claims and propagate the latest bootstrap summary into each queued spec entry
 - backfill default worktree metadata, create `.ralph/worktrees/`, and reassign safely-derivable duplicate worktree names or paths onto unique `.ralph/worktrees/<spec-key>` slots
 - regenerate `.ralph/shared/` overlays for admitted worktrees so shared inputs and canonical reports resolve back to the canonical checkout
 - stop with a repair error when multiple specs already claim the same branch name or when worktree collisions are not safely derivable
@@ -325,14 +325,14 @@ Typical symptoms include:
 - admitted worktrees are missing `.ralph/shared/` or still depend on tracked worktree copies of shared-control-plane files
 - user-defined runtime skills disappeared from `.agents/skills/` after an upgrade
 - a custom hook entry vanished from `.codex/hooks.json`, `.claude/settings.json`, or `.cursor/hooks.json`
-- `.ralph/state/orchestrator-lease.json` still claims a held lease long after the last orchestrator run died
+- `.ralph/state/scheduler-lock.json` still claims a held scheduler lock long after the last orchestrator run died
 - multiple specs claim the same `branch_name`, `worktree_name`, or `worktree_path`
 - multiple specs still point at the same legacy root-level worker report file
 
 Repair steps:
 
 1. refresh the scaffold-owned surface from `src/upgrade-manifest.txt`
-2. inspect `.ralph/state/orchestrator-lease.json`; if it is healthy and still held, stop the live run first instead of upgrading over it
+2. inspect `.ralph/state/scheduler-lock.json`; if it is healthy and still held, stop the live run first instead of upgrading over it
 3. run `python3 scripts/migrate-installed-runtime.py --repo /path/to/target-repo`
 4. if migration blocks, repair the named spec so `tasks.md`, reports, intended lifecycle, and branch ownership agree
 5. rerun migration
@@ -344,7 +344,7 @@ The runtime is not truthful again until:
 - spec queue JSON and `specs/INDEX.md` agree
 - `task-state.json` agrees with `tasks.md`
 - `workflow-state.json` no longer points at a task that `tasks.md` already marks complete
-- `.ralph/state/orchestrator-lease.json` is either idle or held by a currently healthy live run
+- `.ralph/state/scheduler-lock.json` is either idle or held by a currently healthy live run
 - `.ralph/context/project-facts.json` records the canonical `base_branch` when one can be derived safely
 - `.ralph/context/project-facts.json` preserves the user's canonical control-plane selection under `canonical_control_plane`
 - `.ralph/context/project-facts.json` preserves the user's control-plane version-control policy under `control_plane_versioning`
@@ -399,11 +399,11 @@ At the end of the upgrade, verify:
 - `.codex/config.toml` preserves user-owned settings while containing the current Ralph-managed feature flag and role mappings
 - `.codex/config.toml` enforces `agents.max_depth = 3`
 - `.codex/agents/*.toml` all use `sandbox_mode = "danger-full-access"`
-- `.ralph/state/worker-claims.json` exists, parses, and carries the shared claim registry
+- `.ralph/state/execution-claims.json` exists, parses, and carries the shared claim registry
 - unknown runtime skills are still present under `.agents/skills/`
-- runtime contract and orchestrator skill both enforce the lease-plus-claims execution model
+- runtime contract and orchestrator skill both enforce the queue-lock-plus-claims execution model
 - queue entries now carry research metadata, and existing task-state files are normalized to the current schema
-- `.ralph/state/orchestrator-lease.json` is not left in a stale held state
+- `.ralph/state/scheduler-lock.json` is not left in a stale held state
 - no two specs claim the same `branch_name`, `worktree_name`, or `worktree_path`
 - legacy worker reports have been normalized into spec-scoped report paths when the upgrade could attribute them safely
 - the managed Ralph blocks exist in `AGENTS.md` and `CLAUDE.md`

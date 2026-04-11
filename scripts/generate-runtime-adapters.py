@@ -52,7 +52,7 @@ def render_loader_block(registry: dict) -> str:
             "Treat the repository root as the harness work area after installation. Keep agent-specific instructions thin and route all substantive behavior back to the shared Ralph runtime contract.",
             "Ralph supports only adapters that can delegate the full Ralph subagent topology for substantive work.",
             "When a public Ralph entrypoint is invoked, keep the entry thread thin and immediately launch the dedicated Ralph subagent for that entrypoint instead of doing the work inline.",
-            "Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to the orchestrator.",
+            "Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to orchestrator peers operating through the shared scheduler lock.",
             "",
             "If this repository already has its own loader file, preserve non-Ralph content and replace only the managed Ralph block between the markers shown here.",
             registry["loaders"]["managed_block_end"],
@@ -84,7 +84,7 @@ def render_claude_agent(role: dict) -> str:
             "- `.ralph/policy/project-policy.md`",
             "- `.ralph/state/workflow-state.json`",
             "- `.ralph/state/spec-queue.json`",
-            "- `.ralph/state/worker-claims.json`",
+            "- `.ralph/state/execution-claims.json`",
             "",
             "## Role Contract",
             "",
@@ -99,7 +99,7 @@ def render_claude_agent(role: dict) -> str:
                 else None
             ),
             (
-                "- Worker fan-out: exactly one orchestrator per `ralph-execute` invocation, filling the bounded admission window with worker subagents when dependencies allow"
+                "- Peer topology: every `ralph-execute` invocation may launch one orchestrator peer that briefly schedules under the shared queue lock, then claims one runnable role and releases the lock before execution"
                 if role["id"] == "orchestrator"
                 else None
             ),
@@ -125,8 +125,8 @@ def render_claude_command(entrypoint: dict) -> str:
             "Read the shared Ralph runtime files first, preserve any existing managed Ralph loader blocks, and follow the canonical contract instead of rewriting it from memory.",
     ]
     if entrypoint["id"] == "ralph-execute":
-        lines.append("Keep the invoking thread thin: launch a dedicated Ralph orchestrator subagent immediately, then wait and relay its result instead of orchestrating inline on the command thread.")
-        lines.append("That orchestrator should fill the admitted-spec execution window with worker subagents up to the bounded thread budget, then reconcile completed worker output itself instead of spawning multiple orchestrators or tolerating inline worker execution.")
+        lines.append("Keep the invoking thread thin: launch a dedicated Ralph orchestrator peer subagent immediately, then wait and relay its result instead of orchestrating inline on the command thread.")
+        lines.append("That orchestrator peer should briefly acquire the shared scheduler lock to drain intents and refresh admissions, release the lock before worktree execution, then claim and execute one runnable role before reconciling validated output.")
     elif entrypoint["id"] == "ralph-plan":
         lines.append("Keep the invoking thread thin: launch a dedicated Ralph planning coordinator subagent immediately, let that coordinator delegate `specify`, same-batch `research`, `plan`, `task-gen`, and `plan-check` as needed, then wait and relay its result instead of planning inline on the command thread.")
         lines.append("Do not let the main thread become the planning coordinator. If that subagent cannot be launched natively, stop and report the adapter as unsupported instead of planning inline.")
@@ -172,8 +172,8 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
             "Treat `.ralph/` as the canonical runtime doctrine and state surface.",
             "Ralph supports only adapters that can delegate the full Ralph subagent topology for substantive work.",
             "Treat the invoking thread as a Ralph launcher only when a public `ralph-*` entrypoint is used. Keep that thread thin and move substantive Ralph work into the dedicated subagent for that entrypoint.",
-            "Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to the orchestrator.",
-            "Use `.ralph/state/worker-claims.json` as the shared worker-claims registry for cross-runtime execution.",
+            "Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs to orchestrator peers operating through the shared scheduler lock.",
+            "Use `.ralph/state/execution-claims.json` as the shared execution-claims registry for cross-runtime execution.",
             "Execute numbered spec work only from assigned spec worktrees, never from the canonical checkout.",
             "Use `.cursor/rules/` only as Cursor-native wrappers around the shared Ralph contract, not as a divergent workflow definition.",
             "When a task references a Ralph role or entrypoint, route back to `.agents/skills/` and the public `skills/ralph-*` docs."
@@ -184,11 +184,11 @@ def expected_outputs(registry: dict) -> dict[Path, str]:
         "Ralph Execute",
         "How Cursor should resume an installed Ralph runtime.",
         [
-            "Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/worker-claims.json` before execution.",
-            "Keep the invoking thread thin: immediately launch a dedicated Ralph orchestrator subagent for `ralph-execute`, then wait and relay its result instead of orchestrating inline.",
-            "That orchestrator should fill the admitted-spec execution window with bounded worker subagents, keeping at most one non-research worker per admitted spec and refilling freed slots while runnable work remains.",
-            "Record every delegated worker in `.ralph/state/worker-claims.json` with `execution_mode = native_subagent`.",
-            "After workers finish, let them release their claims and exit, then let the orchestrator reconcile validated outputs into canonical shared state.",
+            "Read `.ralph/constitution.md`, `.ralph/runtime-contract.md`, `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, `.ralph/state/workflow-state.json`, `.ralph/state/spec-queue.json`, and `.ralph/state/execution-claims.json` before execution.",
+            "Keep the invoking thread thin: immediately launch a dedicated Ralph orchestrator peer subagent for `ralph-execute`, then wait and relay its result instead of orchestrating inline.",
+            "That orchestrator peer should briefly acquire the shared scheduler lock, release it before execution, then claim one runnable role while keeping at most one non-research worker active per admitted spec.",
+            "Record every delegated worker in `.ralph/state/execution-claims.json` with `execution_mode = native_subagent`.",
+            "After workers finish, let them release their claims and exit, then let any orchestrator peer reacquire the scheduler lock and reconcile validated outputs into canonical shared state.",
             "Use the canonical behavior from `skills/ralph-execute/SKILL.md` and `.agents/skills/orchestrator/SKILL.md`."
         ],
         False,

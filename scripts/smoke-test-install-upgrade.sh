@@ -121,7 +121,7 @@ sys.path.insert(0, str(Path.cwd() / "scripts"))
 from runtime_state_helpers import (
     ensure_project_facts_file,
     ensure_spec_worktree,
-    ensure_worker_claims_file,
+    ensure_execution_claims_file,
     load_json,
     merge_bootstrap_summary_from_claims,
     normalize_queue,
@@ -140,7 +140,7 @@ queue = load_json(queue_path)
 project_facts_path, project_facts = ensure_project_facts_file(repo, queue, workflow)
 queue = normalize_queue(queue, workflow, project_facts, repo)
 workflow = normalize_workflow(workflow, queue)
-claims_path = ensure_worker_claims_file(repo, workflow)
+claims_path = ensure_execution_claims_file(repo, workflow)
 claims = load_json(claims_path)
 merge_bootstrap_summary_from_claims(queue, claims)
 for spec in queue.get("specs", []):
@@ -186,11 +186,11 @@ write_atomic_runtime() {
   "current_run_id": "atomic-20260308",
   "active_pr_number": null,
   "active_pr_url": null,
-  "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
-  "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
-  "lease_owner_token": null,
-  "lease_heartbeat_at": null,
-  "lease_expires_at": null,
+  "scheduler_lock_path": ".ralph/state/scheduler-lock.json",
+  "scheduler_intents_path": ".ralph/state/scheduler-intents.jsonl",
+  "scheduler_lock_owner_token": null,
+  "scheduler_lock_heartbeat_at": null,
+  "scheduler_lock_expires_at": null,
   "scheduler_summary": {
     "normal_execution_limit": 3,
     "active_spec_count": 1,
@@ -363,11 +363,11 @@ write_parallel_research_runtime() {
   "current_run_id": "research-batch-20260308",
   "active_pr_number": null,
   "active_pr_url": null,
-  "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
-  "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
-  "lease_owner_token": null,
-  "lease_heartbeat_at": null,
-  "lease_expires_at": null,
+  "scheduler_lock_path": ".ralph/state/scheduler-lock.json",
+  "scheduler_intents_path": ".ralph/state/scheduler-intents.jsonl",
+  "scheduler_lock_owner_token": null,
+  "scheduler_lock_heartbeat_at": null,
+  "scheduler_lock_expires_at": null,
   "scheduler_summary": {
     "normal_execution_limit": 3,
     "active_spec_count": 0,
@@ -618,12 +618,12 @@ workflow = {
         {"spec_id": "002", "spec_key": "002-bootstrap-next", "epoch_id": "E200", "status": "in_progress", "admission_status": "admitted", "slot_status": "running", "bootstrap_status": "required", "branch_name": "ralph/002-bootstrap-next", "pr_number": None},
         {"spec_id": "003", "spec_key": "003-implement-ready", "epoch_id": "E200", "status": "in_progress", "admission_status": "admitted", "slot_status": "running", "bootstrap_status": "passed", "branch_name": "ralph/003-implement-ready", "pr_number": None},
     ],
-    "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
-    "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
-    "worker_claims_path": ".ralph/state/worker-claims.json",
-    "lease_owner_token": None,
-    "lease_heartbeat_at": None,
-    "lease_expires_at": None,
+    "scheduler_lock_path": ".ralph/state/scheduler-lock.json",
+    "scheduler_intents_path": ".ralph/state/scheduler-intents.jsonl",
+    "execution_claims_path": ".ralph/state/execution-claims.json",
+    "scheduler_lock_owner_token": None,
+    "scheduler_lock_heartbeat_at": None,
+    "scheduler_lock_expires_at": None,
     "scheduler_summary": {
         "normal_execution_limit": 3,
         "active_spec_count": 3,
@@ -644,7 +644,7 @@ queue = {
     "active_spec_ids": ["001", "002", "003"],
     "active_interrupt_spec_id": None,
     "resume_spec_id": None,
-    "worker_claims_path": ".ralph/state/worker-claims.json",
+    "execution_claims_path": ".ralph/state/execution-claims.json",
     "specs": [],
 }
 
@@ -827,12 +827,12 @@ workflow = {
         {"spec_id": "001", "spec_key": "001-dependency-head", "epoch_id": "E201", "status": "in_progress", "admission_status": "admitted", "slot_status": "running", "bootstrap_status": "required", "branch_name": "ralph/001-dependency-head", "pr_number": None},
         {"spec_id": "002", "spec_key": "002-blocked-follow-on", "epoch_id": "E201", "status": "ready", "admission_status": "pending", "slot_status": "inactive", "bootstrap_status": "required", "branch_name": "ralph/002-blocked-follow-on", "pr_number": None},
     ],
-    "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
-    "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
-    "worker_claims_path": ".ralph/state/worker-claims.json",
-    "lease_owner_token": None,
-    "lease_heartbeat_at": None,
-    "lease_expires_at": None,
+    "scheduler_lock_path": ".ralph/state/scheduler-lock.json",
+    "scheduler_intents_path": ".ralph/state/scheduler-intents.jsonl",
+    "execution_claims_path": ".ralph/state/execution-claims.json",
+    "scheduler_lock_owner_token": None,
+    "scheduler_lock_heartbeat_at": None,
+    "scheduler_lock_expires_at": None,
     "scheduler_summary": {
         "normal_execution_limit": 3,
         "active_spec_count": 1,
@@ -853,7 +853,7 @@ queue = {
     "active_spec_ids": ["001"],
     "active_interrupt_spec_id": None,
     "resume_spec_id": None,
-    "worker_claims_path": ".ralph/state/worker-claims.json",
+    "execution_claims_path": ".ralph/state/execution-claims.json",
     "specs": [],
 }
 
@@ -1256,7 +1256,7 @@ write_lease_file() {
   local heartbeat_at="$6"
   local expires_at="$7"
   mkdir -p "$target/.ralph/state"
-  python3 - "$target/.ralph/state/orchestrator-lease.json" "$owner_token" "$holder_thread" "$run_id" "$acquired_at" "$heartbeat_at" "$expires_at" <<'PY'
+  python3 - "$target/.ralph/state/scheduler-lock.json" "$owner_token" "$holder_thread" "$run_id" "$acquired_at" "$heartbeat_at" "$expires_at" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -1305,11 +1305,11 @@ EOF
   "current_run_id": "collision-upgrade",
   "active_pr_number": null,
   "active_pr_url": null,
-  "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
-  "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
-  "lease_owner_token": null,
-  "lease_heartbeat_at": null,
-  "lease_expires_at": null,
+  "scheduler_lock_path": ".ralph/state/scheduler-lock.json",
+  "scheduler_intents_path": ".ralph/state/scheduler-intents.jsonl",
+  "scheduler_lock_owner_token": null,
+  "scheduler_lock_heartbeat_at": null,
+  "scheduler_lock_expires_at": null,
   "scheduler_summary": {
     "normal_execution_limit": 3,
     "active_spec_count": 0,
@@ -1744,7 +1744,7 @@ write_lease_file \
   "2026-03-08T12:01:00-08:00" \
   "2099-03-08T12:03:00-08:00"
 if python3 scripts/migrate-installed-runtime.py --repo "$HEALTHY_LEASE_TARGET"; then
-  echo "smoke-test-install-upgrade: healthy held lease should have blocked upgrade" >&2
+  echo "smoke-test-install-upgrade: healthy held scheduler lock should have blocked upgrade" >&2
   exit 1
 fi
 
@@ -1767,7 +1767,7 @@ import json
 import sys
 from pathlib import Path
 
-lease = json.loads((Path(sys.argv[1]) / ".ralph/state/orchestrator-lease.json").read_text())
+lease = json.loads((Path(sys.argv[1]) / ".ralph/state/scheduler-lock.json").read_text())
 assert lease["status"] == "idle"
 assert lease["owner_token"] is None
 assert lease["heartbeat_at"] is None
@@ -2079,16 +2079,16 @@ from runtime_state_helpers import resolve_canonical_checkout_root
 root = Path(sys.argv[1]).resolve()
 worktrees = [Path(sys.argv[2]).resolve(), Path(sys.argv[3]).resolve()]
 expected_queue = json.loads((root / ".ralph/state/spec-queue.json").read_text())
-expected_lease = json.loads((root / ".ralph/state/orchestrator-lease.json").read_text())
-expected_claims = json.loads((root / ".ralph/state/worker-claims.json").read_text())
+expected_lease = json.loads((root / ".ralph/state/scheduler-lock.json").read_text())
+expected_claims = json.loads((root / ".ralph/state/execution-claims.json").read_text())
 expected_report = (root / ".ralph/reports/atomic-20260308/implement.md").read_text()
 for worktree in worktrees:
     assert resolve_canonical_checkout_root(worktree) == root
     assert (worktree / ".ralph/shared/state").is_symlink()
     assert (worktree / ".ralph/shared/reports").is_symlink()
     assert json.loads((worktree / ".ralph/shared/state/spec-queue.json").read_text()) == expected_queue
-    assert json.loads((worktree / ".ralph/shared/state/orchestrator-lease.json").read_text()) == expected_lease
-    assert json.loads((worktree / ".ralph/shared/state/worker-claims.json").read_text()) == expected_claims
+    assert json.loads((worktree / ".ralph/shared/state/scheduler-lock.json").read_text()) == expected_lease
+    assert json.loads((worktree / ".ralph/shared/state/execution-claims.json").read_text()) == expected_claims
     assert (worktree / ".ralph/shared/reports/atomic-20260308/implement.md").read_text() == expected_report
 PY
 

@@ -6,7 +6,7 @@
 - Supported first-class runtime adapters: Codex, Claude Code, and Cursor local Agent/CLI/IDE surfaces
 - Supported adapters must be able to run the full Ralph topology `launcher thread -> dedicated coordinator or orchestrator subagent -> delegated role subagents`. Adapters that cannot delegate substantive Ralph work are unsupported.
 - Ralph public entrypoints must treat the invoking thread as a thin launcher only. Substantive Ralph work belongs in dedicated subagents, not inline on the entry thread.
-- `ralph-execute` should launch exactly one orchestrator subagent per invocation. Parallel execution comes from worker fan-out across admitted specs, not from spawning multiple orchestrators.
+- `ralph-execute` may launch one orchestrator peer subagent per invocation. Parallel execution may come from multiple orchestrator peers plus execution claims across admitted specs.
 - `ralph-prd` should launch exactly one dedicated `prd` subagent, and `ralph-plan` should launch exactly one planning coordinator subagent that delegates `specify`, same-batch `research`, `plan`, `task-gen`, and `plan-check`.
 - Loader surfaces: `AGENTS.md` and `CLAUDE.md`
 - Runtime-native adapter packs: `.codex/`, `.claude/`, and `.cursor/`
@@ -18,9 +18,9 @@
 - Ralph-managed runtime skill directories under `.agents/skills/` are scaffold-owned and refreshed on upgrade.
 - Project-owned helper skills may live under `.agents/skills/` only when they use a non-managed directory name.
 - External custom tool server: not required for v1
-- Shared-state coordination uses a single-writer lease in `.ralph/state/orchestrator-lease.json`.
-- Cross-runtime worker coordination uses `.ralph/state/worker-claims.json`.
-- Cross-thread scheduler requests use durable intent intake in `.ralph/state/orchestrator-intents.jsonl`.
+- Shared-state coordination uses a short-lived global queue write lock in `.ralph/state/scheduler-lock.json`.
+- Cross-runtime worker coordination uses `.ralph/state/execution-claims.json`.
+- Cross-thread scheduler requests use durable intent intake in `.ralph/state/scheduler-intents.jsonl`.
 - Project-specific control-plane additions belong in `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or project-owned non-managed skill directories, not as direct edits to `.ralph/runtime-contract.md` or Ralph-managed skill directories.
 
 ## Queue Policy
@@ -28,7 +28,7 @@
 - Scheduling rule: explicit-first ready-set admission
 - Queue unit: numbered spec
 - Epochs: grouping layer only
-- Default normal execution limit: derive from the runtime thread budget with one thread reserved for the orchestrator
+- Default normal execution limit: derive from the runtime thread budget with one thread reserved for whichever orchestrator peer is currently scheduling
 - Default operational mode: run through all runnable specs until the queue is drained or a documented human gate is reached
 - Normal-spec execution: bounded admission window with one worker per admitted spec, and the orchestrator should prefer filling every runnable slot in that window
 - For supported adapters, the default posture is native worker fan-out across the admitted window up to the available worker-thread budget. Inline one-role-at-a-time worker execution is not a supported fallback.
@@ -78,9 +78,9 @@
   - interruption fields and resume-stack projections agree semantically across queue, workflow state, and spec index
   - research metadata agrees semantically with queue state and role outputs
   - lease file validity and heartbeat freshness are enforced
-  - healthy held leases block concurrent shared-state mutation, and stale held leases must be recovered before validation passes
+  - healthy held scheduler locks block concurrent shared-state mutation, and stale held locks must be recovered before validation passes
   - durable intent records remain replay-safe and parseable
-  - worker-claim records remain replay-safe, parseable, and expiration-aware
+  - execution-claim records remain replay-safe, parseable, and expiration-aware
   - dependency graphs are acyclic and only target existing specs
   - queue branch and worktree assignments remain unique across specs
   - admitted specs have valid git worktrees and branch alignment
@@ -112,24 +112,24 @@
 - One primary skill per role run.
 - Helper skills are allowlisted by role.
 - A role stops when its assigned artifact and report are complete.
-- The parent orchestrator updates shared state after validating outputs.
-- The parent orchestrator drains the queue until a documented stop condition occurs.
-- The parent orchestrator should not stop after a single spec or successful handoff when other admitted or dependency-satisfied specs are still runnable.
-- The parent orchestrator should prefer explicit ready targets first, then fill the remaining admission window from the ready set.
+- The parent orchestrator peer that currently holds the scheduler lock updates shared state after validating outputs.
+- Orchestrator peers cooperatively drain the queue until a documented stop condition occurs.
+- An orchestrator peer should not stop after a single spec or successful handoff when other admitted or dependency-satisfied specs are still runnable.
+- An orchestrator peer should prefer explicit ready targets first, then fill the remaining admission window from the ready set when it holds the scheduler lock.
 - The parent orchestrator may launch bounded parallel `research` only for specs in the same planning batch.
 - Supported adapters must delegate every substantive Ralph role through runtime-native subagents. Inline current-session execution of `prd`, `specify`, `research`, `plan`, `task-gen`, `plan-check`, `bootstrap`, `implement`, `review`, `verify`, or `release` is unsupported.
 - Public Ralph entry threads must not perform PRD, planning, research, implementation, review, verification, or release inline; they should launch the appropriate dedicated subagent and then wait or summarize only.
 - A claimed session must pass `bootstrap` before `implement` or any other execution role begins locally.
 - Task lifecycle routing should remain deterministic: `ready` or `in_progress` -> `implement`, `awaiting_review` or `review_failed` -> `review`, `awaiting_verification` or `verification_failed` -> `verify`, `awaiting_release` or `release_failed` -> `release`.
 - Child roles must not spawn nested workers beyond the runtime's Ralph-managed delegation policy.
-- The parent orchestrator creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
+- An orchestrator peer holding the scheduler lock creates interrupt specs automatically for failing out-of-scope bugs and resumes paused work after release.
 - `review_failed`, `verification_failed`, and `release_failed` must route back through orchestrator-managed remediation unless the report names an explicit human-gated blocker.
 - Do not patch Ralph-managed runtime skill directories to express project-specific control-plane behavior; move those changes into `.ralph/policy/runtime-overrides.md`, `.ralph/policy/project-policy.md`, or a project-owned non-managed skill directory instead.
-- Workers must not update shared workflow state, queue state, lease state, state Markdown, or orchestrator event logs directly.
-- Runtime sessions may update `.ralph/state/worker-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own worker claim.
+- Workers must not update shared workflow state, queue state, scheduler-lock state, state Markdown, or orchestrator event logs directly.
+- Runtime sessions may update `.ralph/state/execution-claims.json` only to acquire, heartbeat, record bootstrap lifecycle, or release their own worker claim.
 - Workers execute from their assigned spec worktree and may write spec-local artifacts there, but canonical control-plane updates remain orchestrator-mediated after the worker releases its claim and exits.
 - Workers must use the generated `.ralph/shared/` overlay or an equivalent canonical-path resolver for shared inputs and canonical report writes.
-- The orchestrator alone may acquire the lease to reconcile validated worker outputs back into canonical control-plane state.
+- Any orchestrator peer may acquire the scheduler lock to reconcile validated worker outputs back into canonical control-plane state.
 - Handoffs past implementation must preserve `Quality Gate` evidence (`React Effects Audit` and `Deslopify Lite`) in the latest relevant report.
 - Review and verification should treat the assigned spec branch or PR as the unit under inspection.
 - Review should treat missing or failed `Quality Gate`, missing commit evidence, dirty handoffs, or obviously mixed-scope task commits as findings.
