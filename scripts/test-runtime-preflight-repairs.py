@@ -16,6 +16,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from runtime_state_helpers import (  # noqa: E402
     CURRENT_TASK_STATE_SCHEMA_VERSION,
+    DEFAULT_EXECUTION_CLAIMS_PATH,
+    DEFAULT_SCHEDULER_INTENTS_PATH,
+    DEFAULT_SCHEDULER_LOCK_PATH,
+    ensure_execution_claims_file,
+    ensure_intent_log,
+    ensure_lease_file,
     normalize_queue,
     normalize_workflow,
     render_spec_index_markdown,
@@ -285,6 +291,75 @@ def test_planned_spec_without_numbered_tasks_stays_valid() -> None:
     assert_not_contains(result.stdout, "Route To Planning/Task-Gen:")
 
 
+def test_legacy_coordination_paths_migrate_to_canonical_names() -> None:
+    repo = create_fixture("legacy-coordination-paths")
+    legacy_workflow = {
+        "orchestrator_lease_path": ".ralph/state/orchestrator-lease.json",
+        "worker_claims_path": ".ralph/state/worker-claims.json",
+        "orchestrator_intents_path": ".ralph/state/orchestrator-intents.jsonl",
+    }
+    state_dir = repo / ".ralph/state"
+    for canonical_name in ("scheduler-lock.json", "execution-claims.json", "scheduler-intents.jsonl"):
+        canonical_path = state_dir / canonical_name
+        if canonical_path.exists():
+            canonical_path.unlink()
+    (state_dir / "orchestrator-lease.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0.0",
+                "owner_token": None,
+                "holder_thread": None,
+                "run_id": None,
+                "acquired_at": None,
+                "heartbeat_at": None,
+                "expires_at": None,
+                "status": "idle",
+            }
+        )
+        + "\n"
+    )
+    (state_dir / "worker-claims.json").write_text(json.dumps({"schema_version": "1.0.0", "claims": []}) + "\n")
+    (state_dir / "orchestrator-intents.jsonl").write_text("")
+
+    ensure_lease_file(repo, legacy_workflow)
+    ensure_execution_claims_file(repo, legacy_workflow)
+    ensure_intent_log(repo, legacy_workflow)
+
+    if (state_dir / "orchestrator-lease.json").exists():
+        raise AssertionError("legacy scheduler lock path should be renamed during migration")
+    if (state_dir / "worker-claims.json").exists():
+        raise AssertionError("legacy execution claims path should be renamed during migration")
+    if (state_dir / "orchestrator-intents.jsonl").exists():
+        raise AssertionError("legacy scheduler intents path should be renamed during migration")
+    if not (state_dir / "scheduler-lock.json").exists():
+        raise AssertionError("canonical scheduler lock file should exist after migration")
+    if not (state_dir / "execution-claims.json").exists():
+        raise AssertionError("canonical execution claims file should exist after migration")
+    if not (state_dir / "scheduler-intents.jsonl").exists():
+        raise AssertionError("canonical scheduler intents file should exist after migration")
+
+    normalized_queue = normalize_queue(
+        {
+            "schema_version": "6.0.0",
+            "worker_claims_path": ".ralph/state/worker-claims.json",
+            "specs": [],
+            "queue_policy": {"selection": "fifo", "preemption": "emergency_only", "normal_execution_limit": 1},
+        },
+        legacy_workflow,
+        {},
+        repo,
+    )
+    normalized_workflow = normalize_workflow(legacy_workflow, normalized_queue)
+    if normalized_queue["execution_claims_path"] != DEFAULT_EXECUTION_CLAIMS_PATH:
+        raise AssertionError("normalized queue should canonicalize execution_claims_path")
+    if normalized_workflow["scheduler_lock_path"] != DEFAULT_SCHEDULER_LOCK_PATH:
+        raise AssertionError("normalized workflow should canonicalize scheduler_lock_path")
+    if normalized_workflow["execution_claims_path"] != DEFAULT_EXECUTION_CLAIMS_PATH:
+        raise AssertionError("normalized workflow should canonicalize execution_claims_path")
+    if normalized_workflow["scheduler_intents_path"] != DEFAULT_SCHEDULER_INTENTS_PATH:
+        raise AssertionError("normalized workflow should canonicalize scheduler_intents_path")
+
+
 def test_missing_admitted_worktree_self_heals() -> None:
     repo = create_fixture("missing-worktree")
     spec = make_spec(
@@ -430,6 +505,7 @@ def main() -> int:
     tests = [
         test_planned_spec_routes_to_task_gen,
         test_planned_spec_without_numbered_tasks_stays_valid,
+        test_legacy_coordination_paths_migrate_to_canonical_names,
         test_missing_admitted_worktree_self_heals,
         test_stale_projections_self_heal,
         test_runtime_contract_baseline_drift_requires_upgrade,

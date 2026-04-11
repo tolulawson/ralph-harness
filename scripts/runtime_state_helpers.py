@@ -1175,18 +1175,22 @@ def workflow_path_value(workflow: dict[str, Any], key: str, legacy_key: str, def
     return default
 
 
+def canonical_coordination_path(default: str) -> str:
+    return default
+
+
 def migrate_legacy_coordination_files(repo_root: Path, workflow: dict[str, Any]) -> None:
     path_pairs = (
         (
-            repo_root / workflow_path_value(workflow, "scheduler_lock_path", "orchestrator_lease_path", DEFAULT_SCHEDULER_LOCK_PATH),
+            repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_LOCK_PATH),
             repo_root / LEGACY_SCHEDULER_LOCK_PATH,
         ),
         (
-            repo_root / workflow_path_value(workflow, "execution_claims_path", "worker_claims_path", DEFAULT_EXECUTION_CLAIMS_PATH),
+            repo_root / canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH),
             repo_root / LEGACY_EXECUTION_CLAIMS_PATH,
         ),
         (
-            repo_root / workflow_path_value(workflow, "scheduler_intents_path", "orchestrator_intents_path", DEFAULT_SCHEDULER_INTENTS_PATH),
+            repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_INTENTS_PATH),
             repo_root / LEGACY_SCHEDULER_INTENTS_PATH,
         ),
     )
@@ -1200,7 +1204,7 @@ def migrate_legacy_coordination_files(repo_root: Path, workflow: dict[str, Any])
 def ensure_execution_claims_file(repo_root: Path, workflow: dict[str, Any]) -> Path:
     repo_root = resolve_canonical_checkout_root(repo_root)
     migrate_legacy_coordination_files(repo_root, workflow)
-    relative_path = workflow_path_value(workflow, "execution_claims_path", "worker_claims_path", DEFAULT_EXECUTION_CLAIMS_PATH)
+    relative_path = canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH)
     target_path = repo_root / relative_path
     if target_path.exists():
         payload = load_json(target_path)
@@ -1804,7 +1808,7 @@ def repair_active_spec_worktrees(
 
 def ensure_lease_file(repo_root: Path, workflow: dict[str, Any]) -> dict[str, Any]:
     migrate_legacy_coordination_files(repo_root, workflow)
-    lease_path = repo_root / workflow_path_value(workflow, "scheduler_lock_path", "orchestrator_lease_path", DEFAULT_SCHEDULER_LOCK_PATH)
+    lease_path = repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_LOCK_PATH)
     if lease_path.exists():
         lease = load_json(lease_path)
     else:
@@ -1826,7 +1830,7 @@ def ensure_lease_file(repo_root: Path, workflow: dict[str, Any]) -> dict[str, An
 
 def ensure_intent_log(repo_root: Path, workflow: dict[str, Any]) -> Path:
     migrate_legacy_coordination_files(repo_root, workflow)
-    intents_path = repo_root / workflow_path_value(workflow, "scheduler_intents_path", "orchestrator_intents_path", DEFAULT_SCHEDULER_INTENTS_PATH)
+    intents_path = repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_INTENTS_PATH)
     intents_path.parent.mkdir(parents=True, exist_ok=True)
     intents_path.touch(exist_ok=True)
     return intents_path
@@ -2352,13 +2356,7 @@ def normalize_queue(
         queue_policy["normal_execution_limit"] = derive_default_normal_execution_limit(repo_root)
     normalized["queue_policy"] = queue_policy
     normalized["queue_revision"] = int(normalized.get("queue_revision") or 0)
-    normalized["execution_claims_path"] = (
-        normalized.get("execution_claims_path")
-        or normalized.get("worker_claims_path")
-        or workflow.get("execution_claims_path")
-        or workflow.get("worker_claims_path")
-        or DEFAULT_EXECUTION_CLAIMS_PATH
-    )
+    normalized["execution_claims_path"] = canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH)
     project_facts = normalize_project_facts(project_facts or default_project_facts())
     normalized_specs = [normalize_spec_entry(spec, project_facts.get("base_branch")) for spec in normalized.get("specs", [])]
     normalized["specs"] = normalized_specs
@@ -2378,25 +2376,9 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
     normalized["interruption_state"] = normalized.get("interruption_state")
     normalized.pop("queue_head_spec_id", None)
     normalized["queue_snapshot"] = derive_queue_snapshot(queue)
-    normalized["scheduler_lock_path"] = workflow_path_value(
-        normalized,
-        "scheduler_lock_path",
-        "orchestrator_lease_path",
-        DEFAULT_SCHEDULER_LOCK_PATH,
-    )
-    normalized["execution_claims_path"] = (
-        normalized.get("execution_claims_path")
-        or normalized.get("worker_claims_path")
-        or queue.get("execution_claims_path")
-        or queue.get("worker_claims_path")
-        or DEFAULT_EXECUTION_CLAIMS_PATH
-    )
-    normalized["scheduler_intents_path"] = workflow_path_value(
-        normalized,
-        "scheduler_intents_path",
-        "orchestrator_intents_path",
-        DEFAULT_SCHEDULER_INTENTS_PATH,
-    )
+    normalized["scheduler_lock_path"] = canonical_coordination_path(DEFAULT_SCHEDULER_LOCK_PATH)
+    normalized["execution_claims_path"] = canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH)
+    normalized["scheduler_intents_path"] = canonical_coordination_path(DEFAULT_SCHEDULER_INTENTS_PATH)
     normalized["scheduler_lock_owner_token"] = normalized.get("scheduler_lock_owner_token", normalized.get("lease_owner_token"))
     normalized["scheduler_lock_heartbeat_at"] = normalized.get("scheduler_lock_heartbeat_at", normalized.get("lease_heartbeat_at"))
     normalized["scheduler_lock_expires_at"] = normalized.get("scheduler_lock_expires_at", normalized.get("lease_expires_at"))
