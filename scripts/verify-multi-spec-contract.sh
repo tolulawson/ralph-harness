@@ -29,6 +29,9 @@ grep -Fq -- 'active_spec_ids' src/.ralph/runtime-contract.md \
 grep -Fq -- 'depends_on_spec_ids' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention depends_on_spec_ids"
 
+grep -Fq -- 'execution prerequisites' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must define dependencies as execution prerequisites only"
+
 grep -Fq -- 'scheduler-lock.json' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention the scheduler lock file"
 
@@ -74,6 +77,9 @@ grep -Fq -- 'short-lived global queue write lock' src/.ralph/policy/project-poli
 grep -Fq -- 'hard dependency' src/.ralph/policy/project-policy.md \
   || fail "project policy must describe hard dependencies"
 
+grep -Fq -- 'execution prerequisites' src/.ralph/policy/project-policy.md \
+  || fail "project policy must limit dependencies to execution prerequisites"
+
 grep -Fq -- 'durable intent' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must mention durable intent intake"
 
@@ -94,6 +100,12 @@ grep -Fq -- 'execution_mode = native_subagent' src/.agents/skills/orchestrator/S
 
 grep -Fq -- 'depends_on_spec_ids' src/.agents/skills/plan/SKILL.md \
   || fail "plan skill must seed depends_on_spec_ids"
+
+grep -Fq -- 'all prior specs' src/.agents/skills/plan/SKILL.md \
+  || fail "plan skill must explicitly forbid all-prior-spec dependency authoring"
+
+grep -Fq -- 'execution prerequisite' skills/ralph-plan/SKILL.md \
+  || fail "ralph-plan must define dependencies as execution prerequisites only"
 
 grep -Fq -- 'queue write lock' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must mention queue-lock coordination"

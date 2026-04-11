@@ -46,6 +46,7 @@ After upgrade, the target repository should:
 - preserve the canonical shared control plane in the selected canonical checkout while refreshing admitted worktrees to use generated overlays
 - carry current live-state files for workflow, queue, scheduler lock, durable intents, projections, worktree coordination, and per-spec task lifecycle
 - migrate live runtime semantics to the current explicit-first ready-set scheduler model rather than preserving stale queue-head behavior
+- preserve or repair `depends_on_spec_ids` as execution prerequisites only; semantic grouping or chronology should not survive upgrade as hard scheduler blockers
 - regenerate `.ralph/shared/` overlays for admitted spec worktrees so shared reads and canonical report writes no longer depend on tracked worktree copies
 - backfill or preserve the canonical `base_branch` in `.ralph/context/project-facts.json`
 - preserve explicit canonical control-plane selection in `.ralph/context/project-facts.json` under `canonical_control_plane`

@@ -161,7 +161,7 @@ flowchart TD
 In practice, that means:
 
 - specs are the durable execution unit
-- `depends_on_spec_ids` are hard admission blockers
+- `depends_on_spec_ids` are hard admission blockers and should be used only for true execution prerequisites, not semantic relatedness or planning order
 - `task-state.json` is the canonical task lifecycle record
 - `active_spec_ids` is the authoritative active-spec set
 - explicit user-requested specs outrank creation order when they are unblocked

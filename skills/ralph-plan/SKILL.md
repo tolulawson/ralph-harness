@@ -34,10 +34,11 @@ In this source repository, the installable scaffold lives under `src/`. Installe
 9. Seed or refresh scheduler metadata such as `depends_on_spec_ids`, admission state, and default worktree metadata for each spec.
 10. Reject dependency cycles or missing dependency references instead of guessing.
 11. Keep tasks dependency-ordered and small enough for focused implementation passes.
-12. Do not invent implicit dependencies or queue-head priority. Later execution should honor explicit scheduling targets first, then fill the remaining ready set.
-13. Keep any planning-time parallelism bounded to same-batch `research` only; later execution uses the scheduler admission window and hard dependencies.
-14. Stop before code changes or implementation begin.
-15. Recommend the next entry point:
+12. Treat `depends_on_spec_ids` as hard execution prerequisites only. Do not encode semantic relatedness, chronology, "all prior specs", shared file areas, or merge coordination as dependencies when the specs could execute independently.
+13. Do not invent implicit dependencies or queue-head priority. Later execution should honor explicit scheduling targets first, then fill the remaining ready set.
+14. Keep any planning-time parallelism bounded to same-batch `research` only; later execution uses the scheduler admission window and hard dependencies.
+15. Stop before code changes or implementation begin.
+16. Recommend the next entry point:
    - `$ralph-execute` when the installed harness should take over execution
    - `$ralph-prd` when requirements are still too unclear and need reshaping
 

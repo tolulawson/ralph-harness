@@ -35,7 +35,7 @@
 - Parallel execution: encouraged for dependency-independent specs within `normal_execution_limit`
 - Explicit user-requested specs should be admitted first when they are unblocked
 - Remaining ready specs should be chosen by fairness order: `last_dispatch_at`, then `created_at`, then `spec_id`
-- hard dependency policy: a spec may not be admitted until every spec in `depends_on_spec_ids` is `released` or `done`
+- hard dependency policy: a spec may not be admitted until every spec in `depends_on_spec_ids` is `released` or `done`; record those dependencies only for explicit execution prerequisites, not semantic relatedness, chronology, shared file areas, or eventual merge coordination
 - Bounded planning-time parallelism: allowed only for `research` on specs from the same planning batch
 - Automatic preemption: create an interrupt spec for any failing out-of-scope bug
 - Interrupt priority: interrupt specs run ahead of normal specs and stay FIFO among themselves by `created_at`
