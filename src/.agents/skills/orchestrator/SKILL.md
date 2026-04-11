@@ -9,7 +9,7 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 
 - A fresh run needs to resume the harness.
 - A role has finished and the next role must be chosen.
-- Shared state, reports, the spec queue, lease, durable intents, and event history must be synchronized.
+- Shared state, reports, the spec queue, scheduler lock, durable intents, and event history must be synchronized.
 - This skill is already running inside the dedicated orchestrator subagent for the current Ralph entrypoint, not inline on the public entry thread.
 - By the time this skill starts, the launcher thread is already done being a launcher. It must not still be acting as a PRD or planning coordinator.
 - This invocation owns one orchestrator peer. Multiple orchestrator peers may coordinate through the same control plane, but queue-wide rewrites must flow through the shared scheduler lock.
@@ -108,14 +108,14 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 41. Regenerate `.ralph/state/workflow-state.md`.
 42. Regenerate `specs/INDEX.md` when queue-visible metadata changes.
 43. After an interrupt spec is released, pop `resume_spec_stack`, thaw normal admissions, restore paused specs and tasks, and continue dispatching.
-44. Continue dispatching until the queue is empty, lease ownership must transfer, or a human-gated stop condition occurs.
+44. Continue dispatching until the queue is empty, no further runnable work remains, or a human-gated stop condition occurs.
 45. If the active runtime ships the Ralph stop-boundary hook, treat it as a conservative backstop only. The orchestrator should still avoid stopping just because it hit a self-resolvable objection.
 
 ## Outputs
 
 - updated workflow state JSON
 - updated spec queue JSON
-- updated lease state JSON
+- updated scheduler-lock state JSON
 - updated execution claims JSON
 - updated durable intent status when intents are drained
 - updated workflow state Markdown
@@ -126,4 +126,4 @@ description: Coordinate the Ralph multi-agent runtime by managing the dependency
 
 ## Stop Condition
 
-Stop only when the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec finished, one worker handed off successfully, or one worker claim completed while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state. The shipped stop hook may prompt one extra self-check, but it must not replace deliberate stop-boundary reasoning inside the orchestrator itself.
+Stop only when the queue is empty, no further runnable work remains, or a human-gated runtime-contract stop condition is reached. Do not stop merely because review, verification, or release failed. Do not stop merely because one spec finished, one worker handed off successfully, or one worker claim completed while other runnable specs remain. Treat the orchestration safety cap as a human review boundary, not an automatic failure state. The shipped stop hook may prompt one extra self-check, but it must not replace deliberate stop-boundary reasoning inside the orchestrator itself.

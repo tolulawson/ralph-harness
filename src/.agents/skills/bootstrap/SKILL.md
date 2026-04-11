@@ -13,7 +13,7 @@ description: Prepare the assigned spec worktree and local validation environment
 ## Inputs
 
 - active spec entry from `.ralph/shared/state/spec-queue.json` or the resolved canonical `.ralph/state/spec-queue.json`
-- current claim from `.ralph/shared/state/worker-claims.json` or the resolved canonical `.ralph/state/execution-claims.json`
+- current claim from `.ralph/shared/state/execution-claims.json` or the resolved canonical `.ralph/state/execution-claims.json`
 - `.ralph/shared/context/project-truths.md` or the resolved canonical `.ralph/context/project-truths.md`
 - `.ralph/shared/context/project-facts.json` or the resolved canonical `.ralph/context/project-facts.json`
 - `.ralph/shared/context/learning-summary.md` or the resolved canonical `.ralph/context/learning-summary.md`

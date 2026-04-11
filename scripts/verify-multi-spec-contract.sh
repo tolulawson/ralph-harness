@@ -107,6 +107,14 @@ grep -Fq -- 'orchestrator peer subagent' skills/ralph-execute/SKILL.md \
 grep -Fq -- 'record every delegated worker' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must require native subagent execution claims"
 
+if grep -Fq -- 'lease ownership must transfer' skills/ralph-execute/SKILL.md; then
+  fail "ralph-execute must not use legacy lease-transfer stop language"
+fi
+
+if grep -Fq -- 'lease ownership must transfer' src/.agents/skills/orchestrator/SKILL.md; then
+  fail "orchestrator skill must not use legacy lease-transfer stop language"
+fi
+
 grep -Fq -- 'route to `$ralph-plan`' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must route planning gaps back to ralph-plan"
 

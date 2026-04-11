@@ -106,6 +106,20 @@ grep -Fq -- 'execution-claims registry' src/.cursor/rules/ralph-core.mdc \
 grep -Fq -- 'execution_mode = native_subagent' src/.cursor/rules/ralph-execute.mdc \
   || fail "Cursor execute rule must require native subagent execution claims"
 
+grep -Fq -- 'shared scheduler lock' src/.codex/agents/orchestrator.toml \
+  || fail "Codex orchestrator agent must describe shared scheduler-lock coordination"
+
+grep -Fq -- 'orchestrator peer' src/.codex/agents/orchestrator.toml \
+  || fail "Codex orchestrator agent must describe the orchestrator-peer topology"
+
+if grep -Fq -- 'single-writer lease' src/.codex/agents/orchestrator.toml; then
+  fail "Codex orchestrator agent must not instruct the old single-writer lease model"
+fi
+
+if grep -Fq -- 'lease ownership must transfer' src/.codex/agents/orchestrator.toml; then
+  fail "Codex orchestrator agent must not stop on legacy lease-transfer language"
+fi
+
 if grep -Fq -- 'finishing session may reconcile its own validated work' src/.cursor/rules/ralph-execute.mdc; then
   fail "Cursor execute rule must keep reconciliation on the orchestrator"
 fi

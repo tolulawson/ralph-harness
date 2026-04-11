@@ -4,7 +4,7 @@
   "source_repo": "https://github.com/tolulawson/ralph-harness",
   "resolved_commit": null,
   "upgrade_contract_version": 11,
-  "runtime_contract_baseline_sha256": "1f1d602aadf827a2b28310a67811e3d367bbbafafd25b98b21992bf476b7ea05",
+  "runtime_contract_baseline_sha256": "c2a5338c24404fe11acbcd3d415b522ddcf61912ef77f68ec6409da942511420",
   "runtime_overrides_path": ".ralph/policy/runtime-overrides.md",
   "runtime_adapters": [
     "codex",

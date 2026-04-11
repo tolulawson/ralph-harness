@@ -5,7 +5,7 @@ description: Resume an already-installed Ralph harness in the current repository
 
 # Ralph Execute
 
-Resume and advance an already-installed Ralph harness in the current repository until the queue is empty, lease ownership must transfer, or a documented human-gated stop condition occurs.
+Resume and advance an already-installed Ralph harness in the current repository until the queue is empty, no further runnable work remains, or a documented human-gated stop condition occurs.
 
 The default operating principle is to keep advancing every runnable spec in bounded parallel when dependencies allow, rather than completing one spec and stopping while other runnable specs remain.
 
@@ -58,13 +58,13 @@ In this source repository, the shipped scaffold lives under `src/`. Target runti
 6. Inside the orchestrator subagent, treat the tracked `.ralph/` files that appear inside a spec worktree as checkout artifacts only. Shared-state reads and writes must resolve to the canonical checkout directly or through the generated `.ralph/shared/` overlay.
 7. Run a preflight consistency check before selecting the next role:
    - read canonical JSON first and treat `.ralph/state/workflow-state.md` plus `specs/INDEX.md` as derived projections only
-   - the runtime must already be on the current multi-spec, lease-capable state shape or clearly require upgrade
-   - if `.ralph/state/workflow-state.md` or `specs/INDEX.md` drift from canonical JSON, regenerate them under the lease instead of routing to upgrade
+   - the runtime must already be on the current multi-spec, scheduler-lock-capable state shape or clearly require upgrade
+   - if `.ralph/state/workflow-state.md` or `specs/INDEX.md` drift from canonical JSON, regenerate them under the scheduler lock instead of routing to upgrade
    - the scheduler lock file, execution claims file, and durable intents file must exist and parse
    - the canonical base branch must be resolved in `.ralph/context/project-facts.json` or safely derivable for queued specs
    - `task-state.json` is required for admitted, active, or otherwise execution-ready specs, but planned specs that still need `task-gen` may legitimately lack it
    - if a required `task-state.json` is missing, or `tasks.md` and `task-state.json` disagree semantically, stop and route back to planning or `task-gen` instead of routing to upgrade
-   - if an admitted spec is missing its worktree or `.ralph/shared/` overlay and branch ownership is unambiguous, materialize or repair that worktree state under the lease instead of failing preflight
+   - if an admitted spec is missing its worktree or `.ralph/shared/` overlay and branch ownership is unambiguous, materialize or repair that worktree state under the scheduler lock instead of failing preflight
    - admitted specs must have valid worktrees whose branches match the active queue entries after any safe repairs complete
    - admitted spec worktrees must expose a valid `.ralph/shared/` overlay back to the canonical checkout after any safe repairs complete
    - admitted spec worktrees must not carry tracked or untracked edits under canonical shared-control-plane paths
@@ -131,10 +131,10 @@ In this source repository, the shipped scaffold lives under `src/`. Target runti
 - Do not advance review, verification, or release from a dirty spec worktree or a report that lacks checkpoint traceability.
 - Do not let `implement` begin until the current claim has passed `bootstrap` and is validation-ready.
 - Use recent events for normal resume; read older logs only if diagnosing a blocker.
-- Do not stop after a single spec or handoff unless the runtime contract reaches queue completion, scheduler-lock transfer, or a human-gated boundary.
+- Do not stop after a single spec or handoff unless the runtime contract reaches queue completion, no further runnable work remains, or a human-gated boundary.
 - Do not stop merely because review, verification, or release failed; keep routing those failures back through orchestrator-managed remediation unless the report names a human blocker.
 - If the installed runtime includes the Ralph stop-boundary hook, treat it as a conservative self-check that can recover one safe stop, not as a substitute for reading the queue and runtime state correctly.
 
 ## Completion
 
-Stop only when the queue is empty, scheduler-lock transfer is required, or a documented human-gated runtime-contract stop condition occurs. Do not loop indefinitely past the orchestration safety cap; treat that cap as a human review boundary rather than an automatic workflow failure.
+Stop only when the queue is empty, no further runnable work remains, or a documented human-gated runtime-contract stop condition occurs. Do not loop indefinitely past the orchestration safety cap; treat that cap as a human review boundary rather than an automatic workflow failure.

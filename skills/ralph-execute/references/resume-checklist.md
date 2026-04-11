@@ -30,4 +30,4 @@ When resuming the harness:
 26. record delegated workers in `.ralph/state/execution-claims.json` with `execution_mode = native_subagent`; do not execute worker roles inline on supported adapters
 27. after a worker finishes, let it release its claim and exit, then let any orchestrator peer reacquire the scheduler lock as needed, validate outputs, update shared state, and dispatch the next role
 28. keep new user requests inside the durable intent flow; do not bypass scheduler admission or hard dependencies
-29. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, lease ownership must transfer, or a human-gated runtime-contract stop condition occurs
+29. treat `review_failed`, `verification_failed`, and `release_failed` as remediation states and continue orchestrating until the queue is empty, no further runnable work remains, or a human-gated runtime-contract stop condition occurs

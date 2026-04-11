@@ -25,7 +25,7 @@ In this source repository, the installable scaffold lives under `src/`. Installe
 4. Run a preflight consistency check before seeding any interrupt:
    - current runtime shape must already be interrupt-capable or clearly require upgrade
    - read canonical JSON first and treat `.ralph/state/workflow-state.md` plus `specs/INDEX.md` as derived projections
-   - if projections drift from canonical JSON, regenerate them under the lease instead of routing to upgrade
+   - if projections drift from canonical JSON, regenerate them under the scheduler lock instead of routing to upgrade
    - the origin spec `task-state.json` is required only when that spec is already execution-ready; if it is missing or drifted, route back through planning or `task-gen`
    - `.ralph/state/scheduler-lock.json` and `.ralph/state/scheduler-intents.jsonl` must exist and parse
 5. Classify any preflight issues before creating the interrupt:
