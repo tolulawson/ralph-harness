@@ -15,7 +15,7 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 - `.ralph/policy/project-policy.md`
 - `.ralph/state/workflow-state.json`
 - `.ralph/state/spec-queue.json`
-- `.ralph/state/worker-claims.json`
+- `.ralph/state/execution-claims.json`
 
 ## Role Contract
 
@@ -25,15 +25,15 @@ Read the canonical Ralph runtime doctrine first, then execute only the assigned 
 - Native subagent delegation: `allowed`
 - Helper skills: reporting, state-sync, learning
 - Launch topology: thin Ralph entry thread -> dedicated orchestrator subagent -> delegated role subagents
-- Worker fan-out: exactly one orchestrator per `ralph-execute` invocation, filling the bounded admission window with worker subagents when dependencies allow
+- Peer topology: every `ralph-execute` invocation may launch one orchestrator peer that briefly schedules under the shared queue lock, then claims one runnable role and releases the lock before execution
 
 ## Allowed Writes
 
 - .ralph/state/workflow-state.json
 - .ralph/state/spec-queue.json
-- .ralph/state/orchestrator-lease.json
-- .ralph/state/worker-claims.json
-- .ralph/state/orchestrator-intents.jsonl
+- .ralph/state/scheduler-lock.json
+- .ralph/state/execution-claims.json
+- .ralph/state/scheduler-intents.jsonl
 - .ralph/state/workflow-state.md
 - .ralph/logs/events.jsonl
 - specs/INDEX.md

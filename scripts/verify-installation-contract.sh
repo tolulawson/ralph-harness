@@ -53,9 +53,9 @@ for required in \
   '.ralph/context/learning-summary.md' \
   '.ralph/state/workflow-state.json' \
   '.ralph/state/spec-queue.json' \
-  '.ralph/state/orchestrator-lease.json' \
-  '.ralph/state/worker-claims.json' \
-  '.ralph/state/orchestrator-intents.jsonl' \
+  '.ralph/state/scheduler-lock.json' \
+  '.ralph/state/execution-claims.json' \
+  '.ralph/state/scheduler-intents.jsonl' \
   'latest report referenced by `last_report_path`' \
   '.ralph/context/learning-log.jsonl'
 do
@@ -73,7 +73,7 @@ for required in \
   '.ralph/hooks/' \
   '.ralph/shared/' \
   'canonical shared control plane' \
-  'worker-claims' \
+  'execution claims' \
   'base_branch' \
   'canonical_control_plane' \
   'control_plane_versioning' \
@@ -105,11 +105,11 @@ grep -Fq -- 'last_report_path' "$SRC_AGENTS" \
 grep -Fq -- '.ralph/policy/runtime-overrides.md' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing runtime-overrides read-order entry"
 
-grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_AGENTS" \
-  || fail "src/AGENTS.md missing worker-claims read-order entry"
+grep -Fq -- '.ralph/state/execution-claims.json' "$SRC_AGENTS" \
+  || fail "src/AGENTS.md missing execution-claims read-order entry"
 
-grep -Fq -- '.ralph/state/worker-claims.json' "$SRC_CLAUDE" \
-  || fail "src/CLAUDE.md missing worker-claims read-order entry"
+grep -Fq -- '.ralph/state/execution-claims.json' "$SRC_CLAUDE" \
+  || fail "src/CLAUDE.md missing execution-claims read-order entry"
 
 grep -Fq -- '<!-- RALPH-HARNESS:START -->' "$SRC_AGENTS" \
   || fail "src/AGENTS.md missing managed block start marker"

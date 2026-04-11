@@ -12,7 +12,7 @@ fail() {
 for path in \
   src/.ralph/runtime-contract.md \
   src/.agents/skills/orchestrator/SKILL.md \
-  src/.ralph/state/worker-claims.json \
+  src/.ralph/state/execution-claims.json \
   src/CLAUDE.md \
   src/.claude/agents/orchestrator.md \
   src/.claude/agents/bootstrap.md \
@@ -34,8 +34,8 @@ do
   [[ -f "$path" ]] || fail "missing required file $path"
 done
 
-grep -Fq -- '.ralph/state/worker-claims.json' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must require the worker claims registry"
+grep -Fq -- '.ralph/state/execution-claims.json' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must require the execution claims registry"
 
 grep -Fq -- 'native runtime subagents' src/.ralph/runtime-contract.md \
   || fail "runtime contract must describe native runtime subagents"
@@ -52,8 +52,8 @@ grep -Fq -- 'main thread must never continue as the PRD or planning coordinator'
 grep -Fq -- 'Child roles must not spawn nested workers' src/.ralph/runtime-contract.md \
   || fail "runtime contract must forbid nested worker fan-out"
 
-grep -Fq -- '.ralph/state/worker-claims.json' src/.agents/skills/orchestrator/SKILL.md \
-  || fail "orchestrator skill must mention the worker claims registry"
+grep -Fq -- '.ralph/state/execution-claims.json' src/.agents/skills/orchestrator/SKILL.md \
+  || fail "orchestrator skill must mention the execution claims registry"
 
 grep -Fq -- 'native subagents' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must mention native subagents"
@@ -61,14 +61,14 @@ grep -Fq -- 'native subagents' src/.agents/skills/orchestrator/SKILL.md \
 grep -Fq -- 'launcher thread is already done being a launcher' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must assume launcher-only entry threads"
 
-grep -Fq -- '.ralph/state/worker-claims.json' src/CLAUDE.md \
-  || fail "CLAUDE.md must include worker-claims in the read order"
+grep -Fq -- '.ralph/state/execution-claims.json' src/CLAUDE.md \
+  || fail "CLAUDE.md must include execution-claims in the read order"
 
 grep -Fq -- 'close that worker thread' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must close worker threads after wait"
 
-grep -Fq -- 'dedicated orchestrator subagent' skills/ralph-execute/SKILL.md \
-  || fail "public execute skill must launch a dedicated orchestrator subagent"
+grep -Fq -- 'dedicated orchestrator peer subagent' skills/ralph-execute/SKILL.md \
+  || fail "public execute skill must launch a dedicated orchestrator peer subagent"
 
 grep -Fq -- 'dedicated Ralph planning coordinator subagent' skills/ralph-plan/SKILL.md \
   || fail "public plan skill must launch a dedicated planning coordinator subagent"
@@ -79,11 +79,11 @@ grep -Fq -- 'must not become Ralph'\''s planning coordinator' skills/ralph-plan/
 grep -Fq -- 'dedicated `prd` subagent' skills/ralph-prd/SKILL.md \
   || fail "public PRD skill must launch a dedicated PRD subagent"
 
-grep -Fq -- 'dedicated Ralph orchestrator subagent' src/.claude/commands/ralph-execute.md \
+grep -Fq -- 'dedicated Ralph orchestrator peer subagent' src/.claude/commands/ralph-execute.md \
   || fail "Claude execute command must keep the command thread thin"
 
-grep -Fq -- 'fill the admitted-spec execution window with worker subagents' src/.claude/commands/ralph-execute.md \
-  || fail "Claude execute command must describe one-orchestrator worker fan-out"
+grep -Fq -- 'shared scheduler lock' src/.claude/commands/ralph-execute.md \
+  || fail "Claude execute command must describe shared scheduler-lock coordination"
 
 grep -Fq -- 'dedicated Ralph planning coordinator subagent' src/.claude/commands/ralph-plan.md \
   || fail "Claude plan command must keep the command thread thin"
@@ -97,14 +97,28 @@ grep -Fq -- 'delegate `specify`' src/.claude/commands/ralph-plan.md \
 grep -Fq -- 'dedicated Ralph `prd` subagent' src/.claude/commands/ralph-prd.md \
   || fail "Claude PRD command must keep the command thread thin"
 
-grep -Fq -- '.ralph/state/worker-claims.json' src/.claude/agents/orchestrator.md \
-  || fail "Claude orchestrator agent must include worker claims in canonical inputs"
+grep -Fq -- '.ralph/state/execution-claims.json' src/.claude/agents/orchestrator.md \
+  || fail "Claude orchestrator agent must include execution claims in canonical inputs"
 
-grep -Fq -- 'worker-claims' src/.cursor/rules/ralph-core.mdc \
+grep -Fq -- 'execution-claims registry' src/.cursor/rules/ralph-core.mdc \
   || fail "Cursor core rule must mention the shared Ralph claim contract"
 
 grep -Fq -- 'execution_mode = native_subagent' src/.cursor/rules/ralph-execute.mdc \
-  || fail "Cursor execute rule must require native subagent worker claims"
+  || fail "Cursor execute rule must require native subagent execution claims"
+
+grep -Fq -- 'shared scheduler lock' src/.codex/agents/orchestrator.toml \
+  || fail "Codex orchestrator agent must describe shared scheduler-lock coordination"
+
+grep -Fq -- 'orchestrator peer' src/.codex/agents/orchestrator.toml \
+  || fail "Codex orchestrator agent must describe the orchestrator-peer topology"
+
+if grep -Fq -- 'single-writer lease' src/.codex/agents/orchestrator.toml; then
+  fail "Codex orchestrator agent must not instruct the old single-writer lease model"
+fi
+
+if grep -Fq -- 'lease ownership must transfer' src/.codex/agents/orchestrator.toml; then
+  fail "Codex orchestrator agent must not stop on legacy lease-transfer language"
+fi
 
 if grep -Fq -- 'finishing session may reconcile its own validated work' src/.cursor/rules/ralph-execute.mdc; then
   fail "Cursor execute rule must keep reconciliation on the orchestrator"

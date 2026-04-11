@@ -20,7 +20,7 @@ description: Execute one assigned task for the active numbered spec, update only
 - `.ralph/shared/context/project-facts.json` or the resolved canonical `.ralph/context/project-facts.json`
 - `.ralph/shared/context/learning-summary.md` or the resolved canonical `.ralph/context/learning-summary.md`
 - active queue entry from `.ralph/shared/state/spec-queue.json` or the resolved canonical `.ralph/state/spec-queue.json`
-- active claim from `.ralph/shared/state/worker-claims.json` or the resolved canonical `.ralph/state/worker-claims.json`
+- active claim from `.ralph/shared/state/execution-claims.json` or the resolved canonical `.ralph/state/execution-claims.json`
 - any bounded file list from the orchestrator
 - optional `research.md`, `data-model.md`, `contracts/`, `quickstart.md`
 
@@ -41,7 +41,7 @@ If the task list is missing or incomplete, stop and report that task generation 
 11. Create at least one atomic commit before marking the task complete. Multiple commits are allowed only when each commit is a coherent checkpoint inside the same task.
 12. End the assigned spec worktree with a clean worktree before handing off to review.
 13. Update only the task-local artifacts that belong to implementation.
-14. Do not append orchestrator events, mutate shared queue, workflow state, lease state, or task lifecycle state directly, or rely on tracked worktree copies of shared-control-plane files.
+14. Do not append orchestrator events, mutate shared queue, workflow state, scheduler-lock state, or task lifecycle state directly, or rely on tracked worktree copies of shared-control-plane files.
 15. Fill in the `Quality Gate` section:
    - `React Effects Audit` must be `pass` when React scope was touched, else `not_applicable`
    - `React files checked` must list audited files or `None`

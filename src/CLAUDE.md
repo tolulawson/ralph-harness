@@ -18,9 +18,9 @@ Before doing substantial work, read these files in order:
 7. `.ralph/context/learning-summary.md`
 8. `.ralph/state/workflow-state.json`
 9. `.ralph/state/spec-queue.json`
-10. `.ralph/state/orchestrator-lease.json`
-11. `.ralph/state/worker-claims.json`
-12. `recent tail of .ralph/state/orchestrator-intents.jsonl`
+10. `.ralph/state/scheduler-lock.json`
+11. `.ralph/state/execution-claims.json`
+12. `recent tail of .ralph/state/scheduler-intents.jsonl`
 13. `canonical report at last_report_path, resolving through the canonical checkout or .ralph/shared/ when running from a spec worktree`
 14. `active or admitted spec artifacts under specs/<spec-id>-<slug>/`
 15. `specs/INDEX.md`
@@ -45,7 +45,7 @@ Do not treat conversational memory as the source of truth when the Ralph runtime
 Treat the repository root as the harness work area after installation. Keep agent-specific instructions thin and route all substantive behavior back to the shared Ralph runtime contract.
 Ralph supports only adapters that can delegate the full Ralph subagent topology for substantive work.
 When a public Ralph entrypoint is invoked, keep the entry thread thin and immediately launch the dedicated Ralph subagent for that entrypoint instead of doing the work inline.
-Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to the orchestrator.
+Do not let the main thread keep acting as the PRD or planning coordinator after launcher handoff begins. Queue-wide control-plane coordination belongs only to orchestrator peers operating through the shared scheduler lock.
 
 If this repository already has its own loader file, preserve non-Ralph content and replace only the managed Ralph block between the markers shown here.
 <!-- RALPH-HARNESS:END -->

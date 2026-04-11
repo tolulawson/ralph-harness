@@ -15,9 +15,9 @@
 - Admission policy: `explicit_first_ready_set`
 - Normal spec capacity: `3`
 - Active interrupt spec: `null`
-- Lease path: `.ralph/state/orchestrator-lease.json`
-- Worker claims path: `.ralph/state/worker-claims.json`
-- Intents path: `.ralph/state/orchestrator-intents.jsonl`
+- Lease path: `.ralph/state/scheduler-lock.json`
+- Worker claims path: `.ralph/state/execution-claims.json`
+- Intents path: `.ralph/state/scheduler-intents.jsonl`
 - Lease owner token: `null`
 - Lease heartbeat: `null`
 - Lease expires: `null`

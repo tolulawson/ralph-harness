@@ -4,6 +4,54 @@ This file is the canonical human-written release history for the Ralph harness.
 
 GitHub releases should publish notes from the matching section in this file instead of relying on generated commit summaries.
 
+## v0.13.0 - 2026-04-10
+
+### Summary
+
+This release redesigns Ralph's control plane around peer orchestrators instead of a resident single-writer scheduler.
+
+It replaces the long-lived orchestrator lease with a short-lived shared scheduler lock, durable scheduler intents, and spec-scoped execution claims so multiple threads can cooperate against the same canonical control plane without one thread owning the queue for the duration of the run.
+
+### Highlights
+
+- Replaced the old `orchestrator-lease` / `orchestrator-intents` / `worker-claims` naming and semantics with:
+  - `.ralph/state/scheduler-lock.json`
+  - `.ralph/state/scheduler-intents.jsonl`
+  - `.ralph/state/execution-claims.json`
+- Updated the shipped runtime contract, project policy, adapters, and role skills to teach the peer-scheduler model:
+  - queue mutation is guarded by a short-lived shared scheduler lock
+  - many orchestrator peers may participate in one control plane
+  - actual execution ownership is carried by spec-scoped claims
+  - shared-state reads from worktrees resolve through `.ralph/shared/` or the canonical checkout
+- Bumped queue and workflow schema to `7.0.0`, added `queue_revision`, and refreshed migration logic so legacy installs converge on canonical v7 file names and path fields during upgrade and preflight repair.
+- Tightened the stop-boundary hook so it reads canonical shared control-plane state from spec worktrees and never auto-continues across an explicit human-gated boundary.
+- Added regression and verifier coverage for multi-orchestrator doctrine drift, shared-state stop-hook reads, human-gated stop behavior, and legacy coordination-file migration during preflight.
+
+### Install And Upgrade Impact
+
+- Use tag `v0.13.0` as the default public install or upgrade reference.
+- Fresh installs now ship the peer-orchestrator control plane and the renamed scheduler-lock / scheduler-intents / execution-claims runtime state.
+- Existing installs must upgrade into the v7 queue/workflow naming and coordination model; `upgrade_contract_version` remains `11` because this release extends the existing migration contract rather than introducing a new upgrade phase.
+
+### Validation And Release Workflow
+
+- Verified focused regressions with:
+  - `python3 scripts/test-stop-boundary-hook.py`
+  - `python3 scripts/test-control-plane-lifecycle.py`
+  - `python3 scripts/test-runtime-preflight-repairs.py`
+  - `bash scripts/verify-upgrade-contract.sh`
+- Verified full release surface with `scripts/validate-harness.sh`.
+
+### Artifacts And References
+
+- Runtime doctrine: `src/.ralph/runtime-contract.md`
+- Project policy: `src/.ralph/policy/project-policy.md`
+- Stop hook: `src/.ralph/hooks/stop-boundary.py`
+- Coordination helper: `scripts/orchestrator-coordination.py`
+- Runtime helper layer: `scripts/runtime_state_helpers.py`
+- Runtime adapters: `src/.codex/agents/orchestrator.toml`, `src/.claude/agents/orchestrator.md`, `src/.cursor/rules/ralph-core.mdc`
+- Release asset: `ralph-harness-v0.13.0.tar.gz`
+
 ## v0.12.8 - 2026-04-08
 
 ### Summary
@@ -565,7 +613,7 @@ This release keeps the shared Ralph doctrine and queue semantics under `.ralph/`
 
 - Rewrote the shipped runtime contract, project policy, public docs, and loaders around a runtime-neutral lease-plus-claims execution model.
 - Added a canonical agent registry at `src/.ralph/agent-registry.json` plus generated adapter packs for `AGENTS.md`, `CLAUDE.md`, `.claude/agents/`, `.claude/commands/`, and `.cursor/rules/`.
-- Added `.ralph/state/worker-claims.json` and the corresponding template and migration logic for cross-runtime slot claiming.
+- Added `.ralph/state/execution-claims.json` and the corresponding template and migration logic for cross-runtime slot claiming.
 - Switched new scaffold branch defaults from `codex/<spec-key>` to `ralph/<spec-key>` while preserving legacy branch prefixes during upgrade.
 - Extended install and upgrade manifests so all supported adapter packs ship together by default.
 - Added claim operations to `scripts/orchestrator-coordination.py` and generalized validation to cover the generated runtime adapters.
@@ -585,7 +633,7 @@ This release keeps the shared Ralph doctrine and queue semantics under `.ralph/`
 
 - Runtime doctrine: `src/.ralph/runtime-contract.md`
 - Agent registry: `src/.ralph/agent-registry.json`
-- Worker claims state: `src/.ralph/state/worker-claims.json`
+- Worker claims state: `src/.ralph/state/execution-claims.json`
 - Runtime coordination helper: `scripts/orchestrator-coordination.py`
 - Release asset: `ralph-harness-v0.9.0.tar.gz`
 

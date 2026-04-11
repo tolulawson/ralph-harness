@@ -29,16 +29,16 @@ grep -Fq -- 'active_spec_ids' src/.ralph/runtime-contract.md \
 grep -Fq -- 'depends_on_spec_ids' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention depends_on_spec_ids"
 
-grep -Fq -- 'orchestrator-lease.json' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must mention the orchestrator lease file"
+grep -Fq -- 'scheduler-lock.json' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must mention the scheduler lock file"
 
-grep -Fq -- 'worker-claims.json' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must mention the worker claims file"
+grep -Fq -- 'execution-claims.json' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must mention the execution claims file"
 
 grep -Fq -- '.ralph/shared/' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention the generated shared overlay"
 
-grep -Fq -- 'orchestrator-intents.jsonl' src/.ralph/runtime-contract.md \
+grep -Fq -- 'scheduler-intents.jsonl' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention the durable intents file"
 
 grep -Fq -- 'git worktree' src/.ralph/runtime-contract.md \
@@ -47,11 +47,14 @@ grep -Fq -- 'git worktree' src/.ralph/runtime-contract.md \
 grep -Fq -- 'bootstrap' src/.ralph/runtime-contract.md \
   || fail "runtime contract must mention bootstrap"
 
-grep -Fq -- 'exactly one dedicated orchestrator subagent per invocation' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must require exactly one orchestrator per execute invocation"
+grep -Fq -- 'dedicated orchestrator peer subagent per invocation' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must require execute invocations to launch orchestrator peers"
 
-grep -Fq -- 'fill the admitted-spec execution window with bounded worker subagents' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must require worker fan-out across the admitted window"
+grep -Fq -- 'queue write lock' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must describe the short-lived queue write lock"
+
+grep -Fq -- 'queue_revision' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must document queue_revision"
 
 for status in awaiting_review awaiting_verification awaiting_release release_failed
 do
@@ -62,11 +65,11 @@ done
 grep -Fq -- 'workers release their claims and exit' src/.ralph/runtime-contract.md \
   || fail "runtime contract must make workers release claims before orchestrator reconciliation"
 
-grep -Fq -- 'orchestrator alone' src/.ralph/runtime-contract.md \
-  || fail "runtime contract must keep shared-state reconciliation on the orchestrator"
+grep -Fq -- 'orchestrator peer may later acquire the scheduler lock' src/.ralph/runtime-contract.md \
+  || fail "runtime contract must keep reconciliation on an orchestrator peer under the scheduler lock"
 
-grep -Fq -- 'single-writer lease' src/.ralph/policy/project-policy.md \
-  || fail "project policy must describe the single-writer lease"
+grep -Fq -- 'short-lived global queue write lock' src/.ralph/policy/project-policy.md \
+  || fail "project policy must describe the shared queue write lock"
 
 grep -Fq -- 'hard dependency' src/.ralph/policy/project-policy.md \
   || fail "project policy must describe hard dependencies"
@@ -83,26 +86,34 @@ grep -Fq -- 'bootstrap' src/.agents/skills/orchestrator/SKILL.md \
 grep -Fq -- '.ralph/shared/' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must mention the generated shared overlay"
 
-grep -Fq -- 'refill freed slots' src/.agents/skills/orchestrator/SKILL.md \
+grep -Fq -- 'refill freed execution slots' src/.agents/skills/orchestrator/SKILL.md \
   || fail "orchestrator skill must refill freed worker slots while runnable work remains"
 
 grep -Fq -- 'execution_mode = native_subagent' src/.agents/skills/orchestrator/SKILL.md \
-  || fail "orchestrator skill must require native subagent worker claims"
+  || fail "orchestrator skill must require native subagent execution claims"
 
 grep -Fq -- 'depends_on_spec_ids' src/.agents/skills/plan/SKILL.md \
   || fail "plan skill must seed depends_on_spec_ids"
 
-grep -Fq -- 'lease' skills/ralph-execute/SKILL.md \
-  || fail "ralph-execute must mention lease coordination"
+grep -Fq -- 'queue write lock' skills/ralph-execute/SKILL.md \
+  || fail "ralph-execute must mention queue-lock coordination"
 
 grep -Fq -- '.ralph/shared/' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must mention the generated shared overlay"
 
-grep -Fq -- 'one orchestrator with many workers' skills/ralph-execute/SKILL.md \
-  || fail "ralph-execute must describe the one-orchestrator/many-workers topology"
+grep -Fq -- 'orchestrator peer subagent' skills/ralph-execute/SKILL.md \
+  || fail "ralph-execute must describe the orchestrator-peer topology"
 
 grep -Fq -- 'record every delegated worker' skills/ralph-execute/SKILL.md \
-  || fail "ralph-execute must require native subagent worker claims"
+  || fail "ralph-execute must require native subagent execution claims"
+
+if grep -Fq -- 'lease ownership must transfer' skills/ralph-execute/SKILL.md; then
+  fail "ralph-execute must not use legacy lease-transfer stop language"
+fi
+
+if grep -Fq -- 'lease ownership must transfer' src/.agents/skills/orchestrator/SKILL.md; then
+  fail "orchestrator skill must not use legacy lease-transfer stop language"
+fi
 
 grep -Fq -- 'route to `$ralph-plan`' skills/ralph-execute/SKILL.md \
   || fail "ralph-execute must route planning gaps back to ralph-plan"
@@ -141,18 +152,18 @@ from pathlib import Path
 constitution = Path("src/.ralph/constitution.md").read_text()
 workflow = json.loads(Path("src/.ralph/state/workflow-state.json").read_text())
 queue = json.loads(Path("src/.ralph/state/spec-queue.json").read_text())
-lease = json.loads(Path("src/.ralph/state/orchestrator-lease.json").read_text())
+lease = json.loads(Path("src/.ralph/state/scheduler-lock.json").read_text())
 queue_template = json.loads(Path("src/.ralph/templates/spec-queue-template.json").read_text())
 
 for needle in ("release_failed", "awaiting_release", "awaiting_merge"):
     if needle not in constitution:
         raise SystemExit(f"verify-multi-spec-contract: constitution must include {needle}")
 
-for key in ("active_spec_ids", "active_interrupt_spec_id", "orchestrator_lease_path", "worker_claims_path", "orchestrator_intents_path", "scheduler_summary"):
+for key in ("active_spec_ids", "active_interrupt_spec_id", "scheduler_lock_path", "execution_claims_path", "scheduler_intents_path", "scheduler_summary"):
     if key not in workflow:
         raise SystemExit(f"verify-multi-spec-contract: workflow-state missing {key}")
 
-for key in ("active_spec_ids", "active_interrupt_spec_id", "worker_claims_path"):
+for key in ("active_spec_ids", "active_interrupt_spec_id", "execution_claims_path", "queue_revision"):
     if key not in queue:
         raise SystemExit(f"verify-multi-spec-contract: spec-queue missing {key}")
 
@@ -188,7 +199,7 @@ for key in (
 
 for key in ("schema_version", "owner_token", "heartbeat_at", "expires_at", "status"):
     if key not in lease:
-        raise SystemExit(f"verify-multi-spec-contract: lease state missing {key}")
+        raise SystemExit(f"verify-multi-spec-contract: scheduler lock state missing {key}")
 PY
 
 echo "verify-multi-spec-contract: ok"

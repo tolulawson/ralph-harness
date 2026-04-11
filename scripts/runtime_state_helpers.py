@@ -16,8 +16,8 @@ except ModuleNotFoundError:
     from pip._vendor import tomli as tomllib  # type: ignore
 
 
-CURRENT_QUEUE_SCHEMA_VERSION = "6.0.0"
-CURRENT_WORKFLOW_SCHEMA_VERSION = "6.0.0"
+CURRENT_QUEUE_SCHEMA_VERSION = "7.0.0"
+CURRENT_WORKFLOW_SCHEMA_VERSION = "7.0.0"
 CURRENT_TASK_STATE_SCHEMA_VERSION = "1.1.0"
 CURRENT_PROJECT_FACTS_SCHEMA_VERSION = "1.1.0"
 CURRENT_PREEMPTION_POLICY = "failing_out_of_scope_bug"
@@ -25,12 +25,15 @@ CURRENT_QUEUE_SELECTION = "explicit_first_ready_set"
 DEFAULT_MAX_THREADS = 4
 ORCHESTRATOR_THREAD_RESERVE = 1
 CURRENT_UPGRADE_CONTRACT_VERSION = 11
-CURRENT_LEASE_SCHEMA_VERSION = "1.0.0"
-CURRENT_WORKER_CLAIMS_SCHEMA_VERSION = "1.1.0"
+CURRENT_SCHEDULER_LOCK_SCHEMA_VERSION = "2.0.0"
+CURRENT_EXECUTION_CLAIMS_SCHEMA_VERSION = "2.0.0"
 CURRENT_SCAFFOLD_REF = "__current_scaffold__"
-DEFAULT_LEASE_PATH = ".ralph/state/orchestrator-lease.json"
-DEFAULT_WORKER_CLAIMS_PATH = ".ralph/state/worker-claims.json"
-DEFAULT_INTENTS_PATH = ".ralph/state/orchestrator-intents.jsonl"
+DEFAULT_SCHEDULER_LOCK_PATH = ".ralph/state/scheduler-lock.json"
+DEFAULT_EXECUTION_CLAIMS_PATH = ".ralph/state/execution-claims.json"
+DEFAULT_SCHEDULER_INTENTS_PATH = ".ralph/state/scheduler-intents.jsonl"
+LEGACY_SCHEDULER_LOCK_PATH = ".ralph/state/orchestrator-lease.json"
+LEGACY_EXECUTION_CLAIMS_PATH = ".ralph/state/worker-claims.json"
+LEGACY_SCHEDULER_INTENTS_PATH = ".ralph/state/orchestrator-intents.jsonl"
 DEFAULT_WORKTREE_ROOT = ".ralph/worktrees"
 DEFAULT_SHARED_OVERLAY_ROOT = ".ralph/shared"
 DEFAULT_RUNTIME_OVERRIDES_PATH = ".ralph/policy/runtime-overrides.md"
@@ -90,7 +93,7 @@ RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     "supported runtime adapter packs together",
     "native runtime subagents",
     "unsupported by the shipped harness",
-    ".ralph/state/worker-claims.json",
+    ".ralph/state/execution-claims.json",
     ".ralph/shared/",
     "canonical shared control plane",
     "worktree-local tracked copies",
@@ -98,21 +101,23 @@ RUNTIME_CONTRACT_REQUIRED_SNIPPETS = (
     "main thread must never continue as the PRD or planning coordinator",
     "Review, verification, and release failures are remediation signals, not stop conditions.",
     "Release reports must record one explicit outcome",
-    "single-writer lease",
-    "orchestrator-intents.jsonl",
+    "short-lived global queue write lock",
+    "scheduler-intents.jsonl",
+    "scheduler-lock.json",
+    "Many orchestrator peers",
     "git worktree",
     "bootstrap",
 )
 ORCHESTRATOR_SKILL_REQUIRED_SNIPPETS = (
-    "worker-claims",
+    "execution-claims",
     "native subagents",
     "execution_mode = native_subagent",
     "release their claims and exit",
-    "orchestrator alone",
+    "orchestrator peer",
     ".ralph/shared/",
     "canonical checkout",
     "shared-control-plane",
-    "close that worker thread",
+    "claim one runnable non-research role",
     "Do not stop merely because review, verification, or release failed.",
     "durable intent",
     "worktree",
@@ -189,12 +194,12 @@ WORKFLOW_REQUIRED_KEYS = (
     "current_run_id",
     "active_pr_number",
     "active_pr_url",
-    "orchestrator_lease_path",
-    "worker_claims_path",
-    "orchestrator_intents_path",
-    "lease_owner_token",
-    "lease_heartbeat_at",
-    "lease_expires_at",
+    "scheduler_lock_path",
+    "execution_claims_path",
+    "scheduler_intents_path",
+    "scheduler_lock_owner_token",
+    "scheduler_lock_heartbeat_at",
+    "scheduler_lock_expires_at",
     "scheduler_summary",
     "resume_spec_id",
     "resume_spec_stack",
@@ -262,7 +267,7 @@ QUEUE_SPEC_REQUIRED_KEYS = (
     "next_task_id",
 )
 
-LEASE_REQUIRED_KEYS = (
+SCHEDULER_LOCK_REQUIRED_KEYS = (
     "schema_version",
     "owner_token",
     "holder_thread",
@@ -273,7 +278,7 @@ LEASE_REQUIRED_KEYS = (
     "status",
 )
 
-WORKER_CLAIMS_REQUIRED_KEYS = (
+EXECUTION_CLAIMS_REQUIRED_KEYS = (
     "schema_version",
     "claims",
 )
@@ -337,7 +342,7 @@ SPEC_SCOPED_REPORT_ROLES = {
 COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{7,40}$")
 INTENT_TYPES = {"create_spec", "schedule_spec", "pause_spec", "resume_spec", "status_request"}
 INTENT_STATUSES = {"pending", "acknowledged", "processed", "rejected"}
-LEASE_STATUSES = {"idle", "held"}
+SCHEDULER_LOCK_STATUSES = {"idle", "held"}
 CLAIM_STATUSES = {"claimed", "released", "expired"}
 BOOTSTRAP_STATUSES = {"required", "in_progress", "passed", "failed"}
 SUPPORTED_RUNTIME_NAMES = {"codex", "claude", "cursor"}
@@ -401,6 +406,12 @@ def sha256_text(text: str) -> str:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    temp_path = path.with_name(f".{path.name}.tmp")
+    temp_path.write_text(json.dumps(payload, indent=2) + "\n")
+    temp_path.replace(path)
 
 
 def default_worktree_name(spec_key: str) -> str:
@@ -791,6 +802,7 @@ def render_workflow_state_markdown(workflow: dict[str, Any], queue: dict[str, An
         f"- Project: `{format_code(workflow.get('project_name'))}`",
         f"- Active epoch: `{format_code(workflow.get('active_epoch_id'))}`",
         f"- Active specs: `{format_code(active_spec_ids)}`",
+        f"- Queue revision: `{format_code(queue.get('queue_revision'))}`",
         f"- Primary active spec (compatibility mirror): `{format_code(workflow.get('active_spec_key'))}`",
         f"- Active task: `{format_code(workflow.get('active_task_id'))}`",
         f"- Phase: `{format_code(workflow.get('current_phase'))}`",
@@ -803,12 +815,12 @@ def render_workflow_state_markdown(workflow: dict[str, Any], queue: dict[str, An
         f"- Admission policy: `{format_code(queue.get('queue_policy', {}).get('selection'))}`",
         f"- Normal spec capacity: `{format_code(queue.get('queue_policy', {}).get('normal_execution_limit'))}`",
         f"- Active interrupt spec: `{format_code(workflow.get('active_interrupt_spec_id'))}`",
-        f"- Lease path: `{format_code(workflow.get('orchestrator_lease_path'))}`",
-        f"- Worker claims path: `{format_code(workflow.get('worker_claims_path'))}`",
-        f"- Intents path: `{format_code(workflow.get('orchestrator_intents_path'))}`",
-        f"- Lease owner token: `{format_code(workflow.get('lease_owner_token'))}`",
-        f"- Lease heartbeat: `{format_code(workflow.get('lease_heartbeat_at'))}`",
-        f"- Lease expires: `{format_code(workflow.get('lease_expires_at'))}`",
+        f"- Scheduler lock path: `{format_code(workflow.get('scheduler_lock_path'))}`",
+        f"- Execution claims path: `{format_code(workflow.get('execution_claims_path'))}`",
+        f"- Scheduler intents path: `{format_code(workflow.get('scheduler_intents_path'))}`",
+        f"- Scheduler lock owner token: `{format_code(workflow.get('scheduler_lock_owner_token'))}`",
+        f"- Scheduler lock heartbeat: `{format_code(workflow.get('scheduler_lock_heartbeat_at'))}`",
+        f"- Scheduler lock expires: `{format_code(workflow.get('scheduler_lock_expires_at'))}`",
         f"- Scheduler summary: `{format_code(scheduler_summary)}`",
         f"- Resume spec id: `{format_code(workflow.get('resume_spec_id'))}`",
         f"- Resume stack depth: `{len(resume_stack)}`",
@@ -1153,13 +1165,50 @@ def ensure_runtime_overrides_file(repo_root: Path) -> Path:
     return target_path
 
 
-def ensure_worker_claims_file(repo_root: Path, workflow: dict[str, Any]) -> Path:
+def workflow_path_value(workflow: dict[str, Any], key: str, legacy_key: str, default: str) -> str:
+    value = workflow.get(key)
+    if isinstance(value, str) and value:
+        return value
+    legacy_value = workflow.get(legacy_key)
+    if isinstance(legacy_value, str) and legacy_value:
+        return legacy_value
+    return default
+
+
+def canonical_coordination_path(default: str) -> str:
+    return default
+
+
+def migrate_legacy_coordination_files(repo_root: Path, workflow: dict[str, Any]) -> None:
+    path_pairs = (
+        (
+            repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_LOCK_PATH),
+            repo_root / LEGACY_SCHEDULER_LOCK_PATH,
+        ),
+        (
+            repo_root / canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH),
+            repo_root / LEGACY_EXECUTION_CLAIMS_PATH,
+        ),
+        (
+            repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_INTENTS_PATH),
+            repo_root / LEGACY_SCHEDULER_INTENTS_PATH,
+        ),
+    )
+    for target_path, legacy_path in path_pairs:
+        if target_path.exists() or not legacy_path.exists():
+            continue
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        legacy_path.replace(target_path)
+
+
+def ensure_execution_claims_file(repo_root: Path, workflow: dict[str, Any]) -> Path:
     repo_root = resolve_canonical_checkout_root(repo_root)
-    relative_path = workflow.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
+    migrate_legacy_coordination_files(repo_root, workflow)
+    relative_path = canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH)
     target_path = repo_root / relative_path
     if target_path.exists():
         payload = load_json(target_path)
-        payload["schema_version"] = CURRENT_WORKER_CLAIMS_SCHEMA_VERSION
+        payload["schema_version"] = CURRENT_EXECUTION_CLAIMS_SCHEMA_VERSION
         claims = list(payload.get("claims") or [])
         for claim in claims:
             claim.setdefault("bootstrap_status", "required")
@@ -1171,7 +1220,7 @@ def ensure_worker_claims_file(repo_root: Path, workflow: dict[str, Any]) -> Path
         write_json(target_path, payload)
         return target_path
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json(target_path, {"schema_version": CURRENT_WORKER_CLAIMS_SCHEMA_VERSION, "claims": []})
+    write_json(target_path, {"schema_version": CURRENT_EXECUTION_CLAIMS_SCHEMA_VERSION, "claims": []})
     return target_path
 
 
@@ -1188,9 +1237,58 @@ def worker_claim_is_healthy(claim: dict[str, Any], now: datetime | None = None) 
     return expires_at > now
 
 
-def count_active_claims(worker_claims: dict[str, Any], now: datetime | None = None) -> int:
+def count_active_claims(execution_claims: dict[str, Any], now: datetime | None = None) -> int:
     now = now or utc_now()
-    return sum(1 for claim in worker_claims.get("claims", []) if worker_claim_is_healthy(claim, now))
+    return sum(1 for claim in execution_claims.get("claims", []) if worker_claim_is_healthy(claim, now))
+
+
+def spec_has_healthy_execution_claim(
+    spec_id: Any,
+    execution_claims: dict[str, Any],
+    now: datetime | None = None,
+) -> bool:
+    now = now or utc_now()
+    return any(
+        claim.get("spec_id") == spec_id and worker_claim_is_healthy(claim, now)
+        for claim in execution_claims.get("claims", [])
+    )
+
+
+def admitted_specs_without_healthy_claim(
+    queue: dict[str, Any],
+    execution_claims: dict[str, Any],
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
+    now = now or utc_now()
+    active_spec_ids = set(queue.get("active_spec_ids") or [])
+    return [
+        spec
+        for spec in queue.get("specs", [])
+        if (
+            spec.get("admission_status") in ADMISSION_ACTIVE_STATUSES
+            or spec.get("spec_id") in active_spec_ids
+        )
+        and not spec_has_healthy_execution_claim(spec.get("spec_id"), execution_claims, now)
+    ]
+
+
+def bump_queue_revision(queue: dict[str, Any]) -> None:
+    queue["queue_revision"] = int(queue.get("queue_revision") or 0) + 1
+
+
+def has_expired_execution_claim(
+    execution_claims: dict[str, Any],
+    now: datetime | None = None,
+) -> bool:
+    now = now or utc_now()
+    for claim in execution_claims.get("claims", []):
+        if claim.get("status") != "claimed":
+            continue
+        heartbeat_at = parse_timestamp(claim.get("heartbeat_at"))
+        expires_at = parse_timestamp(claim.get("expires_at"))
+        if heartbeat_at is None or expires_at is None or expires_at <= heartbeat_at or expires_at <= now:
+            return True
+    return False
 
 
 def canonical_runtime_contract_hash_for_ref(ref: str) -> str | None:
@@ -1472,8 +1570,8 @@ def normalize_lease_state(lease: dict[str, Any], now: datetime | None = None) ->
     normalized = dict(lease)
     recovered = False
 
-    normalized["schema_version"] = CURRENT_LEASE_SCHEMA_VERSION
-    if normalized.get("status") not in LEASE_STATUSES:
+    normalized["schema_version"] = CURRENT_SCHEDULER_LOCK_SCHEMA_VERSION
+    if normalized.get("status") not in SCHEDULER_LOCK_STATUSES:
         recovered = True
         normalized["status"] = "idle"
 
@@ -1606,7 +1704,7 @@ def refresh_runtime_derived_state(
     repo_root: Path,
     workflow: dict[str, Any],
     queue: dict[str, Any],
-    worker_claims: dict[str, Any],
+    execution_claims: dict[str, Any],
     lease: dict[str, Any],
     pending_intent_count: int,
 ) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
@@ -1616,12 +1714,13 @@ def refresh_runtime_derived_state(
     queue_path = repo_root / ".ralph/state/spec-queue.json"
     workflow_path = repo_root / ".ralph/state/workflow-state.json"
 
-    merge_bootstrap_summary_from_claims(refreshed_queue, worker_claims)
+    merge_bootstrap_summary_from_claims(refreshed_queue, execution_claims)
     rendered_queue = json.dumps(refreshed_queue, indent=2) + "\n"
     actual_queue = queue_path.read_text() if queue_path.exists() else None
     if actual_queue != rendered_queue:
+        bump_queue_revision(refreshed_queue)
         write_json(queue_path, refreshed_queue)
-        self_healed.append("refreshed queue bootstrap summary fields from worker claims")
+        self_healed.append("refreshed queue bootstrap summary fields from execution claims")
 
     refreshed_workflow = normalize_workflow(refreshed_workflow, refreshed_queue)
     refreshed_workflow["queue_snapshot"] = derive_queue_snapshot(refreshed_queue)
@@ -1630,19 +1729,19 @@ def refresh_runtime_derived_state(
         refreshed_workflow["active_spec_ids"][0] if refreshed_workflow["active_spec_ids"] else None
     )
     refreshed_workflow["active_interrupt_spec_id"] = derive_interrupt_spec_id(refreshed_workflow, refreshed_queue)
-    refreshed_workflow["worker_claims_path"] = (
-        refreshed_queue.get("worker_claims_path") or refreshed_workflow.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
+    refreshed_workflow["execution_claims_path"] = (
+        refreshed_queue.get("execution_claims_path") or refreshed_workflow.get("execution_claims_path") or DEFAULT_EXECUTION_CLAIMS_PATH
     )
-    refreshed_workflow["lease_owner_token"] = lease.get("owner_token")
-    refreshed_workflow["lease_heartbeat_at"] = lease.get("heartbeat_at")
-    refreshed_workflow["lease_expires_at"] = lease.get("expires_at")
+    refreshed_workflow["scheduler_lock_owner_token"] = lease.get("owner_token")
+    refreshed_workflow["scheduler_lock_heartbeat_at"] = lease.get("heartbeat_at")
+    refreshed_workflow["scheduler_lock_expires_at"] = lease.get("expires_at")
     refreshed_workflow["scheduler_summary"] = {
         "normal_execution_limit": refreshed_queue.get("queue_policy", {}).get(
             "normal_execution_limit",
             derive_default_normal_execution_limit(repo_root),
         ),
         "active_spec_count": len(refreshed_workflow["active_spec_ids"]),
-        "active_claim_count": count_active_claims(worker_claims),
+        "active_claim_count": count_active_claims(execution_claims),
         "pending_intent_count": pending_intent_count,
         "dependency_blocked_count": count_dependency_blocked_specs(refreshed_queue),
     }
@@ -1708,12 +1807,13 @@ def repair_active_spec_worktrees(
 
 
 def ensure_lease_file(repo_root: Path, workflow: dict[str, Any]) -> dict[str, Any]:
-    lease_path = repo_root / (workflow.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH)
+    migrate_legacy_coordination_files(repo_root, workflow)
+    lease_path = repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_LOCK_PATH)
     if lease_path.exists():
         lease = load_json(lease_path)
     else:
         lease = {
-            "schema_version": CURRENT_LEASE_SCHEMA_VERSION,
+            "schema_version": CURRENT_SCHEDULER_LOCK_SCHEMA_VERSION,
             "owner_token": None,
             "holder_thread": None,
             "run_id": None,
@@ -1729,7 +1829,8 @@ def ensure_lease_file(repo_root: Path, workflow: dict[str, Any]) -> dict[str, An
 
 
 def ensure_intent_log(repo_root: Path, workflow: dict[str, Any]) -> Path:
-    intents_path = repo_root / (workflow.get("orchestrator_intents_path") or DEFAULT_INTENTS_PATH)
+    migrate_legacy_coordination_files(repo_root, workflow)
+    intents_path = repo_root / canonical_coordination_path(DEFAULT_SCHEDULER_INTENTS_PATH)
     intents_path.parent.mkdir(parents=True, exist_ok=True)
     intents_path.touch(exist_ok=True)
     return intents_path
@@ -1796,9 +1897,9 @@ def bootstrap_claim_sort_key(claim: dict[str, Any]) -> tuple[datetime, datetime,
     return completed, started, claimed
 
 
-def merge_bootstrap_summary_from_claims(queue: dict[str, Any], worker_claims: dict[str, Any]) -> None:
+def merge_bootstrap_summary_from_claims(queue: dict[str, Any], execution_claims: dict[str, Any]) -> None:
     latest_by_spec: dict[str, dict[str, Any]] = {}
-    for claim in worker_claims.get("claims", []):
+    for claim in execution_claims.get("claims", []):
         spec_id = claim.get("spec_id")
         if not isinstance(spec_id, str):
             continue
@@ -2254,7 +2355,8 @@ def normalize_queue(
     else:
         queue_policy["normal_execution_limit"] = derive_default_normal_execution_limit(repo_root)
     normalized["queue_policy"] = queue_policy
-    normalized["worker_claims_path"] = normalized.get("worker_claims_path") or workflow.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
+    normalized["queue_revision"] = int(normalized.get("queue_revision") or 0)
+    normalized["execution_claims_path"] = canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH)
     project_facts = normalize_project_facts(project_facts or default_project_facts())
     normalized_specs = [normalize_spec_entry(spec, project_facts.get("base_branch")) for spec in normalized.get("specs", [])]
     normalized["specs"] = normalized_specs
@@ -2274,12 +2376,18 @@ def normalize_workflow(workflow: dict[str, Any], queue: dict[str, Any]) -> dict[
     normalized["interruption_state"] = normalized.get("interruption_state")
     normalized.pop("queue_head_spec_id", None)
     normalized["queue_snapshot"] = derive_queue_snapshot(queue)
-    normalized["orchestrator_lease_path"] = normalized.get("orchestrator_lease_path") or DEFAULT_LEASE_PATH
-    normalized["worker_claims_path"] = normalized.get("worker_claims_path") or queue.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
-    normalized["orchestrator_intents_path"] = normalized.get("orchestrator_intents_path") or DEFAULT_INTENTS_PATH
-    normalized["lease_owner_token"] = normalized.get("lease_owner_token")
-    normalized["lease_heartbeat_at"] = normalized.get("lease_heartbeat_at")
-    normalized["lease_expires_at"] = normalized.get("lease_expires_at")
+    normalized["scheduler_lock_path"] = canonical_coordination_path(DEFAULT_SCHEDULER_LOCK_PATH)
+    normalized["execution_claims_path"] = canonical_coordination_path(DEFAULT_EXECUTION_CLAIMS_PATH)
+    normalized["scheduler_intents_path"] = canonical_coordination_path(DEFAULT_SCHEDULER_INTENTS_PATH)
+    normalized["scheduler_lock_owner_token"] = normalized.get("scheduler_lock_owner_token", normalized.get("lease_owner_token"))
+    normalized["scheduler_lock_heartbeat_at"] = normalized.get("scheduler_lock_heartbeat_at", normalized.get("lease_heartbeat_at"))
+    normalized["scheduler_lock_expires_at"] = normalized.get("scheduler_lock_expires_at", normalized.get("lease_expires_at"))
+    normalized.pop("orchestrator_lease_path", None)
+    normalized.pop("worker_claims_path", None)
+    normalized.pop("orchestrator_intents_path", None)
+    normalized.pop("lease_owner_token", None)
+    normalized.pop("lease_heartbeat_at", None)
+    normalized.pop("lease_expires_at", None)
     active_spec_ids = list(normalized.get("active_spec_ids") or queue.get("active_spec_ids") or [])
     if not active_spec_ids:
         active_spec_ids = derive_active_spec_ids(queue, normalized)
@@ -2330,20 +2438,21 @@ def migrate_repo_state(repo_root: Path) -> None:
     queue_path = repo_root / ".ralph/state/spec-queue.json"
     workflow = load_json(workflow_path)
     queue = load_json(queue_path)
+    migrate_legacy_coordination_files(repo_root, workflow)
     project_facts_path, project_facts = ensure_project_facts_file(repo_root, queue, workflow)
     queue = normalize_queue(queue, workflow, project_facts, repo_root)
     workflow = normalize_workflow(workflow, queue)
     lease = ensure_lease_file(repo_root, workflow)
-    worker_claims_path = ensure_worker_claims_file(repo_root, workflow)
-    worker_claims = load_json(worker_claims_path)
+    execution_claims_path = ensure_execution_claims_file(repo_root, workflow)
+    execution_claims = load_json(execution_claims_path)
     if lease_is_healthy(lease):
         raise RuntimeStateError(
-            "upgrade blocked because .ralph/state/orchestrator-lease.json still shows a healthy active lease; stop the live orchestrator or wait for lease expiry before upgrading"
+            "upgrade blocked because .ralph/state/scheduler-lock.json still shows a healthy active queue lock; stop the live peer or wait for lock expiry before upgrading"
         )
     intents_path = ensure_intent_log(repo_root, workflow)
     ensure_worktree_root(repo_root)
     normalize_queue_worktree_metadata(repo_root, queue)
-    merge_bootstrap_summary_from_claims(queue, worker_claims)
+    merge_bootstrap_summary_from_claims(queue, execution_claims)
     legacy_report_owners: dict[str, str] = {}
 
     for spec in queue.get("specs", []):
@@ -2402,17 +2511,17 @@ def migrate_repo_state(repo_root: Path) -> None:
     workflow["active_spec_ids"] = derive_active_spec_ids(queue, workflow)
     workflow["active_spec_id"] = workflow["active_spec_ids"][0] if workflow["active_spec_ids"] else None
     workflow["active_interrupt_spec_id"] = derive_interrupt_spec_id(workflow, queue)
-    workflow["lease_owner_token"] = lease.get("owner_token")
-    workflow["lease_heartbeat_at"] = lease.get("heartbeat_at")
-    workflow["lease_expires_at"] = lease.get("expires_at")
-    workflow["worker_claims_path"] = queue.get("worker_claims_path") or DEFAULT_WORKER_CLAIMS_PATH
+    workflow["scheduler_lock_owner_token"] = lease.get("owner_token")
+    workflow["scheduler_lock_heartbeat_at"] = lease.get("heartbeat_at")
+    workflow["scheduler_lock_expires_at"] = lease.get("expires_at")
+    workflow["execution_claims_path"] = queue.get("execution_claims_path") or DEFAULT_EXECUTION_CLAIMS_PATH
     workflow["scheduler_summary"] = {
         "normal_execution_limit": queue.get("queue_policy", {}).get(
             "normal_execution_limit",
             derive_default_normal_execution_limit(repo_root),
         ),
         "active_spec_count": len(workflow["active_spec_ids"]),
-        "active_claim_count": count_active_claims(worker_claims),
+        "active_claim_count": count_active_claims(execution_claims),
         "pending_intent_count": len(load_jsonl_records(intents_path)),
         "dependency_blocked_count": count_dependency_blocked_specs(queue),
     }
@@ -2430,7 +2539,7 @@ def migrate_repo_state(repo_root: Path) -> None:
     write_json(queue_path, queue)
     write_json(workflow_path, workflow)
     write_json(project_facts_path, project_facts)
-    write_json(worker_claims_path, worker_claims)
+    write_json(execution_claims_path, execution_claims)
     (repo_root / ".ralph/state/workflow-state.md").write_text(render_workflow_state_markdown(workflow, queue))
     (repo_root / "specs/INDEX.md").write_text(render_spec_index_markdown(queue))
 
@@ -2493,7 +2602,7 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             issues.append(".codex/config.toml agents.max_depth must be an integer")
         elif max_depth != MAX_AGENT_DEPTH:
             issues.append(
-                f".codex/config.toml agents.max_depth must equal {MAX_AGENT_DEPTH} so a thin Ralph entry thread can launch one orchestrator or role subagent, which may launch worker subagents without allowing deeper fan-out"
+                f".codex/config.toml agents.max_depth must equal {MAX_AGENT_DEPTH} so a thin Ralph entry thread can launch one orchestrator peer or role subagent, which may launch worker subagents without allowing deeper fan-out"
             )
         for role, target in configured_targets.items():
             rel_target = target.relative_to(repo_root) if target.is_relative_to(repo_root) else target
@@ -2528,9 +2637,9 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     queue_json_path = repo_root / ".ralph/state/spec-queue.json"
     workflow_md_path = repo_root / ".ralph/state/workflow-state.md"
     spec_index_path = repo_root / "specs/INDEX.md"
-    lease_path = repo_root / DEFAULT_LEASE_PATH
-    worker_claims_path = repo_root / DEFAULT_WORKER_CLAIMS_PATH
-    intents_path = repo_root / DEFAULT_INTENTS_PATH
+    lease_path = repo_root / DEFAULT_SCHEDULER_LOCK_PATH
+    execution_claims_path = repo_root / DEFAULT_EXECUTION_CLAIMS_PATH
+    intents_path = repo_root / DEFAULT_SCHEDULER_INTENTS_PATH
     project_facts_path = repo_root / ".ralph/context/project-facts.json"
     runtime_contract_path = repo_root / ".ralph/runtime-contract.md"
     stop_hook_path = repo_root / DEFAULT_STOP_HOOK_PATH
@@ -2547,7 +2656,7 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         workflow_md_path,
         spec_index_path,
         lease_path,
-        worker_claims_path,
+        execution_claims_path,
         intents_path,
         project_facts_path,
         stop_hook_path,
@@ -2600,9 +2709,9 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
 
     workflow = load_json(workflow_json_path)
     queue = load_json(queue_json_path)
-    worker_claims = load_json(worker_claims_path)
+    execution_claims = load_json(execution_claims_path)
     project_facts = normalize_project_facts(load_json(project_facts_path))
-    merge_bootstrap_summary_from_claims(queue, worker_claims)
+    merge_bootstrap_summary_from_claims(queue, execution_claims)
 
     harness_version_path = repo_root / ".ralph/harness-version.json"
     if harness_version_path.exists():
@@ -2629,6 +2738,8 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
 
     if queue.get("schema_version") != CURRENT_QUEUE_SCHEMA_VERSION:
         issues.append(".ralph/state/spec-queue.json schema_version is not current")
+    if not isinstance(queue.get("queue_revision"), int) or queue.get("queue_revision") < 0:
+        issues.append(".ralph/state/spec-queue.json queue_revision must be a non-negative integer")
     if queue.get("queue_policy", {}).get("selection") != CURRENT_QUEUE_SELECTION:
         issues.append(".ralph/state/spec-queue.json selection policy is not the current explicit-first ready-set mode")
     if queue.get("queue_policy", {}).get("preemption") != CURRENT_PREEMPTION_POLICY:
@@ -2636,10 +2747,10 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     normal_execution_limit = queue.get("queue_policy", {}).get("normal_execution_limit")
     if not isinstance(normal_execution_limit, int) or normal_execution_limit < 1:
         issues.append(".ralph/state/spec-queue.json normal_execution_limit must be a positive integer")
-    if queue.get("worker_claims_path") != DEFAULT_WORKER_CLAIMS_PATH:
-        issues.append(".ralph/state/spec-queue.json worker_claims_path must point at .ralph/state/worker-claims.json")
-    if workflow.get("worker_claims_path") != DEFAULT_WORKER_CLAIMS_PATH:
-        issues.append(".ralph/state/workflow-state.json worker_claims_path must point at .ralph/state/worker-claims.json")
+    if queue.get("execution_claims_path") != DEFAULT_EXECUTION_CLAIMS_PATH:
+        issues.append(".ralph/state/spec-queue.json execution_claims_path must point at .ralph/state/execution-claims.json")
+    if workflow.get("execution_claims_path") != DEFAULT_EXECUTION_CLAIMS_PATH:
+        issues.append(".ralph/state/workflow-state.json execution_claims_path must point at .ralph/state/execution-claims.json")
     orchestrator_stop_hook = project_facts.get("orchestrator_stop_hook")
     if not isinstance(orchestrator_stop_hook, dict):
         issues.append(".ralph/context/project-facts.json orchestrator_stop_hook must be an object")
@@ -2741,29 +2852,29 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             issues.append(".cursor/hooks.json must register the Ralph stop hook command")
 
     lease = load_json(lease_path)
-    for key in LEASE_REQUIRED_KEYS:
+    for key in SCHEDULER_LOCK_REQUIRED_KEYS:
         if key not in lease:
-            issues.append(f".ralph/state/orchestrator-lease.json is missing `{key}`")
-    if lease.get("status") not in LEASE_STATUSES:
-        issues.append(".ralph/state/orchestrator-lease.json status must be `idle` or `held`")
-    lease_heartbeat_at = parse_timestamp(lease.get("heartbeat_at"))
-    lease_expires_at = parse_timestamp(lease.get("expires_at"))
+            issues.append(f".ralph/state/scheduler-lock.json is missing `{key}`")
+    if lease.get("status") not in SCHEDULER_LOCK_STATUSES:
+        issues.append(".ralph/state/scheduler-lock.json status must be `idle` or `held`")
+    scheduler_lock_heartbeat_at = parse_timestamp(lease.get("heartbeat_at"))
+    scheduler_lock_expires_at = parse_timestamp(lease.get("expires_at"))
     if lease.get("status") == "held":
         if lease.get("owner_token") is None:
-            issues.append(".ralph/state/orchestrator-lease.json status is held but owner_token is null")
-        if lease_heartbeat_at is None or lease_expires_at is None:
-            issues.append(".ralph/state/orchestrator-lease.json held lease must record heartbeat_at and expires_at")
-        elif lease_expires_at <= lease_heartbeat_at:
-            issues.append(".ralph/state/orchestrator-lease.json expires_at must be later than heartbeat_at for a held lease")
-        elif lease_expires_at <= utc_now():
-            issues.append(".ralph/state/orchestrator-lease.json held lease is stale; recover it to idle before validation passes")
+            issues.append(".ralph/state/scheduler-lock.json status is held but owner_token is null")
+        if scheduler_lock_heartbeat_at is None or scheduler_lock_expires_at is None:
+            issues.append(".ralph/state/scheduler-lock.json held scheduler lock must record heartbeat_at and expires_at")
+        elif scheduler_lock_expires_at <= scheduler_lock_heartbeat_at:
+            issues.append(".ralph/state/scheduler-lock.json expires_at must be later than heartbeat_at for a held scheduler lock")
+        elif scheduler_lock_expires_at <= utc_now():
+            issues.append(".ralph/state/scheduler-lock.json held scheduler lock is stale; recover it to idle before validation passes")
     elif lease_has_holder_metadata(lease):
-        issues.append(".ralph/state/orchestrator-lease.json idle lease must not retain holder metadata")
+        issues.append(".ralph/state/scheduler-lock.json idle lock must not retain holder metadata")
 
-    for key in WORKER_CLAIMS_REQUIRED_KEYS:
-        if key not in worker_claims:
-            issues.append(f".ralph/state/worker-claims.json is missing `{key}`")
-    for claim in worker_claims.get("claims", []):
+    for key in EXECUTION_CLAIMS_REQUIRED_KEYS:
+        if key not in execution_claims:
+            issues.append(f".ralph/state/execution-claims.json is missing `{key}`")
+    for claim in execution_claims.get("claims", []):
         for key in (
             "claim_id",
             "spec_id",
@@ -2786,36 +2897,36 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
             "validation_ready",
         ):
             if key not in claim:
-                issues.append(f".ralph/state/worker-claims.json claim is missing `{key}`")
+                issues.append(f".ralph/state/execution-claims.json claim is missing `{key}`")
         if claim.get("runtime") not in SUPPORTED_RUNTIME_NAMES:
-            issues.append(f".ralph/state/worker-claims.json has unsupported runtime `{claim.get('runtime')}`")
+            issues.append(f".ralph/state/execution-claims.json has unsupported runtime `{claim.get('runtime')}`")
         if claim.get("execution_mode") not in SUPPORTED_EXECUTION_MODES:
             issues.append(
-                f".ralph/state/worker-claims.json has unsupported execution_mode `{claim.get('execution_mode')}`"
+                f".ralph/state/execution-claims.json has unsupported execution_mode `{claim.get('execution_mode')}`"
             )
         if claim.get("status") not in CLAIM_STATUSES:
-            issues.append(f".ralph/state/worker-claims.json has unsupported status `{claim.get('status')}`")
+            issues.append(f".ralph/state/execution-claims.json has unsupported status `{claim.get('status')}`")
         if claim.get("bootstrap_status") not in BOOTSTRAP_STATUSES:
             issues.append(
-                f".ralph/state/worker-claims.json has unsupported bootstrap_status `{claim.get('bootstrap_status')}`"
+                f".ralph/state/execution-claims.json has unsupported bootstrap_status `{claim.get('bootstrap_status')}`"
             )
         if claim.get("bootstrap_status") == "in_progress" and claim.get("bootstrap_started_at") is None:
-            issues.append(".ralph/state/worker-claims.json bootstrap in_progress claims must record bootstrap_started_at")
+            issues.append(".ralph/state/execution-claims.json bootstrap in_progress claims must record bootstrap_started_at")
         if claim.get("bootstrap_status") in {"passed", "failed"}:
             if claim.get("bootstrap_completed_at") is None:
                 issues.append(
-                    ".ralph/state/worker-claims.json bootstrap terminal claims must record bootstrap_completed_at"
+                    ".ralph/state/execution-claims.json bootstrap terminal claims must record bootstrap_completed_at"
                 )
             if not isinstance(claim.get("bootstrap_report_path"), str) or not claim.get("bootstrap_report_path"):
-                issues.append(".ralph/state/worker-claims.json bootstrap terminal claims must record bootstrap_report_path")
+                issues.append(".ralph/state/execution-claims.json bootstrap terminal claims must record bootstrap_report_path")
         if claim.get("bootstrap_status") == "passed" and claim.get("validation_ready") is not True:
-            issues.append(".ralph/state/worker-claims.json bootstrap passed claims must set validation_ready=true")
+            issues.append(".ralph/state/execution-claims.json bootstrap passed claims must set validation_ready=true")
         if claim.get("bootstrap_status") == "failed" and claim.get("validation_ready") is not False:
-            issues.append(".ralph/state/worker-claims.json bootstrap failed claims must set validation_ready=false")
+            issues.append(".ralph/state/execution-claims.json bootstrap failed claims must set validation_ready=false")
         if claim.get("role") != "bootstrap" and claim.get("status") == "claimed":
             if claim.get("bootstrap_status") != "passed" or claim.get("validation_ready") is not True:
                 issues.append(
-                    f".ralph/state/worker-claims.json active `{claim.get('role')}` claim for {claim.get('spec_key')} must have passed bootstrap before execution"
+                    f".ralph/state/execution-claims.json active `{claim.get('role')}` claim for {claim.get('spec_key')} must have passed bootstrap before execution"
                 )
 
     intents = load_jsonl_records(intents_path)
@@ -2823,28 +2934,28 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
     last_intent_timestamp: datetime | None = None
     for record in intents:
         if record.get("type") not in INTENT_TYPES:
-            issues.append(f".ralph/state/orchestrator-intents.jsonl has unsupported intent type `{record.get('type')}`")
+            issues.append(f".ralph/state/scheduler-intents.jsonl has unsupported intent type `{record.get('type')}`")
         for key in ("intent_id", "created_at", "requested_by", "type", "status", "dependency_hints"):
             if key not in record:
-                issues.append(f".ralph/state/orchestrator-intents.jsonl record missing `{key}`")
+                issues.append(f".ralph/state/scheduler-intents.jsonl record missing `{key}`")
         intent_id = record.get("intent_id")
         if isinstance(intent_id, str):
             if intent_id in seen_intent_ids:
-                issues.append(f".ralph/state/orchestrator-intents.jsonl contains duplicate intent_id `{intent_id}`")
+                issues.append(f".ralph/state/scheduler-intents.jsonl contains duplicate intent_id `{intent_id}`")
             seen_intent_ids.add(intent_id)
         created_at = parse_timestamp(record.get("created_at"))
         if created_at is None:
-            issues.append(".ralph/state/orchestrator-intents.jsonl record has an invalid created_at timestamp")
+            issues.append(".ralph/state/scheduler-intents.jsonl record has an invalid created_at timestamp")
         elif last_intent_timestamp is not None and created_at < last_intent_timestamp:
-            issues.append(".ralph/state/orchestrator-intents.jsonl records are not in append order by created_at")
+            issues.append(".ralph/state/scheduler-intents.jsonl records are not in append order by created_at")
         else:
             last_intent_timestamp = created_at
         if record.get("status") not in INTENT_STATUSES:
-            issues.append(f".ralph/state/orchestrator-intents.jsonl has unsupported status `{record.get('status')}`")
+            issues.append(f".ralph/state/scheduler-intents.jsonl has unsupported status `{record.get('status')}`")
         if not isinstance(record.get("dependency_hints"), list):
-            issues.append(".ralph/state/orchestrator-intents.jsonl dependency_hints must be a list")
+            issues.append(".ralph/state/scheduler-intents.jsonl dependency_hints must be a list")
         if "target_spec_ids" in record and not isinstance(record.get("target_spec_ids"), list):
-            issues.append(".ralph/state/orchestrator-intents.jsonl target_spec_ids must be a list when present")
+            issues.append(".ralph/state/scheduler-intents.jsonl target_spec_ids must be a list when present")
 
     if detect_dependency_cycle(queue):
         issues.append(".ralph/state/spec-queue.json contains a dependency cycle")
@@ -2919,7 +3030,7 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         issues.append("specs/INDEX.md does not match the canonical spec queue projection")
 
     expected_bootstrap_projection = json.loads(json.dumps(queue))
-    merge_bootstrap_summary_from_claims(expected_bootstrap_projection, worker_claims)
+    merge_bootstrap_summary_from_claims(expected_bootstrap_projection, execution_claims)
     for actual_spec, expected_spec in zip(queue.get("specs", []), expected_bootstrap_projection.get("specs", [])):
         for key in ("bootstrap_status", "bootstrap_last_claim_id", "bootstrap_last_report_path", "bootstrap_last_completed_at"):
             if actual_spec.get(key) != expected_spec.get(key):
@@ -2936,10 +3047,10 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         issues.append("workflow-state active_spec_ids do not match spec-queue active_spec_ids")
     if workflow.get("active_interrupt_spec_id") != queue.get("active_interrupt_spec_id"):
         issues.append("workflow-state active_interrupt_spec_id does not match spec-queue active_interrupt_spec_id")
-    if workflow.get("orchestrator_lease_path") != DEFAULT_LEASE_PATH:
-        issues.append(".ralph/state/workflow-state.json orchestrator_lease_path does not match the canonical lease path")
-    if workflow.get("orchestrator_intents_path") != DEFAULT_INTENTS_PATH:
-        issues.append(".ralph/state/workflow-state.json orchestrator_intents_path does not match the canonical intents path")
+    if workflow.get("scheduler_lock_path") != DEFAULT_SCHEDULER_LOCK_PATH:
+        issues.append(".ralph/state/workflow-state.json scheduler_lock_path does not match the canonical scheduler lock path")
+    if workflow.get("scheduler_intents_path") != DEFAULT_SCHEDULER_INTENTS_PATH:
+        issues.append(".ralph/state/workflow-state.json scheduler_intents_path does not match the canonical scheduler intents path")
     scheduler_summary = workflow.get("scheduler_summary") or {}
     if scheduler_summary.get("normal_execution_limit") != queue.get("queue_policy", {}).get("normal_execution_limit"):
         issues.append(".ralph/state/workflow-state.json scheduler_summary normal_execution_limit does not match spec-queue.json")
@@ -2949,12 +3060,12 @@ def validate_installed_runtime(repo_root: Path) -> list[str]:
         issues.append(".ralph/state/workflow-state.json scheduler_summary pending_intent_count does not match the intent log")
     if scheduler_summary.get("dependency_blocked_count") != count_dependency_blocked_specs(queue):
         issues.append(".ralph/state/workflow-state.json scheduler_summary dependency_blocked_count does not match spec-queue.json")
-    if workflow.get("lease_owner_token") != lease.get("owner_token"):
-        issues.append(".ralph/state/workflow-state.json lease_owner_token does not match orchestrator-lease.json")
-    if workflow.get("lease_heartbeat_at") != lease.get("heartbeat_at"):
-        issues.append(".ralph/state/workflow-state.json lease_heartbeat_at does not match orchestrator-lease.json")
-    if workflow.get("lease_expires_at") != lease.get("expires_at"):
-        issues.append(".ralph/state/workflow-state.json lease_expires_at does not match orchestrator-lease.json")
+    if workflow.get("scheduler_lock_owner_token") != lease.get("owner_token"):
+        issues.append(".ralph/state/workflow-state.json scheduler_lock_owner_token does not match scheduler-lock.json")
+    if workflow.get("scheduler_lock_heartbeat_at") != lease.get("heartbeat_at"):
+        issues.append(".ralph/state/workflow-state.json scheduler_lock_heartbeat_at does not match scheduler-lock.json")
+    if workflow.get("scheduler_lock_expires_at") != lease.get("expires_at"):
+        issues.append(".ralph/state/workflow-state.json scheduler_lock_expires_at does not match scheduler-lock.json")
 
     active_spec: dict[str, Any] | None = None
     active_task_state: dict[str, Any] | None = None
@@ -3103,6 +3214,10 @@ def dedupe_messages(messages: list[str]) -> list[str]:
     return ordered
 
 
+def canonical_or_legacy_path_exists(repo_root: Path, canonical_relative_path: str, legacy_relative_path: str) -> bool:
+    return (repo_root / canonical_relative_path).exists() or (repo_root / legacy_relative_path).exists()
+
+
 def classify_preflight_issue(
     repo_root: Path,
     queue: dict[str, Any],
@@ -3163,24 +3278,41 @@ def check_runtime_preflight(
     required_paths = (
         repo_root / ".ralph/state/workflow-state.json",
         repo_root / ".ralph/state/spec-queue.json",
-        repo_root / ".ralph/state/worker-claims.json",
-        repo_root / ".ralph/state/orchestrator-lease.json",
         repo_root / ".ralph/context/project-facts.json",
-        repo_root / ".ralph/state/orchestrator-intents.jsonl",
     )
-    if apply_repairs and all(path.exists() for path in required_paths):
+    coordination_paths_available = all(
+        (
+            canonical_or_legacy_path_exists(
+                repo_root,
+                DEFAULT_EXECUTION_CLAIMS_PATH,
+                LEGACY_EXECUTION_CLAIMS_PATH,
+            ),
+            canonical_or_legacy_path_exists(
+                repo_root,
+                DEFAULT_SCHEDULER_LOCK_PATH,
+                LEGACY_SCHEDULER_LOCK_PATH,
+            ),
+            canonical_or_legacy_path_exists(
+                repo_root,
+                DEFAULT_SCHEDULER_INTENTS_PATH,
+                LEGACY_SCHEDULER_INTENTS_PATH,
+            ),
+        )
+    )
+    if apply_repairs and all(path.exists() for path in required_paths) and coordination_paths_available:
         workflow = load_json(repo_root / ".ralph/state/workflow-state.json")
         queue = load_json(repo_root / ".ralph/state/spec-queue.json")
-        worker_claims = load_json(repo_root / ".ralph/state/worker-claims.json")
-        lease = load_json(repo_root / ".ralph/state/orchestrator-lease.json")
+        execution_claims_path = ensure_execution_claims_file(repo_root, workflow)
+        execution_claims = load_json(execution_claims_path)
+        lease = ensure_lease_file(repo_root, workflow)
         project_facts = normalize_project_facts(load_json(repo_root / ".ralph/context/project-facts.json"))
-        intents = load_jsonl_records(repo_root / ".ralph/state/orchestrator-intents.jsonl")
+        intents = load_jsonl_records(ensure_intent_log(repo_root, workflow))
 
         workflow, queue, self_healed = refresh_runtime_derived_state(
             repo_root,
             workflow,
             queue,
-            worker_claims,
+            execution_claims,
             lease,
             pending_intent_count=len(intents),
         )

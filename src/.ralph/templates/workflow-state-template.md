@@ -15,12 +15,12 @@
 - Admission policy: `{{admission_policy}}`
 - Normal spec capacity: `{{normal_execution_limit}}`
 - Active interrupt spec: `{{active_interrupt_spec_id}}`
-- Lease path: `{{orchestrator_lease_path}}`
-- Worker claims path: `{{worker_claims_path}}`
-- Intents path: `{{orchestrator_intents_path}}`
-- Lease owner token: `{{lease_owner_token}}`
-- Lease heartbeat: `{{lease_heartbeat_at}}`
-- Lease expires: `{{lease_expires_at}}`
+- Lease path: `{{scheduler_lock_path}}`
+- Worker claims path: `{{execution_claims_path}}`
+- Intents path: `{{scheduler_intents_path}}`
+- Lease owner token: `{{scheduler_lock_owner_token}}`
+- Lease heartbeat: `{{scheduler_lock_heartbeat_at}}`
+- Lease expires: `{{scheduler_lock_expires_at}}`
 - Scheduler summary: `{{scheduler_summary}}`
 - Resume spec id: `{{resume_spec_id}}`
 - Resume stack depth: `{{resume_spec_stack_depth}}`
